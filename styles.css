@@ -49,3 +49,7 @@ button { cursor:pointer; }
 .delete-record { border:0; background:transparent; color:var(--red); font-size:13px; }
 .money-total { margin:-8px 0 14px; padding:10px 12px; border-radius:8px; background:var(--yellow); font-weight:700; }
 @media (max-width:360px) { .app-body { grid-template-columns:64px 1fr; } .side-nav { padding-inline:5px; } .nav-item { width:52px; } .content { padding-inline:10px; } .quick-form { grid-template-columns:1fr; } }
+
+.cloud-status { padding:10px 12px; border-radius:8px; color:#1d64b8; background:#dcebff; font-size:13px; font-weight:700; }
+.cloud-status.offline { color:#8a5a00; background:#fff6bd; }
+.cloud-status.error { color:#b42318; background:#ffe4e1; }

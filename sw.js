@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "mobile-workbench-v1";
+﻿const CACHE_NAME = "mobile-workbench-v2";
 const ASSETS = [
   "./",
   "./index.html",
@@ -25,3 +25,4 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)));
 });
+
