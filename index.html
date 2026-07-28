@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#3987ed">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="每日工作台">
+  <meta name="apple-mobile-web-app-title" content="七夜的工作台">
   <link rel="manifest" href="./manifest.json">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
-  <title>每日工作台</title>
+  <title>七夜的工作台</title>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -17,45 +17,76 @@
       <div class="status"><strong id="clock">11:13</strong><span>5G Wi-Fi 78</span></div>
       <div class="navline">
         <button class="icon-button" aria-label="首页">⌂</button>
-        <h1 id="pageTitle">每日工作台</h1>
+        <h1 id="pageTitle">七夜的工作台</h1>
         <button class="pill-button" id="exportData" aria-label="导出">导出</button>
       </div>
       <div class="workspace-title">
-        <span class="home-mark">⌂</span>
-        <strong id="sectionTitle">每日打卡</strong>
+        <span class="home-mark">✦</span>
+        <strong id="sectionTitle">习惯打卡</strong>
         <button class="ghost-button" id="clearPage" aria-label="清空当前页">清空</button>
       </div>
     </header>
 
     <section class="app-body">
       <aside class="side-nav" aria-label="工作台导航">
-        <button class="nav-item active" data-page="checkin"><span>✅</span><small>每日打卡</small></button>
-        <button class="nav-item" data-page="food"><span>🥗</span><small>饮食记录</small></button>
-        <button class="nav-item" data-page="news"><span>📰</span><small>每日新闻</small></button>
-        <button class="nav-item" data-page="review"><span>📝</span><small>每日复盘</small></button>
+        <div class="nav-group-title">娱乐</div>
+        <button class="nav-item" data-page="media"><span>🎬</span><small>影视推荐</small></button>
         <button class="nav-item" data-page="chat"><span>🤖</span><small>AI chat</small></button>
-        <button class="nav-item" data-page="money"><span>💰</span><small>记账日记</small></button>
-        <button class="nav-item" data-page="stats"><span>📊</span><small>统计</small></button>
+
+        <div class="nav-group-title">生活</div>
+        <button class="nav-item active" data-page="checkin"><span>🌱</span><small>习惯打卡</small></button>
+        <button class="nav-item" data-page="food"><span>🥗</span><small>饮食记录</small></button>
+        <button class="nav-item" data-page="todo"><span>✅</span><small>待办清单</small></button>
+        <button class="nav-item" data-page="sleep"><span>🌙</span><small>作息提醒</small></button>
+        <button class="nav-item" data-page="treehole"><span>💙</span><small>七夜树洞</small></button>
+        <button class="nav-item" data-page="review"><span>📝</span><small>每日复盘</small></button>
+        <button class="nav-item" data-page="settings"><span>⚙️</span><small>设置</small></button>
       </aside>
 
       <section class="content">
         <div class="cloud-status" id="cloudStatus">云端同步准备中...</div>
+
         <section class="page active" data-view="checkin">
-          <article class="card">
-            <div class="card-heading"><h2>今日打卡</h2><span class="tag">今天</span></div>
-            <label class="check-row"><input type="checkbox" data-save="checkin-water"><span>喝水 8 杯</span></label>
-            <label class="check-row"><input type="checkbox" data-save="checkin-workout"><span>运动或拉伸 30 分钟</span></label>
-            <label class="check-row"><input type="checkbox" data-save="checkin-reading"><span>阅读 / 学习 20 分钟</span></label>
-            <label class="check-row"><input type="checkbox" data-save="checkin-review"><span>完成晚间复盘</span></label>
+          <article class="hero-card">
+            <span>🌱</span>
+            <div><h2>习惯打卡</h2><p>坚持就是胜利，今天也给自己一点确定感。</p></div>
           </article>
           <article class="card">
-            <h2>自定义打卡</h2>
-            <form class="quick-form" data-form="checkin">
-              <input name="title" type="text" placeholder="例如：早睡、背单词、看盘复盘" required>
+            <div class="card-heading"><h2>今日打卡任务</h2><span class="tag" id="checkinToday">今天</span></div>
+            <div class="checkin-task-list" id="checkinTaskList"></div>
+          </article>
+          <article class="card">
+            <h2>添加自定义打卡</h2>
+            <form class="quick-form" id="checkinTaskForm">
+              <input id="checkinTaskInput" type="text" placeholder="例如：早睡、运动、读书、复盘" required>
               <button type="submit">添加</button>
             </form>
-            <div class="record-list" data-list="checkin"></div>
           </article>
+        </section>
+
+        <section class="page" data-view="media">
+          <article class="card">
+            <h2>影视推荐</h2>
+            <form class="stack-form" data-form="media">
+              <input name="title" type="text" placeholder="片名 / 剧名 / 综艺名" required>
+              <input name="meta" type="text" placeholder="平台 / 类型 / 链接，可选">
+              <textarea name="note" rows="4" placeholder="推荐理由、看点、适合什么时候看"></textarea>
+              <button type="submit">保存推荐</button>
+            </form>
+          </article>
+          <article class="card"><h2>推荐记录</h2><div class="record-list" data-list="media"></div></article>
+        </section>
+
+        <section class="page" data-view="chat">
+          <article class="card">
+            <h2>AI chat</h2>
+            <form class="stack-form" data-form="chat">
+              <input name="title" type="text" placeholder="问题 / 主题" required>
+              <textarea name="note" rows="5" placeholder="把想问 AI 的问题、回答摘要或提示词记在这里"></textarea>
+              <button type="submit">保存对话</button>
+            </form>
+          </article>
+          <article class="card"><h2>对话记录</h2><div class="record-list" data-list="chat"></div></article>
         </section>
 
         <section class="page" data-view="food">
@@ -74,20 +105,49 @@
               <button type="submit">保存饮食</button>
             </form>
           </article>
-          <article class="card"><h2>今日饮食列表</h2><div class="record-list" data-list="food"></div></article>
+          <article class="card"><h2>饮食列表</h2><div class="record-list" data-list="food"></div></article>
         </section>
 
-        <section class="page" data-view="news">
+        <section class="page" data-view="todo">
           <article class="card">
-            <h2>每日新闻</h2>
-            <form class="stack-form" data-form="news">
-              <input name="title" type="text" placeholder="新闻标题 / 主题" required>
-              <input name="meta" type="text" placeholder="来源 / 链接，可选">
-              <textarea name="note" rows="4" placeholder="核心内容、影响、你的判断"></textarea>
-              <button type="submit">保存新闻</button>
+            <h2>我的待办清单</h2>
+            <form class="stack-form" data-form="todo">
+              <input name="title" type="text" placeholder="事件名称" required>
+              <select name="meal">
+                <option value="今天">今天</option>
+                <option value="本周">本周</option>
+                <option value="以后">以后</option>
+              </select>
+              <textarea name="note" rows="3" placeholder="补充说明、地点、需要准备什么"></textarea>
+              <button type="submit">添加待办</button>
             </form>
           </article>
-          <article class="card"><h2>新闻记录</h2><div class="record-list" data-list="news"></div></article>
+          <article class="card"><h2>待办记录</h2><div class="record-list" data-list="todo"></div></article>
+        </section>
+
+        <section class="page" data-view="sleep">
+          <article class="card">
+            <h2>早睡早起提醒</h2>
+            <div class="reminder-list">
+              <label class="reminder-row"><span>🌙 睡觉提醒</span><input id="sleepTime" type="time" value="23:00"></label>
+              <label class="reminder-row"><span>☀️ 起床提醒</span><input id="wakeTime" type="time" value="07:00"></label>
+              <label class="toggle-row"><span>启用提醒记录</span><input id="sleepToggle" type="checkbox"></label>
+            </div>
+            <button class="full-button" id="saveSleepSettings" type="button">保存作息设置</button>
+          </article>
+          <article class="card"><h2>作息记录</h2><div class="record-list" data-list="sleep"></div></article>
+        </section>
+
+        <section class="page" data-view="treehole">
+          <article class="card">
+            <h2>七夜树洞</h2>
+            <form class="stack-form" data-form="treehole">
+              <input name="title" type="text" placeholder="今天的小标题" required>
+              <textarea name="note" rows="6" placeholder="今天的小想法、小情绪、小确幸……都放进来吧"></textarea>
+              <button type="submit">存进树洞</button>
+            </form>
+          </article>
+          <article class="card"><h2>树洞记录</h2><div class="record-list" data-list="treehole"></div></article>
         </section>
 
         <section class="page" data-view="review">
@@ -102,90 +162,15 @@
           <article class="card"><h2>复盘历史</h2><div class="record-list" data-list="review"></div></article>
         </section>
 
-        <section class="page" data-view="chat">
+        <section class="page" data-view="settings">
           <article class="card">
-            <h2>AI chat</h2>
-            <form class="stack-form" data-form="chat">
-              <input name="title" type="text" placeholder="问题 / 主题" required>
-              <textarea name="note" rows="5" placeholder="把想问 AI 的问题、回答摘要或提示词记在这里"></textarea>
-              <button type="submit">保存对话</button>
-            </form>
-          </article>
-          <article class="card"><h2>对话记录</h2><div class="record-list" data-list="chat"></div></article>
-        </section>
-
-        <section class="page" data-view="stats">
-          <article class="stats-hero">
-            <div class="stats-hero-top">
-              <button type="button" class="stats-menu">☰</button>
-              <strong id="statsMonth">2026-07</strong>
-              <span>📊</span>
+            <h2>主题颜色</h2>
+            <div class="theme-grid" id="themeGrid">
+              <button type="button" data-theme="#3987ed" data-soft="#dcebff"><span style="background:#3987ed"></span>蓝色</button>
+              <button type="button" data-theme="#22a06b" data-soft="#dcfce7"><span style="background:#22a06b"></span>绿色</button>
+              <button type="button" data-theme="#a855f7" data-soft="#f0e7ff"><span style="background:#a855f7"></span>紫色</button>
+              <button type="button" data-theme="#e45858" data-soft="#ffe4e1"><span style="background:#e45858"></span>红色</button>
             </div>
-            <div class="stats-main-number">
-              <span>月消费</span>
-              <strong id="statsExpense">0.00</strong>
-            </div>
-            <div class="stats-summary-row">
-              <span>月收入 <b id="statsIncome">0.00</b></span>
-              <span>本月结余 <b id="statsBalance">0.00</b></span>
-            </div>
-          </article>
-
-          <article class="card stats-card">
-            <div class="stats-card-head">
-              <div><h2>最近15日消费</h2><p id="stats15Total">总计：0.00</p></div>
-              <span>•••</span>
-            </div>
-            <div class="bar-chart" id="statsBarChart"></div>
-          </article>
-
-          <section class="stats-day-list" id="statsDayList"></section>
-        </section>
-        <section class="page" data-view="money">
-          <article class="money-panel">
-            <div class="money-tabs" role="tablist" aria-label="记账类型">
-              <button class="money-tab active" type="button" data-money-kind="消费">消费</button>
-              <button class="money-tab" type="button" data-money-kind="收入">收入</button>
-            </div>
-
-            <div class="money-category-grid" id="moneyCategoryGrid"></div>
-
-            <div class="money-entry">
-              <input id="moneyNote" type="text" placeholder="点此输入备注..." autocomplete="off">
-              <output id="moneyAmount" class="money-amount">0.0</output>
-            </div>
-
-            <div class="money-chips">
-              <button type="button">账户</button>
-              <button type="button">今天</button>
-              <button type="button">图片</button>
-              <button type="button">⚑</button>
-            </div>
-
-            <div class="money-keypad" id="moneyKeypad">
-              <button type="button" data-key="1">1</button>
-              <button type="button" data-key="2">2</button>
-              <button type="button" data-key="3">3</button>
-              <button type="button" data-key="back">⌫</button>
-              <button type="button" data-key="4">4</button>
-              <button type="button" data-key="5">5</button>
-              <button type="button" data-key="6">6</button>
-              <button type="button" data-key="minus">-</button>
-              <button type="button" data-key="7">7</button>
-              <button type="button" data-key="8">8</button>
-              <button type="button" data-key="9">9</button>
-              <button type="button" data-key="plus">+</button>
-              <button type="button" data-key="again">再记</button>
-              <button type="button" data-key="0">0</button>
-              <button type="button" data-key=".">.</button>
-              <button class="money-save" type="button" id="moneySave">保存</button>
-            </div>
-          </article>
-
-          <article class="card">
-            <h2>账目记录</h2>
-            <div class="money-total" id="moneyTotal">合计：0</div>
-            <div class="record-list" data-list="money"></div>
           </article>
         </section>
       </section>
@@ -195,8 +180,3 @@
   <script src="./app.js"></script>
 </body>
 </html>
-
-
-
-
-

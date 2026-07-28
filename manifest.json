@@ -1,7 +1,7 @@
 ﻿{
-  "name": "每日工作台",
-  "short_name": "工作台",
-  "description": "手机端个人记录工作台",
+  "name": "七夜的工作台",
+  "short_name": "七夜工作台",
+  "description": "七夜的手机端个人工作台",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -23,3 +23,4 @@
     }
   ]
 }
+

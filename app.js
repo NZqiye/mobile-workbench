@@ -3,15 +3,17 @@ const supabaseUrl = "https://sfdcugcuxcxljiqyxlym.supabase.co";
 const supabaseKey = "sb_publishable_jJ3S5L8F9Dv5-wAYUO-mJg_govCK7pk";
 const tableUrl = `${supabaseUrl}/rest/v1/workbench_records`;
 const pageNames = {
-  checkin: "每日打卡",
-  food: "饮食记录",
-  news: "每日新闻",
-  review: "每日复盘",
+  checkin: "习惯打卡",
+  media: "影视推荐",
   chat: "AI chat",
-  money: "记账日记",
-  stats: "统计",
+  food: "饮食记录",
+  todo: "待办清单",
+  sleep: "作息提醒",
+  treehole: "七夜树洞",
+  review: "每日复盘",
+  settings: "设置",
 };
-const recordPages = ["checkin", "food", "news", "review", "chat", "money"];
+const recordPages = ["media", "chat", "food", "todo", "sleep", "treehole", "review"];
 let cloudEnabled = true;
 
 function key(name) {
@@ -20,6 +22,11 @@ function key(name) {
 
 function nowText(date = new Date()) {
   return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function todayKey() {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function headers(extra = {}) {
@@ -59,7 +66,6 @@ function toAppRecord(row) {
     meta: row.meta || "",
     note: row.note || "",
     time: nowText(new Date(row.created_at)),
-    createdAt: row.created_at,
   };
 }
 
@@ -130,12 +136,11 @@ async function renderRecords(page) {
   } catch (error) {
     cloudEnabled = false;
     records = readLocalRecords(page);
-    setCloudStatus("云端未连接，暂用本地缓存。请确认 Supabase 表和 RLS 策略已创建。", "error");
+    setCloudStatus("云端未连接，暂用本地缓存", "error");
   }
   list.innerHTML = "";
   if (!records.length) {
     list.innerHTML = '<p class="empty">还没有记录，先添加一条。</p>';
-    updateMoneyTotal();
     return;
   }
   records.forEach((record, index) => {
@@ -157,37 +162,140 @@ async function renderRecords(page) {
     });
     list.append(item);
   });
-  updateMoneyTotal();
 }
 
-function updateMoneyTotal() {
-  const target = document.querySelector("#moneyTotal");
-  if (!target) return;
-  const total = readLocalRecords("money").reduce((sum, item) => {
-    const amount = Number(item.meta || 0);
-    return item.group === "收入" ? sum + amount : sum - amount;
-  }, 0);
-  target.textContent = `合计：${total.toFixed(2)}`;
+function loadCheckinTasks() {
+  return JSON.parse(localStorage.getItem(key("checkinTasks")) || "[]");
+}
+
+function saveCheckinTasks(tasks) {
+  localStorage.setItem(key("checkinTasks"), JSON.stringify(tasks));
+}
+
+function loadCheckinDone() {
+  return JSON.parse(localStorage.getItem(key("checkinDone:" + todayKey())) || "{}");
+}
+
+function saveCheckinDone(done) {
+  localStorage.setItem(key("checkinDone:" + todayKey()), JSON.stringify(done));
+}
+
+function renderCheckinTasks() {
+  const list = document.querySelector("#checkinTaskList");
+  if (!list) return;
+  const label = document.querySelector("#checkinToday");
+  if (label) label.textContent = todayKey();
+  const tasks = loadCheckinTasks();
+  const done = loadCheckinDone();
+  list.innerHTML = "";
+  if (!tasks.length) {
+    list.innerHTML = '<p class="empty">还没有习惯，添加一个开始坚持吧。</p>';
+    return;
+  }
+  tasks.forEach((task) => {
+    const row = document.createElement("div");
+    row.className = "checkin-task";
+    row.innerHTML = `
+      <label class="check-row"><input type="checkbox"><span></span></label>
+      <div class="task-actions"><button type="button" data-action="edit">修改</button><button type="button" data-action="delete">删除</button></div>
+    `;
+    const box = row.querySelector("input");
+    box.checked = Boolean(done[task.id]);
+    row.querySelector("span").textContent = task.title;
+    box.addEventListener("change", () => {
+      const nextDone = loadCheckinDone();
+      nextDone[task.id] = box.checked;
+      saveCheckinDone(nextDone);
+      renderCheckinTasks();
+    });
+    row.querySelector('[data-action="edit"]').addEventListener("click", () => {
+      const nextTitle = prompt("修改习惯", task.title);
+      if (!nextTitle || !nextTitle.trim()) return;
+      const nextTasks = loadCheckinTasks().map((item) => item.id === task.id ? { ...item, title: nextTitle.trim() } : item);
+      saveCheckinTasks(nextTasks);
+      renderCheckinTasks();
+    });
+    row.querySelector('[data-action="delete"]').addEventListener("click", () => {
+      if (!confirm(`删除「${task.title}」？`)) return;
+      saveCheckinTasks(loadCheckinTasks().filter((item) => item.id !== task.id));
+      const nextDone = loadCheckinDone();
+      delete nextDone[task.id];
+      saveCheckinDone(nextDone);
+      renderCheckinTasks();
+    });
+    list.append(row);
+  });
+}
+
+function setupCheckinTasks() {
+  const form = document.querySelector("#checkinTaskForm");
+  if (!form) return;
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const input = document.querySelector("#checkinTaskInput");
+    const title = input.value.trim();
+    if (!title) return;
+    const tasks = loadCheckinTasks();
+    tasks.push({ id: String(Date.now()), title });
+    saveCheckinTasks(tasks);
+    input.value = "";
+    renderCheckinTasks();
+  });
+}
+
+function applyTheme(theme, soft) {
+  document.documentElement.style.setProperty("--blue", theme);
+  document.documentElement.style.setProperty("--blue-soft", soft);
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", theme);
+  localStorage.setItem(key("theme"), JSON.stringify({ theme, soft }));
+  document.querySelectorAll("#themeGrid button").forEach((button) => {
+    button.classList.toggle("active", button.dataset.theme === theme);
+  });
+}
+
+function setupTheme() {
+  const saved = JSON.parse(localStorage.getItem(key("theme")) || "{}");
+  applyTheme(saved.theme || "#3987ed", saved.soft || "#dcebff");
+  document.querySelectorAll("#themeGrid button").forEach((button) => {
+    button.addEventListener("click", () => applyTheme(button.dataset.theme, button.dataset.soft));
+  });
+}
+
+function loadSleepSettings() {
+  return JSON.parse(localStorage.getItem(key("sleepSettings")) || "{}");
+}
+
+function setupSleepSettings() {
+  const settings = loadSleepSettings();
+  if (settings.sleepTime) document.querySelector("#sleepTime").value = settings.sleepTime;
+  if (settings.wakeTime) document.querySelector("#wakeTime").value = settings.wakeTime;
+  document.querySelector("#sleepToggle").checked = Boolean(settings.enabled);
+  document.querySelector("#saveSleepSettings").addEventListener("click", async () => {
+    const next = {
+      sleepTime: document.querySelector("#sleepTime").value,
+      wakeTime: document.querySelector("#wakeTime").value,
+      enabled: document.querySelector("#sleepToggle").checked,
+    };
+    localStorage.setItem(key("sleepSettings"), JSON.stringify(next));
+    await addRecord("sleep", {
+      title: next.enabled ? "已启用作息提醒" : "已关闭作息提醒",
+      meta: `${next.sleepTime} 睡 / ${next.wakeTime} 起`,
+      note: "浏览器网页无法真正弹系统闹钟，这里先保存提醒设置。",
+      time: nowText(),
+    });
+    await renderRecords("sleep");
+  });
 }
 
 function switchPage(page) {
   document.querySelectorAll(".nav-item").forEach((button) => button.classList.toggle("active", button.dataset.page === page));
   document.querySelectorAll(".page").forEach((view) => view.classList.toggle("active", view.dataset.view === page));
   document.querySelector("#sectionTitle").textContent = pageNames[page];
-  document.querySelector("#pageTitle").textContent = pageNames[page];
+  document.querySelector("#pageTitle").textContent = page === "settings" ? "七夜的工作台" : pageNames[page];
   localStorage.setItem(key("activePage"), page);
-  if (page === "stats") {
-    renderStats();
-  } else {
-    renderRecords(page);
-  }
+  if (page === "checkin") renderCheckinTasks();
+  else if (page !== "settings") renderRecords(page);
 }
-
-document.querySelectorAll("[data-save]").forEach((box) => {
-  const boxKey = key(box.dataset.save);
-  box.checked = localStorage.getItem(boxKey) === "1";
-  box.addEventListener("change", () => localStorage.setItem(boxKey, box.checked ? "1" : "0"));
-});
 
 document.querySelectorAll(".nav-item").forEach((item) => {
   item.addEventListener("click", () => switchPage(item.dataset.page));
@@ -206,7 +314,6 @@ document.querySelectorAll("[data-form]").forEach((form) => {
       meta: String(data.get("meta") || "").trim(),
       note: String(data.get("note") || "").trim(),
       time: nowText(),
-    createdAt: new Date().toISOString(),
     };
     try {
       await addRecord(page, record);
@@ -227,6 +334,13 @@ document.querySelectorAll("[data-form]").forEach((form) => {
 
 document.querySelector("#clearPage").addEventListener("click", async () => {
   const page = localStorage.getItem(key("activePage")) || "checkin";
+  if (page === "settings") return;
+  if (page === "checkin") {
+    if (!confirm("清空今天的打卡完成状态？习惯本身会保留。")) return;
+    localStorage.removeItem(key("checkinDone:" + todayKey()));
+    renderCheckinTasks();
+    return;
+  }
   if (!confirm(`清空「${pageNames[page]}」的记录？`)) return;
   await clearRecords(page);
   await renderRecords(page);
@@ -234,6 +348,8 @@ document.querySelector("#clearPage").addEventListener("click", async () => {
 
 document.querySelector("#exportData").addEventListener("click", async () => {
   const data = Object.fromEntries(recordPages.map((page) => [pageNames[page], readLocalRecords(page)]));
+  data[pageNames.checkin] = { tasks: loadCheckinTasks(), todayDone: loadCheckinDone() };
+  data["主题"] = JSON.parse(localStorage.getItem(key("theme")) || "{}");
   const text = JSON.stringify(data, null, 2);
   try {
     await navigator.clipboard.writeText(text);
@@ -243,256 +359,9 @@ document.querySelector("#exportData").addEventListener("click", async () => {
   }
 });
 
-const moneyCategories = {
-  消费: [
-    ["三餐", "🍴"], ["零食", "🥡"], ["衣服", "👕"], ["交通", "🚌"],
-    ["旅行", "🏝️"], ["孩子", "🧒"], ["宠物", "🐾"], ["话费网费", "☎️"],
-    ["烟酒", "🍺"], ["学习", "📖"], ["日用品", "🧻"], ["住房", "🏠"],
-    ["美妆", "💄"], ["医疗", "➕"], ["发红包", "🧧"], ["汽车/加油", "⛽"],
-    ["娱乐", "🎮"], ["请客送礼", "🎂"], ["电器数码", "📷"], ["运动", "🏃"], ["其它", "▦"]
-  ],
-  收入: [
-    ["工资", "💰"], ["生活费", "💳"], ["收红包", "🧧"], ["外快", "👤"], ["股票基金", "📈"], ["其它", "▦"]
-  ]
-};
-let moneyKind = "消费";
-let moneyCategory = "三餐";
-let moneyAmountText = "";
-
-function formatMoneyAmount() {
-  return moneyAmountText || "0.0";
-}
-
-function renderMoneyAmount() {
-  const amount = document.querySelector("#moneyAmount");
-  if (amount) amount.textContent = formatMoneyAmount();
-}
-
-function renderMoneyCategories() {
-  const grid = document.querySelector("#moneyCategoryGrid");
-  if (!grid) return;
-  grid.innerHTML = "";
-  moneyCategories[moneyKind].forEach(([name, icon]) => {
-    const button = document.createElement("button");
-    button.className = `money-category ${name === moneyCategory ? "active" : ""}`.trim();
-    button.type = "button";
-    button.innerHTML = '<span class="money-icon"></span><span class="money-label"></span>';
-    button.querySelector(".money-icon").textContent = icon;
-    button.querySelector(".money-label").textContent = name;
-    button.addEventListener("click", () => {
-      moneyCategory = name;
-      renderMoneyCategories();
-    });
-    grid.append(button);
-  });
-}
-
-function setMoneyKind(kind) {
-  moneyKind = kind;
-  moneyCategory = moneyCategories[kind][0][0];
-  document.querySelectorAll(".money-tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.moneyKind === kind));
-  const panel = document.querySelector(".money-panel");
-  if (panel) panel.classList.toggle("income", kind === "收入");
-  renderMoneyAmount();
-  renderMoneyCategories();
-}
-
-function pressMoneyKey(value) {
-  if (/^\d$/.test(value)) {
-    if (moneyAmountText === "0") moneyAmountText = value;
-    else moneyAmountText += value;
-  } else if (value === "." && !moneyAmountText.includes(".")) {
-    moneyAmountText = moneyAmountText ? moneyAmountText + "." : "0.";
-  } else if (value === "back") {
-    moneyAmountText = moneyAmountText.slice(0, -1);
-  } else if (value === "again") {
-    moneyAmountText = "";
-    const note = document.querySelector("#moneyNote");
-    if (note) note.value = "";
-  } else if (value === "minus" && moneyAmountText) {
-    moneyAmountText = moneyAmountText.startsWith("-") ? moneyAmountText.slice(1) : "-" + moneyAmountText;
-  }
-  if (moneyAmountText.length > 10) moneyAmountText = moneyAmountText.slice(0, 10);
-  renderMoneyAmount();
-}
-
-async function saveMoneyEntry() {
-  const amount = Math.abs(Number(moneyAmountText));
-  if (!amount) {
-    alert("请输入金额");
-    return;
-  }
-  const note = document.querySelector("#moneyNote");
-  const record = {
-    title: moneyCategory,
-    group: moneyKind,
-    meta: amount.toFixed(2),
-    note: note ? note.value.trim() : "",
-    time: nowText(),
-    createdAt: new Date().toISOString(),
-  };
-  try {
-    await addRecord("money", record);
-    moneyAmountText = "";
-    if (note) note.value = "";
-    renderMoneyAmount();
-    await renderRecords("money");
-  } catch (error) {
-    cloudEnabled = false;
-    const records = readLocalRecords("money");
-    records.unshift(record);
-    writeLocalRecords("money", records);
-    setCloudStatus("云端保存失败，已保存到本地缓存", "error");
-    moneyAmountText = "";
-    if (note) note.value = "";
-    renderMoneyAmount();
-    await renderRecords("money");
-  }
-}
-
-function setupMoneyBook() {
-  document.querySelectorAll(".money-tab").forEach((tab) => {
-    tab.addEventListener("click", () => setMoneyKind(tab.dataset.moneyKind));
-  });
-  document.querySelectorAll("#moneyKeypad [data-key]").forEach((button) => {
-    button.addEventListener("click", () => pressMoneyKey(button.dataset.key));
-  });
-  const save = document.querySelector("#moneySave");
-  if (save) save.addEventListener("click", saveMoneyEntry);
-  setMoneyKind("消费");
-}
-
-function moneyDate(record) {
-  if (record.createdAt) return new Date(record.createdAt);
-  const fallback = new Date();
-  if (record.time && record.time.includes("/")) {
-    const datePart = record.time.split(" ")[0];
-    const [month, day] = datePart.split("/").map(Number);
-    if (month && day) return new Date(fallback.getFullYear(), month - 1, day);
-  }
-  return fallback;
-}
-
-function isExpenseRecord(record) {
-  return record.group === "消费" || record.group === "支出";
-}
-
-function isIncomeRecord(record) {
-  return record.group === "收入";
-}
-
-function moneyAmount(record) {
-  return Number(record.meta || 0) || 0;
-}
-
-function sameMonth(date, baseDate) {
-  return date.getFullYear() === baseDate.getFullYear() && date.getMonth() === baseDate.getMonth();
-}
-
-function dateKey(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function shortDate(date) {
-  return `${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")}`;
-}
-
-function weekdayName(date) {
-  return ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()];
-}
-
-async function renderStats() {
-  let records = [];
-  try {
-    records = await loadRecords("money");
-    setCloudStatus("云端同步已连接", "online");
-  } catch (error) {
-    cloudEnabled = false;
-    records = readLocalRecords("money");
-    setCloudStatus("云端未连接，统计使用本地缓存", "error");
-  }
-
-  const now = new Date();
-  const monthRecords = records.filter((record) => sameMonth(moneyDate(record), now));
-  const monthExpense = monthRecords.filter(isExpenseRecord).reduce((sum, item) => sum + moneyAmount(item), 0);
-  const monthIncome = monthRecords.filter(isIncomeRecord).reduce((sum, item) => sum + moneyAmount(item), 0);
-  const balance = monthIncome - monthExpense;
-
-  document.querySelector("#statsMonth").textContent = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  document.querySelector("#statsExpense").textContent = monthExpense.toFixed(2);
-  document.querySelector("#statsIncome").textContent = monthIncome.toFixed(2);
-  document.querySelector("#statsBalance").textContent = balance.toFixed(2);
-
-  renderStatsBars(records, now);
-  renderStatsDays(records);
-}
-
-function renderStatsBars(records, now) {
-  const chart = document.querySelector("#statsBarChart");
-  if (!chart) return;
-  const days = Array.from({ length: 15 }, (_, index) => {
-    const date = new Date(now);
-    date.setDate(now.getDate() - 14 + index);
-    return date;
-  });
-  const values = days.map((day) => records.filter((record) => isExpenseRecord(record) && dateKey(moneyDate(record)) === dateKey(day)).reduce((sum, item) => sum + moneyAmount(item), 0));
-  const max = Math.max(...values, 1);
-  const total = values.reduce((sum, value) => sum + value, 0);
-  document.querySelector("#stats15Total").textContent = `总计：${total.toFixed(2)}`;
-  chart.innerHTML = "";
-  days.forEach((day, index) => {
-    const bar = document.createElement("div");
-    bar.className = "bar-item";
-    bar.innerHTML = '<div class="bar-track"><span></span></div><small></small>';
-    bar.querySelector("span").style.height = `${Math.max(4, Math.round((values[index] / max) * 84))}px`;
-    bar.querySelector("small").textContent = String(day.getDate());
-    chart.append(bar);
-  });
-}
-
-function renderStatsDays(records) {
-  const list = document.querySelector("#statsDayList");
-  if (!list) return;
-  const recentExpenses = records
-    .filter(isExpenseRecord)
-    .map((record) => ({ ...record, date: moneyDate(record) }))
-    .sort((a, b) => b.date - a.date)
-    .slice(0, 30);
-  const groups = new Map();
-  recentExpenses.forEach((record) => {
-    const key = dateKey(record.date);
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(record);
-  });
-  list.innerHTML = "";
-  if (!groups.size) {
-    list.innerHTML = '<article class="stats-day-card"><p class="empty">还没有消费记录。</p></article>';
-    return;
-  }
-  [...groups.values()].forEach((items) => {
-    const date = items[0].date;
-    const total = items.reduce((sum, item) => sum + moneyAmount(item), 0);
-    const card = document.createElement("article");
-    card.className = "stats-day-card";
-    card.innerHTML = `
-      <div class="stats-day-head"><strong></strong><span></span></div>
-      <div class="stats-day-items"></div>
-    `;
-    card.querySelector("strong").textContent = `${shortDate(date)} ${weekdayName(date)}`;
-    card.querySelector("span").textContent = `消:¥${total.toFixed(2)}`;
-    const wrap = card.querySelector(".stats-day-items");
-    items.forEach((item) => {
-      const row = document.createElement("div");
-      row.className = "stats-day-row";
-      row.innerHTML = '<span></span><b></b>';
-      row.querySelector("span").textContent = item.title;
-      row.querySelector("b").textContent = `-${moneyAmount(item).toFixed(2)}`;
-      wrap.append(row);
-    });
-    list.append(card);
-  });
-}
-setupMoneyBook();
+setupTheme();
+setupCheckinTasks();
+setupSleepSettings();
 updateClock();
 setInterval(updateClock, 30000);
 switchPage(localStorage.getItem(key("activePage")) || "checkin");
@@ -502,6 +371,3 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js");
   });
 }
-
-
-
