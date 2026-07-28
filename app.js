@@ -9,6 +9,7 @@ const pageNames = {
   review: "每日复盘",
   chat: "AI chat",
   money: "记账日记",
+  stats: "统计",
 };
 const recordPages = ["checkin", "food", "news", "review", "chat", "money"];
 let cloudEnabled = true;
@@ -58,6 +59,7 @@ function toAppRecord(row) {
     meta: row.meta || "",
     note: row.note || "",
     time: nowText(new Date(row.created_at)),
+    createdAt: row.created_at,
   };
 }
 
@@ -174,7 +176,11 @@ function switchPage(page) {
   document.querySelector("#sectionTitle").textContent = pageNames[page];
   document.querySelector("#pageTitle").textContent = pageNames[page];
   localStorage.setItem(key("activePage"), page);
-  renderRecords(page);
+  if (page === "stats") {
+    renderStats();
+  } else {
+    renderRecords(page);
+  }
 }
 
 document.querySelectorAll("[data-save]").forEach((box) => {
@@ -200,6 +206,7 @@ document.querySelectorAll("[data-form]").forEach((form) => {
       meta: String(data.get("meta") || "").trim(),
       note: String(data.get("note") || "").trim(),
       time: nowText(),
+    createdAt: new Date().toISOString(),
     };
     try {
       await addRecord(page, record);
@@ -236,6 +243,256 @@ document.querySelector("#exportData").addEventListener("click", async () => {
   }
 });
 
+const moneyCategories = {
+  消费: [
+    ["三餐", "🍴"], ["零食", "🥡"], ["衣服", "👕"], ["交通", "🚌"],
+    ["旅行", "🏝️"], ["孩子", "🧒"], ["宠物", "🐾"], ["话费网费", "☎️"],
+    ["烟酒", "🍺"], ["学习", "📖"], ["日用品", "🧻"], ["住房", "🏠"],
+    ["美妆", "💄"], ["医疗", "➕"], ["发红包", "🧧"], ["汽车/加油", "⛽"],
+    ["娱乐", "🎮"], ["请客送礼", "🎂"], ["电器数码", "📷"], ["运动", "🏃"], ["其它", "▦"]
+  ],
+  收入: [
+    ["工资", "💰"], ["生活费", "💳"], ["收红包", "🧧"], ["外快", "👤"], ["股票基金", "📈"], ["其它", "▦"]
+  ]
+};
+let moneyKind = "消费";
+let moneyCategory = "三餐";
+let moneyAmountText = "";
+
+function formatMoneyAmount() {
+  return moneyAmountText || "0.0";
+}
+
+function renderMoneyAmount() {
+  const amount = document.querySelector("#moneyAmount");
+  if (amount) amount.textContent = formatMoneyAmount();
+}
+
+function renderMoneyCategories() {
+  const grid = document.querySelector("#moneyCategoryGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  moneyCategories[moneyKind].forEach(([name, icon]) => {
+    const button = document.createElement("button");
+    button.className = `money-category ${name === moneyCategory ? "active" : ""}`.trim();
+    button.type = "button";
+    button.innerHTML = '<span class="money-icon"></span><span class="money-label"></span>';
+    button.querySelector(".money-icon").textContent = icon;
+    button.querySelector(".money-label").textContent = name;
+    button.addEventListener("click", () => {
+      moneyCategory = name;
+      renderMoneyCategories();
+    });
+    grid.append(button);
+  });
+}
+
+function setMoneyKind(kind) {
+  moneyKind = kind;
+  moneyCategory = moneyCategories[kind][0][0];
+  document.querySelectorAll(".money-tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.moneyKind === kind));
+  const panel = document.querySelector(".money-panel");
+  if (panel) panel.classList.toggle("income", kind === "收入");
+  renderMoneyAmount();
+  renderMoneyCategories();
+}
+
+function pressMoneyKey(value) {
+  if (/^\d$/.test(value)) {
+    if (moneyAmountText === "0") moneyAmountText = value;
+    else moneyAmountText += value;
+  } else if (value === "." && !moneyAmountText.includes(".")) {
+    moneyAmountText = moneyAmountText ? moneyAmountText + "." : "0.";
+  } else if (value === "back") {
+    moneyAmountText = moneyAmountText.slice(0, -1);
+  } else if (value === "again") {
+    moneyAmountText = "";
+    const note = document.querySelector("#moneyNote");
+    if (note) note.value = "";
+  } else if (value === "minus" && moneyAmountText) {
+    moneyAmountText = moneyAmountText.startsWith("-") ? moneyAmountText.slice(1) : "-" + moneyAmountText;
+  }
+  if (moneyAmountText.length > 10) moneyAmountText = moneyAmountText.slice(0, 10);
+  renderMoneyAmount();
+}
+
+async function saveMoneyEntry() {
+  const amount = Math.abs(Number(moneyAmountText));
+  if (!amount) {
+    alert("请输入金额");
+    return;
+  }
+  const note = document.querySelector("#moneyNote");
+  const record = {
+    title: moneyCategory,
+    group: moneyKind,
+    meta: amount.toFixed(2),
+    note: note ? note.value.trim() : "",
+    time: nowText(),
+    createdAt: new Date().toISOString(),
+  };
+  try {
+    await addRecord("money", record);
+    moneyAmountText = "";
+    if (note) note.value = "";
+    renderMoneyAmount();
+    await renderRecords("money");
+  } catch (error) {
+    cloudEnabled = false;
+    const records = readLocalRecords("money");
+    records.unshift(record);
+    writeLocalRecords("money", records);
+    setCloudStatus("云端保存失败，已保存到本地缓存", "error");
+    moneyAmountText = "";
+    if (note) note.value = "";
+    renderMoneyAmount();
+    await renderRecords("money");
+  }
+}
+
+function setupMoneyBook() {
+  document.querySelectorAll(".money-tab").forEach((tab) => {
+    tab.addEventListener("click", () => setMoneyKind(tab.dataset.moneyKind));
+  });
+  document.querySelectorAll("#moneyKeypad [data-key]").forEach((button) => {
+    button.addEventListener("click", () => pressMoneyKey(button.dataset.key));
+  });
+  const save = document.querySelector("#moneySave");
+  if (save) save.addEventListener("click", saveMoneyEntry);
+  setMoneyKind("消费");
+}
+
+function moneyDate(record) {
+  if (record.createdAt) return new Date(record.createdAt);
+  const fallback = new Date();
+  if (record.time && record.time.includes("/")) {
+    const datePart = record.time.split(" ")[0];
+    const [month, day] = datePart.split("/").map(Number);
+    if (month && day) return new Date(fallback.getFullYear(), month - 1, day);
+  }
+  return fallback;
+}
+
+function isExpenseRecord(record) {
+  return record.group === "消费" || record.group === "支出";
+}
+
+function isIncomeRecord(record) {
+  return record.group === "收入";
+}
+
+function moneyAmount(record) {
+  return Number(record.meta || 0) || 0;
+}
+
+function sameMonth(date, baseDate) {
+  return date.getFullYear() === baseDate.getFullYear() && date.getMonth() === baseDate.getMonth();
+}
+
+function dateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function shortDate(date) {
+  return `${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function weekdayName(date) {
+  return ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()];
+}
+
+async function renderStats() {
+  let records = [];
+  try {
+    records = await loadRecords("money");
+    setCloudStatus("云端同步已连接", "online");
+  } catch (error) {
+    cloudEnabled = false;
+    records = readLocalRecords("money");
+    setCloudStatus("云端未连接，统计使用本地缓存", "error");
+  }
+
+  const now = new Date();
+  const monthRecords = records.filter((record) => sameMonth(moneyDate(record), now));
+  const monthExpense = monthRecords.filter(isExpenseRecord).reduce((sum, item) => sum + moneyAmount(item), 0);
+  const monthIncome = monthRecords.filter(isIncomeRecord).reduce((sum, item) => sum + moneyAmount(item), 0);
+  const balance = monthIncome - monthExpense;
+
+  document.querySelector("#statsMonth").textContent = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  document.querySelector("#statsExpense").textContent = monthExpense.toFixed(2);
+  document.querySelector("#statsIncome").textContent = monthIncome.toFixed(2);
+  document.querySelector("#statsBalance").textContent = balance.toFixed(2);
+
+  renderStatsBars(records, now);
+  renderStatsDays(records);
+}
+
+function renderStatsBars(records, now) {
+  const chart = document.querySelector("#statsBarChart");
+  if (!chart) return;
+  const days = Array.from({ length: 15 }, (_, index) => {
+    const date = new Date(now);
+    date.setDate(now.getDate() - 14 + index);
+    return date;
+  });
+  const values = days.map((day) => records.filter((record) => isExpenseRecord(record) && dateKey(moneyDate(record)) === dateKey(day)).reduce((sum, item) => sum + moneyAmount(item), 0));
+  const max = Math.max(...values, 1);
+  const total = values.reduce((sum, value) => sum + value, 0);
+  document.querySelector("#stats15Total").textContent = `总计：${total.toFixed(2)}`;
+  chart.innerHTML = "";
+  days.forEach((day, index) => {
+    const bar = document.createElement("div");
+    bar.className = "bar-item";
+    bar.innerHTML = '<div class="bar-track"><span></span></div><small></small>';
+    bar.querySelector("span").style.height = `${Math.max(4, Math.round((values[index] / max) * 84))}px`;
+    bar.querySelector("small").textContent = String(day.getDate());
+    chart.append(bar);
+  });
+}
+
+function renderStatsDays(records) {
+  const list = document.querySelector("#statsDayList");
+  if (!list) return;
+  const recentExpenses = records
+    .filter(isExpenseRecord)
+    .map((record) => ({ ...record, date: moneyDate(record) }))
+    .sort((a, b) => b.date - a.date)
+    .slice(0, 30);
+  const groups = new Map();
+  recentExpenses.forEach((record) => {
+    const key = dateKey(record.date);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(record);
+  });
+  list.innerHTML = "";
+  if (!groups.size) {
+    list.innerHTML = '<article class="stats-day-card"><p class="empty">还没有消费记录。</p></article>';
+    return;
+  }
+  [...groups.values()].forEach((items) => {
+    const date = items[0].date;
+    const total = items.reduce((sum, item) => sum + moneyAmount(item), 0);
+    const card = document.createElement("article");
+    card.className = "stats-day-card";
+    card.innerHTML = `
+      <div class="stats-day-head"><strong></strong><span></span></div>
+      <div class="stats-day-items"></div>
+    `;
+    card.querySelector("strong").textContent = `${shortDate(date)} ${weekdayName(date)}`;
+    card.querySelector("span").textContent = `消:¥${total.toFixed(2)}`;
+    const wrap = card.querySelector(".stats-day-items");
+    items.forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "stats-day-row";
+      row.innerHTML = '<span></span><b></b>';
+      row.querySelector("span").textContent = item.title;
+      row.querySelector("b").textContent = `-${moneyAmount(item).toFixed(2)}`;
+      wrap.append(row);
+    });
+    list.append(card);
+  });
+}
+setupMoneyBook();
 updateClock();
 setInterval(updateClock, 30000);
 switchPage(localStorage.getItem(key("activePage")) || "checkin");
@@ -245,3 +502,6 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js");
   });
 }
+
+
+

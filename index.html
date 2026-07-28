@@ -35,6 +35,7 @@
         <button class="nav-item" data-page="review"><span>📝</span><small>每日复盘</small></button>
         <button class="nav-item" data-page="chat"><span>🤖</span><small>AI chat</small></button>
         <button class="nav-item" data-page="money"><span>💰</span><small>记账日记</small></button>
+        <button class="nav-item" data-page="stats"><span>📊</span><small>统计</small></button>
       </aside>
 
       <section class="content">
@@ -113,21 +114,79 @@
           <article class="card"><h2>对话记录</h2><div class="record-list" data-list="chat"></div></article>
         </section>
 
-        <section class="page" data-view="money">
-          <article class="card">
-            <h2>记账日记</h2>
-            <form class="stack-form" data-form="money">
-              <select name="meal" required>
-                <option value="支出">支出</option>
-                <option value="收入">收入</option>
-              </select>
-              <input name="title" type="text" placeholder="事项：午餐、交通、工资等" required>
-              <input name="meta" type="number" step="0.01" placeholder="金额">
-              <textarea name="note" rows="3" placeholder="备注：支付方式、是否必要"></textarea>
-              <button type="submit">保存账目</button>
-            </form>
+        <section class="page" data-view="stats">
+          <article class="stats-hero">
+            <div class="stats-hero-top">
+              <button type="button" class="stats-menu">☰</button>
+              <strong id="statsMonth">2026-07</strong>
+              <span>📊</span>
+            </div>
+            <div class="stats-main-number">
+              <span>月消费</span>
+              <strong id="statsExpense">0.00</strong>
+            </div>
+            <div class="stats-summary-row">
+              <span>月收入 <b id="statsIncome">0.00</b></span>
+              <span>本月结余 <b id="statsBalance">0.00</b></span>
+            </div>
           </article>
-          <article class="card"><h2>账目记录</h2><div class="money-total" id="moneyTotal">合计：0</div><div class="record-list" data-list="money"></div></article>
+
+          <article class="card stats-card">
+            <div class="stats-card-head">
+              <div><h2>最近15日消费</h2><p id="stats15Total">总计：0.00</p></div>
+              <span>•••</span>
+            </div>
+            <div class="bar-chart" id="statsBarChart"></div>
+          </article>
+
+          <section class="stats-day-list" id="statsDayList"></section>
+        </section>
+        <section class="page" data-view="money">
+          <article class="money-panel">
+            <div class="money-tabs" role="tablist" aria-label="记账类型">
+              <button class="money-tab active" type="button" data-money-kind="消费">消费</button>
+              <button class="money-tab" type="button" data-money-kind="收入">收入</button>
+            </div>
+
+            <div class="money-category-grid" id="moneyCategoryGrid"></div>
+
+            <div class="money-entry">
+              <input id="moneyNote" type="text" placeholder="点此输入备注..." autocomplete="off">
+              <output id="moneyAmount" class="money-amount">0.0</output>
+            </div>
+
+            <div class="money-chips">
+              <button type="button">账户</button>
+              <button type="button">今天</button>
+              <button type="button">图片</button>
+              <button type="button">⚑</button>
+            </div>
+
+            <div class="money-keypad" id="moneyKeypad">
+              <button type="button" data-key="1">1</button>
+              <button type="button" data-key="2">2</button>
+              <button type="button" data-key="3">3</button>
+              <button type="button" data-key="back">⌫</button>
+              <button type="button" data-key="4">4</button>
+              <button type="button" data-key="5">5</button>
+              <button type="button" data-key="6">6</button>
+              <button type="button" data-key="minus">-</button>
+              <button type="button" data-key="7">7</button>
+              <button type="button" data-key="8">8</button>
+              <button type="button" data-key="9">9</button>
+              <button type="button" data-key="plus">+</button>
+              <button type="button" data-key="again">再记</button>
+              <button type="button" data-key="0">0</button>
+              <button type="button" data-key=".">.</button>
+              <button class="money-save" type="button" id="moneySave">保存</button>
+            </div>
+          </article>
+
+          <article class="card">
+            <h2>账目记录</h2>
+            <div class="money-total" id="moneyTotal">合计：0</div>
+            <div class="record-list" data-list="money"></div>
+          </article>
         </section>
       </section>
     </section>
@@ -136,5 +195,8 @@
   <script src="./app.js"></script>
 </body>
 </html>
+
+
+
 
 
