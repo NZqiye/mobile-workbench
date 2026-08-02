@@ -64,6 +64,7 @@ const stockDefaultAssets = "sh600584,sh603629,sh688507";
 const defaultAssets = "hf_GC,sh603629,sh688507";
 const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
 const defaultChineseHolidaysSeedKey = "defaultChineseHolidays2026Seeded";
+const marketCacheVersion = 2;
 const defaultWaterTarget = 2000;
 const cupSize = 250;
 const foodCalories = [
@@ -1005,6 +1006,7 @@ function NewsBoard() {
   const [category, setCategory] = useState("politics");
   const [news, setNews] = useState([]);
   const [status, setStatus] = useState("正在读取新闻...");
+  const [error, setError] = useState("");
 
   async function loadNews(nextCategory = category, force = false) {
     const cacheKey = `newsCache:${nextCategory}`;
@@ -1020,14 +1022,17 @@ function NewsBoard() {
       const response = await fetch(`/api/news?category=${encodeURIComponent(nextCategory)}`);
       const data = await response.json();
       const nextNews = Array.isArray(data.news) ? data.news : [];
+      setError(data.error || "");
       setNews(nextNews);
-      writeStorage(cacheKey, { savedAt: Date.now(), news: nextNews });
+      if (nextNews.length) writeStorage(cacheKey, { savedAt: Date.now(), news: nextNews });
       setStatus(`${data.source || "免费新闻源"} · ${nowText()}`);
     } catch {
       if (cache?.news) {
+        setError("");
         setNews(cache.news);
         setStatus(`新闻更新失败，显示缓存 · ${nowText(new Date(cache.savedAt))}`);
       } else {
+        setError("新闻接口暂时不可用，请稍后刷新。");
         setNews([]);
         setStatus("新闻暂时不可用");
       }
@@ -1065,6 +1070,7 @@ function NewsBoard() {
           <button className="chip-button" type="button" onClick={() => loadNews(category, true)}>刷新</button>
         </div>
         <div className="news-list">
+          {error && <p className="news-error">{error}</p>}
           {news.length === 0 && <p className="empty">还没有新闻数据，请稍后刷新。</p>}
           {news.map((item, index) => (
             <a className="news-row" href={item.url || "#"} target="_blank" rel="noreferrer" key={`${item.title}-${index}`}>
@@ -1117,7 +1123,7 @@ function MarketBoard({ compact = false }) {
       localStorage.removeItem(key("marketCache"));
     }
     const cache = readStorage("marketCache", null);
-    if (!force && cache && Date.now() - cache.savedAt < 60000) {
+    if (!force && cache?.version === marketCacheVersion && Date.now() - cache.savedAt < 60000) {
       setQuotes(cache.quotes);
       setStatus(`缓存行情 · ${nowText(new Date(cache.savedAt))}`);
       return;
@@ -1129,7 +1135,7 @@ function MarketBoard({ compact = false }) {
       const data = await response.json();
       const nextQuotes = Array.isArray(data.quotes) ? data.quotes : [];
       setQuotes(nextQuotes);
-      writeStorage("marketCache", { savedAt: Date.now(), quotes: nextQuotes });
+      writeStorage("marketCache", { version: marketCacheVersion, savedAt: Date.now(), quotes: nextQuotes });
       setStatus(`${nextQuotes.some((quote) => quote.source === "示例") ? "示例行情" : "行情已更新"} · ${nowText()}`);
     } catch {
       if (cache?.quotes) {
@@ -1212,6 +1218,11 @@ function itemMatchesQuery(item, query, fields) {
 function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onToggleHabit, onDeleteHabit, onAddTask, onToggleTask, onDeleteTask, onAddAnniversary, onDeleteAnniversary }) {
   const unfinishedTasks = tasks.filter((task) => task.status !== "已完成").slice(0, 8);
   const sortedAnniversaries = [...anniversaries].sort((a, b) => (anniversaryMeta(a).nextDays ?? 99999) - (anniversaryMeta(b).nextDays ?? 99999));
+  const isElapsedThisYear = (item) => {
+    const meta = anniversaryMeta(item);
+    return meta.nextDate ? new Date(meta.nextDate).getFullYear() > new Date().getFullYear() : false;
+  };
+  const sortByNextDays = (items) => [...items].sort((a, b) => (anniversaryMeta(a).nextDays ?? 99999) - (anniversaryMeta(b).nextDays ?? 99999));
   const renderAnniversaryCards = (items, type) => (
     <div className="anniversary-grid">
       {items.map((item) => {
@@ -1232,6 +1243,21 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
       })}
     </div>
   );
+  const renderAnniversaryGroup = (items, type, emptyText) => {
+    const activeItems = sortByNextDays(items.filter((item) => !isElapsedThisYear(item)));
+    const elapsedItems = sortByNextDays(items.filter(isElapsedThisYear));
+    return (
+      <>
+        {activeItems.length === 0 ? <p className="anniversary-empty">{emptyText}</p> : renderAnniversaryCards(activeItems, type)}
+        {elapsedItems.length > 0 && (
+          <details className="anniversary-archive">
+            <summary>已过日期 {elapsedItems.length} 个</summary>
+            {renderAnniversaryCards(elapsedItems, type)}
+          </details>
+        )}
+      </>
+    );
+  };
 
   return (
     <section className="arrange-shell">
@@ -1335,13 +1361,13 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
                             <strong>{group.label}</strong>
                             <span>{birthdayItems.length}</span>
                           </div>
-                          {birthdayItems.length === 0 ? <p className="anniversary-empty">暂无{group.label}</p> : renderAnniversaryCards(birthdayItems, type)}
+                          {birthdayItems.length === 0 ? <p className="anniversary-empty">暂无{group.label}</p> : renderAnniversaryGroup(birthdayItems, type, `暂无未到的${group.label}`)}
                         </section>
                       );
                     })}
                   </div>
                 ) : (
-                  renderAnniversaryCards(items, type)
+                  renderAnniversaryGroup(items, type, `暂无未到的${type.label}`)
                 )}
               </section>
             );
