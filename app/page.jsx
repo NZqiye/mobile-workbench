@@ -556,7 +556,7 @@ function mergeCloudWithLocal(cloud) {
   return {
     notes: mergeById(readStorage("notes", []), cloud.notes),
     plans: mergeById(readStorage("plans", []), cloud.plans),
-    consultations: mergeById(readStorage("consultations", []), cloud.consultations),
+    consultations: dedupeConsultations(mergeById(readStorage("consultations", []), cloud.consultations)),
     dietRecords: mergeById(readStorage("dietRecords", []), cloud.dietRecords),
     anniversaries: mergeById(readStorage("anniversaries", []), cloud.anniversaries),
     waterTarget: Number(cloud.waterTarget || readStorage("waterTarget", defaultWaterTarget)) || defaultWaterTarget,
@@ -1124,6 +1124,21 @@ function normalizeMarketQuote(quote) {
   const name = String(quote.name || "");
   const brokenName = !name || name.includes("�") || /^[\d.]+$/.test(name);
   return { ...quote, name: mappedName || (brokenName ? quote.symbol : name) };
+}
+
+function consultationKey(item) {
+  if (item.tmdbId) return `tmdb:${item.tmdbId}`;
+  return `title:${String(item.title || "").trim().toLowerCase()}`;
+}
+
+function dedupeConsultations(items) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = consultationKey(item);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function MarketBoard({ compact = false }) {
@@ -2011,8 +2026,9 @@ export default function Workbench() {
       writeStorage("plans", cloud.plans);
     }
     if (Array.isArray(cloud.consultations)) {
-      setConsultations(cloud.consultations);
-      writeStorage("consultations", cloud.consultations);
+      const nextConsultations = dedupeConsultations(cloud.consultations);
+      setConsultations(nextConsultations);
+      writeStorage("consultations", nextConsultations);
     }
     if (Array.isArray(cloud.dietRecords)) {
       setDietRecords(cloud.dietRecords);
@@ -2093,7 +2109,9 @@ export default function Workbench() {
     setActivePage(pages.some((page) => page.id === savedPage) ? savedPage : "today");
     setPlans(readStorage("plans", []));
     setNotes(readStorage("notes", []));
-    setConsultations(readStorage("consultations", []));
+    const nextConsultations = dedupeConsultations(readStorage("consultations", []));
+    setConsultations(nextConsultations);
+    writeStorage("consultations", nextConsultations);
     setDietRecords(readStorage("dietRecords", []));
     let nextAnniversaries = readStorage("anniversaries", []);
     if (localStorage.getItem(key(defaultChineseHolidaysSeedKey)) !== "true") {
@@ -2190,8 +2208,9 @@ export default function Workbench() {
   async function importTmdb(item) {
     setTmdbStatus(`正在读取《${item.title}》的 TMDB 详情...`);
     let details = {};
+    let watchlistStatus = "";
+    const mediaType = item.tmdbMediaType || (item.type === "电影" ? "movie" : "tv");
     try {
-      const mediaType = item.tmdbMediaType || (item.type === "电影" ? "movie" : "tv");
       const response = await fetch(`/api/tmdb/details?id=${encodeURIComponent(item.tmdbId)}&type=${encodeURIComponent(mediaType)}`);
       const text = await response.text();
       const data = text ? JSON.parse(text) : {};
@@ -2199,6 +2218,21 @@ export default function Workbench() {
       details = data;
     } catch (error) {
       setTmdbStatus(`详情读取失败，已按搜索结果加入：${error.message || "请稍后重试"}`);
+    }
+    if (item.tmdbId) {
+      try {
+        const response = await fetch("/api/tmdb/watchlist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mediaId: item.tmdbId, mediaType }),
+        });
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : {};
+        if (!response.ok) throw new Error(data.error || "写入 TMDB 片单失败");
+        watchlistStatus = " · 已同步 TMDB 片单";
+      } catch (error) {
+        watchlistStatus = ` · TMDB 片单未同步：${error.message || "请稍后重试"}`;
+      }
     }
     const mergedItem = { ...item, ...details };
     const nextItem = {
@@ -2213,10 +2247,10 @@ export default function Workbench() {
       totalEpisodes: mergedItem.totalEpisodes || "",
       time: nowText(),
     };
-    const next = [nextItem, ...consultations];
+    const next = dedupeConsultations([nextItem, ...consultations]);
     setConsultations(next);
     persist("consultations", next);
-    setTmdbStatus(`已加入：${mergedItem.title || item.title}${nextItem.nextAirDate ? ` · 下次 ${nextItem.nextAirDate} 更新第 ${nextItem.updateEpisodes || "--"} 集` : ""}`);
+    setTmdbStatus(`已加入：${mergedItem.title || item.title}${nextItem.nextAirDate ? ` · 下次 ${nextItem.nextAirDate} 更新第 ${nextItem.updateEpisodes || "--"} 集` : ""}${watchlistStatus}`);
   }
 
   async function syncTmdbWatchlist() {
@@ -2227,9 +2261,9 @@ export default function Workbench() {
       const data = text ? JSON.parse(text) : {};
       if (!response.ok) throw new Error(data.error || "TMDB 片单同步失败");
       const incoming = Array.isArray(data.items) ? data.items : [];
-      const existingKeys = new Set(consultations.map((item) => `${item.tmdbMediaType || item.type}:${item.tmdbId || item.title}`));
+      const existingKeys = new Set(consultations.map(consultationKey));
       const nextItems = incoming
-        .filter((item) => !existingKeys.has(`${item.tmdbMediaType || item.type}:${item.tmdbId || item.title}`))
+        .filter((item) => !existingKeys.has(consultationKey(item)))
         .map((item) => ({
           id: crypto.randomUUID(),
           ...item,
@@ -2243,7 +2277,7 @@ export default function Workbench() {
           time: nowText(),
         }));
       if (nextItems.length) {
-        const next = [...nextItems, ...consultations];
+        const next = dedupeConsultations([...nextItems, ...consultations]);
         setConsultations(next);
         persist("consultations", next);
       }
@@ -2388,9 +2422,9 @@ export default function Workbench() {
   }
 
   function saveConsultation(item) {
-    const next = consultations.some((record) => record.id === item.id)
+    const next = dedupeConsultations(consultations.some((record) => record.id === item.id)
       ? mapItemsById(consultations, item.id, () => item)
-      : [item, ...consultations];
+      : [item, ...consultations]);
     setConsultations(next);
     persist("consultations", next);
   }
@@ -2490,8 +2524,9 @@ export default function Workbench() {
         persist("notes", payload.notes);
       }
       if (Array.isArray(payload.consultations)) {
-        setConsultations(payload.consultations);
-        persist("consultations", payload.consultations);
+        const nextConsultations = dedupeConsultations(payload.consultations);
+        setConsultations(nextConsultations);
+        persist("consultations", nextConsultations);
       }
       if (Array.isArray(payload.dietRecords)) {
         setDietRecords(payload.dietRecords);
