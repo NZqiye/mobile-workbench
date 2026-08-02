@@ -7,11 +7,13 @@ const storagePrefix = "qiyeworkbench:";
 const statePage = "app_state";
 const pages = [
   { id: "today", name: "今日速看", icon: "home" },
+  { id: "consultations", name: "观影记录", icon: "chat" },
+  { id: "market", name: "股市行情", icon: "trend" },
+  { id: "diet", name: "饮食记录", icon: "food" },
+  { id: "wear", name: "穿衣助手", icon: "wear" },
+  { id: "news", name: "时事新闻", icon: "news" },
   { id: "plans", name: "每日安排", icon: "checklist" },
   { id: "notes", name: "灵感记录", icon: "note" },
-  { id: "market", name: "股市行情", icon: "trend" },
-  { id: "calendar", name: "日历行程", icon: "calendar" },
-  { id: "consultations", name: "观影记录", icon: "chat" },
   { id: "settings", name: "设置", icon: "settings" },
 ];
 const pageNames = Object.fromEntries(pages.map((page) => [page.id, page.name]));
@@ -20,7 +22,9 @@ const pageDescriptions = {
   plans: "每日安排、待办事项、复盘跟进",
   notes: "生活记录、灵感、饮食与树洞",
   market: "金价、指数、自选资产观察",
-  calendar: "签到、习惯和每日完成情况",
+  diet: "每日喝水、饮食热量和最近趋势",
+  wear: "江苏无锡天气和今日穿搭推荐",
+  news: "时政、财经、消费新闻每日更新",
   consultations: "观影清单、想法和资料整理",
   settings: "账号同步、备份恢复和自选配置",
 };
@@ -40,8 +44,42 @@ const noteTypes = [
   { value: "idea", label: "灵感" },
 ];
 const consultationStatuses = ["想看的剧", "正在看", "看过的剧", "暂停/弃剧"];
-const defaultAssets = "SGE_AU9999,s_sh000001,s_sz399001,sh600519,sz300750";
+const legacyDefaultAssets = "SGE_AU9999,s_sh000001,s_sz399001,sh600519,sz300750";
+const stockDefaultAssets = "sh600584,sh603629,sh688507";
+const defaultAssets = "hf_GC,sh603629,sh688507";
 const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
+const defaultWaterTarget = 2000;
+const cupSize = 250;
+const foodCalories = [
+  ["鸡蛋", 70],
+  ["牛奶", 150],
+  ["豆浆", 120],
+  ["酸奶", 120],
+  ["米饭", 230],
+  ["粥", 120],
+  ["面条", 350],
+  ["馒头", 220],
+  ["包子", 220],
+  ["面包", 180],
+  ["吐司", 90],
+  ["油条", 250],
+  ["饺子", 420],
+  ["鸡胸肉", 180],
+  ["牛肉", 250],
+  ["猪肉", 300],
+  ["鱼", 180],
+  ["虾", 120],
+  ["豆腐", 120],
+  ["青菜", 60],
+  ["西兰花", 70],
+  ["土豆", 160],
+  ["玉米", 180],
+  ["香蕉", 100],
+  ["苹果", 80],
+  ["橙子", 70],
+  ["咖啡", 20],
+  ["奶茶", 350],
+];
 
 function WorkbenchIcon({ name }) {
   const icons = {
@@ -82,6 +120,33 @@ function WorkbenchIcon({ name }) {
         <path d="M4 18h16" />
         <path d="M6 15l4-5 3 3 5-7" />
         <path d="M15 6h3v3" />
+      </>
+    ),
+    food: (
+      <>
+        <path d="M6 3v7" />
+        <path d="M9 3v7" />
+        <path d="M4.5 10h6" />
+        <path d="M7.5 10v11" />
+        <path d="M16 3c2 1.7 3 4.1 3 7.2V21" />
+        <path d="M16 3v18" />
+      </>
+    ),
+    wear: (
+      <>
+        <path d="M9 4l3 2 3-2 4 3-2.2 3.2V20H7.2V10.2L5 7z" />
+        <path d="M10 5.2c.5 1 1.2 1.5 2 1.5s1.5-.5 2-1.5" />
+        <path d="M7.2 10.2 9 11.5" />
+        <path d="M16.8 10.2 15 11.5" />
+      </>
+    ),
+    news: (
+      <>
+        <path d="M5 5h11v14H5z" />
+        <path d="M16 8h3v10a1 1 0 0 1-1 1h-2z" />
+        <path d="M8 9h5" />
+        <path d="M8 12h5" />
+        <path d="M8 15h3" />
       </>
     ),
     calendar: (
@@ -218,6 +283,31 @@ function AnimeNavIcon({ name }) {
         <path className="anime-ribbon" d="M4.5 10.5 9 7l4 2.6L19 4l1.4 1.5-7.1 6.7L9.1 9.5 5.8 12z" />
       </>
     ),
+    food: (
+      <>
+        <path className="anime-shadow" d="M6 4h5v7c0 1.8-1.1 3.2-2.5 3.6V22h-2v-7.4C5.1 14.2 4 12.8 4 11V4h2v6h1V4h2v6h1V4z" />
+        <path className="anime-main" d="M6 4h4v7c0 1.4-.9 2.4-2 2.4S6 12.4 6 11z" />
+        <path className="anime-accent" d="M16 3c2.2 1.8 3.4 4.6 3.4 8.1 0 2.1-.8 3.4-2.1 4V22h-2.2V3z" />
+        <path className="anime-light" d="M17 6.5c.7 1.1 1 2.5 1 4.1 0 1.2-.2 2-.7 2.4z" />
+      </>
+    ),
+    wear: (
+      <>
+        <path className="anime-shadow" d="M8 4 12 7l4-3 4 3.2-2.3 4V21H6.3v-9.8L4 7.2z" />
+        <path className="anime-main" d="M8.2 5.2 12 8l3.8-2.8 2.4 2-1.8 3.3V19H7.6v-8.5L5.8 7.2z" />
+        <path className="anime-light" d="M10 6.6c.5 1 1.2 1.6 2 1.6s1.5-.6 2-1.6v4.2h-4z" />
+        <path className="anime-accent" d="M7.6 11.2 9.4 13l-1.8 1.2zm8.8 0L14.6 13l1.8 1.2z" />
+      </>
+    ),
+    news: (
+      <>
+        <path className="anime-shadow" d="M5 4h12c1.3 0 2.2.9 2.2 2.2V20H6.8A2.8 2.8 0 0 1 4 17.2V5c0-.6.4-1 1-1z" />
+        <path className="anime-main" d="M6 5.5h10.5V19H6z" />
+        <path className="anime-accent" d="M8 8h6.5v3H8z" />
+        <path className="anime-light" d="M8 13h7v1.5H8zM8 16h5v1.5H8z" />
+        <circle className="anime-dot" cx="18" cy="6" r="2" />
+      </>
+    ),
     calendar: (
       <>
         <path className="anime-shadow" d="M6 4h12c1.7 0 3 1.3 3 3v12c0 1.7-1.3 3-3 3H6c-1.7 0-3-1.3-3-3V7c0-1.7 1.3-3 3-3z" />
@@ -308,8 +398,38 @@ function nowText(date = new Date()) {
   return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
+function clockText(date = new Date()) {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
+}
+
 function todayKey(date = new Date()) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function todayDisplay(date = new Date()) {
+  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 · ${["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()]}`;
+}
+
+function parseFoodCount(value) {
+  if (!value) return 1;
+  const normalized = { 一: 1, 两: 2, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 }[value];
+  return normalized || Number(value) || 1;
+}
+
+function estimateMealCalories(title) {
+  const text = title.trim();
+  if (!text) return { calories: 0, matched: [] };
+  const matched = foodCalories
+    .filter(([name]) => text.includes(name))
+    .map(([name, calories]) => {
+      const countMatch = text.match(new RegExp(`([一两二三四五六七八九十\\d]+)\\s*(个|颗|杯|碗|份|根|片)?\\s*${name}|${name}\\s*([一两二三四五六七八九十\\d]+)\\s*(个|颗|杯|碗|份|根|片)?`));
+      const count = parseFoodCount(countMatch?.[1] || countMatch?.[3]);
+      return { name, count, calories: calories * count };
+    });
+  return {
+    calories: matched.reduce((sum, item) => sum + item.calories, 0),
+    matched,
+  };
 }
 
 function readStorage(name, fallback) {
@@ -336,6 +456,17 @@ function noteTypeLabel(type) {
   return noteTypes.find((item) => item.value === type)?.label || "生活";
 }
 
+function weatherLabel(code) {
+  if (code === 0) return "晴";
+  if ([1, 2, 3].includes(code)) return "多云";
+  if ([45, 48].includes(code)) return "有雾";
+  if ([51, 53, 55, 56, 57].includes(code)) return "小雨";
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return "降雨";
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return "降雪";
+  if ([95, 96, 99].includes(code)) return "雷雨";
+  return "天气";
+}
+
 function getItemDate(item) {
   return item?.date || todayKey();
 }
@@ -349,7 +480,7 @@ function weekdayText(date) {
 }
 
 function monthTitle(date) {
-  return `${date.getFullYear()}年${date.getMonth() + 1}月`;
+  return `${["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"][date.getMonth()]} ${date.getFullYear()}`;
 }
 
 function mapItemsById(items, id, updater) {
@@ -371,17 +502,24 @@ function mergeById(localItems, cloudItems) {
 }
 
 function mergeCloudWithLocal(cloud) {
+  const localAssets = localStorage.getItem(key("assets"));
   return {
     notes: mergeById(readStorage("notes", []), cloud.notes),
     plans: mergeById(readStorage("plans", []), cloud.plans),
     consultations: mergeById(readStorage("consultations", []), cloud.consultations),
+    dietRecords: mergeById(readStorage("dietRecords", []), cloud.dietRecords),
+    waterTarget: Number(cloud.waterTarget || readStorage("waterTarget", defaultWaterTarget)) || defaultWaterTarget,
     habits: mergeById(readStorage("habits", readStorage("checkins", [])), cloud.habits || cloud.checkins),
     [`done:${todayKey()}`]: {
       ...readStorage(`done:${todayKey()}`, {}),
       ...(cloud[`done:${todayKey()}`] || {}),
     },
-    assets: typeof cloud.assets === "string" ? cloud.assets : localStorage.getItem(key("assets")) || defaultAssets,
+    assets: typeof cloud.assets === "string" ? cloud.assets : normalizeSavedAssets(localAssets),
   };
+}
+
+function normalizeSavedAssets(assets) {
+  return !assets || assets === legacyDefaultAssets || assets === stockDefaultAssets ? defaultAssets : assets;
 }
 
 function migrateLegacyData() {
@@ -585,7 +723,7 @@ function SyncPanel({ session, syncStatus, onLogin, onLogout, onSync, onExport })
   );
 }
 
-function WeatherCard({ compact = false }) {
+function WeatherCard({ compact = false, clock = "--:--" }) {
   const [weather, setWeather] = useState(null);
   const [status, setStatus] = useState("正在读取天气...");
 
@@ -598,14 +736,25 @@ function WeatherCard({ compact = false }) {
     }
 
     try {
-      const response = await fetch("https://api.open-meteo.com/v1/forecast?latitude=31.2304&longitude=121.4737&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FShanghai&forecast_days=3");
+      const response = await fetch("https://api.open-meteo.com/v1/forecast?latitude=31.4912&longitude=120.3119&current=temperature_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FShanghai&forecast_days=5");
       const data = await response.json();
+      const forecast = (data.daily?.time || []).map((date, index) => ({
+        date,
+        code: data.daily?.weather_code?.[index],
+        max: data.daily?.temperature_2m_max?.[index],
+        min: data.daily?.temperature_2m_min?.[index],
+        rain: data.daily?.precipitation_probability_max?.[index],
+      }));
       const next = {
         savedAt: Date.now(),
-        location: "上海",
-        max: data.daily?.temperature_2m_max?.[0],
-        min: data.daily?.temperature_2m_min?.[0],
-        rain: data.daily?.precipitation_probability_max?.[0],
+        location: "无锡",
+        current: data.current?.temperature_2m,
+        code: data.current?.weather_code,
+        wind: data.current?.wind_speed_10m,
+        max: forecast[0]?.max,
+        min: forecast[0]?.min,
+        rain: forecast[0]?.rain,
+        forecast,
       };
       writeStorage("weatherCache", next);
       setWeather(next);
@@ -629,9 +778,284 @@ function WeatherCard({ compact = false }) {
         <button className="chip-button" type="button" onClick={() => loadWeather(true)}>刷新</button>
       </div>
       <div className="weather-main">
-        <strong>{weather ? `${weather.min ?? "--"}° / ${weather.max ?? "--"}°` : "--"}</strong>
-        <span>{weather?.location || "默认城市"} · 降水概率 {weather?.rain ?? "--"}%</span>
+        <div>
+          <span>{weather?.location || "无锡"} · {todayKey()} · {clock}</span>
+          <strong>{weather ? `${weather.current ?? "--"}°` : "--"}</strong>
+          <small>{weather ? `${weatherLabel(weather.code)} · ${weather.min ?? "--"}° / ${weather.max ?? "--"}° · 降水 ${weather.rain ?? "--"}%` : "正在读取无锡天气"}</small>
+        </div>
+        <b>{weather ? weatherLabel(weather.code) : "天气"}</b>
       </div>
+      <div className="weather-forecast">
+        {(weather?.forecast || []).slice(0, 5).map((day) => (
+          <div key={day.date}>
+            <span>{day.date.slice(5).replace("-", "/")}</span>
+            <strong>{weatherLabel(day.code)}</strong>
+            <small>{day.min ?? "--"}°/{day.max ?? "--"}°</small>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function weatherIcon(code) {
+  if ([0, 1].includes(Number(code))) return "☀️";
+  if ([2, 3].includes(Number(code))) return "☁️";
+  if ([45, 48].includes(Number(code))) return "🌫️";
+  if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(Number(code))) return "🌧️";
+  if ([71, 73, 75, 77, 85, 86].includes(Number(code))) return "❄️";
+  if ([95, 96, 99].includes(Number(code))) return "⛈️";
+  return "🌤️";
+}
+
+function outfitAdvice(day) {
+  const max = Number(day?.max ?? 0);
+  const min = Number(day?.min ?? 0);
+  const rain = Number(day?.rain ?? 0);
+  const label = weatherLabel(day?.code);
+  const items = [];
+  let title = "轻便通勤";
+
+  if (max >= 32) {
+    title = "清爽防晒";
+    items.push("速干短袖", "轻薄短裤或工装长裤", "遮阳帽或防晒衣");
+  } else if (max >= 26) {
+    title = "夏季舒适";
+    items.push("短袖 T 恤", "薄款休闲裤", "透气运动鞋");
+  } else if (max >= 20) {
+    title = "薄外套搭配";
+    items.push("长袖 T 恤或衬衫", "轻薄夹克", "直筒休闲裤");
+  } else if (max >= 12) {
+    title = "保暖层次";
+    items.push("卫衣或毛衣", "夹克或风衣", "牛仔裤/工装裤");
+  } else {
+    title = "冬季保暖";
+    items.push("保暖内搭", "羽绒服或厚外套", "长裤和围巾");
+  }
+
+  if (min <= 18 && max - min >= 7) items.push("早晚加一件外套");
+  if (rain >= 45 || label.includes("雨")) items.push("带伞，鞋子选防滑");
+
+  return {
+    title,
+    items,
+    note: `无锡今日 ${label}，${min ?? "--"}° / ${max ?? "--"}°，降水概率 ${rain || 0}%。`,
+  };
+}
+
+function ClothingAssistant() {
+  const [weather, setWeather] = useState(null);
+  const [status, setStatus] = useState("正在读取无锡天气...");
+
+  async function loadWearWeather(force = false) {
+    const cache = readStorage("wearWeatherCache", null);
+    if (!force && cache && Date.now() - cache.savedAt < 30 * 60 * 1000) {
+      setWeather(cache);
+      setStatus(`天气缓存 · ${nowText(new Date(cache.savedAt))}`);
+      return;
+    }
+
+    try {
+      const response = await fetch("https://api.open-meteo.com/v1/forecast?latitude=31.4912&longitude=120.3119&current=temperature_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FShanghai&forecast_days=5");
+      const data = await response.json();
+      const forecast = (data.daily?.time || []).map((date, index) => ({
+        date,
+        code: data.daily?.weather_code?.[index],
+        max: data.daily?.temperature_2m_max?.[index],
+        min: data.daily?.temperature_2m_min?.[index],
+        rain: data.daily?.precipitation_probability_max?.[index],
+      }));
+      const next = {
+        savedAt: Date.now(),
+        current: data.current?.temperature_2m,
+        code: data.current?.weather_code,
+        wind: data.current?.wind_speed_10m,
+        forecast,
+      };
+      writeStorage("wearWeatherCache", next);
+      setWeather(next);
+      setStatus(`江苏无锡 · 已更新 ${nowText()}`);
+    } catch {
+      setStatus(cache ? `天气更新失败 · ${nowText(new Date(cache.savedAt))}` : "天气暂时不可用");
+    }
+  }
+
+  useEffect(() => {
+    loadWearWeather();
+  }, []);
+
+  const today = weather?.forecast?.[0];
+  const advice = outfitAdvice(today);
+
+  return (
+    <section className="wear-shell">
+      <div className="wear-title">
+        <span>👕</span>
+        <div>
+          <h2>穿衣助手</h2>
+          <p>定位：江苏无锡 · 最近五天天气 / 今日穿搭</p>
+        </div>
+      </div>
+
+      <section className="wear-weather-card">
+        <div>
+          <span>{weatherIcon(weather?.code)}</span>
+          <strong>{weather?.current ?? today?.max ?? "--"}°C</strong>
+          <small>江苏无锡</small>
+        </div>
+        <div>
+          <h2>{weatherLabel(weather?.code || today?.code)}</h2>
+          <p>当前风速 {weather?.wind ?? "--"} km/h</p>
+          <button className="chip-button" type="button" onClick={() => loadWearWeather(true)}>刷新</button>
+        </div>
+      </section>
+
+      <section className="wear-card">
+        <div className="panel-head">
+          <div>
+            <h2>最近五天天气</h2>
+            <p>{status}</p>
+          </div>
+        </div>
+        <div className="wear-forecast">
+          {(weather?.forecast || []).map((day, index) => (
+            <div key={day.date}>
+              <span>{index === 0 ? "今天" : day.date.slice(5).replace("-", "/")}</span>
+              <b>{weatherIcon(day.code)}</b>
+              <strong>{day.min ?? "--"}°/{day.max ?? "--"}°</strong>
+              <small>{weatherLabel(day.code)} · {day.rain ?? 0}%</small>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="wear-card outfit-card">
+        <div className="panel-head">
+          <div>
+            <h2>今日穿搭 · {todayKey()}</h2>
+            <p>{advice.note}</p>
+          </div>
+        </div>
+        <div className="outfit-main">
+          <span>👕</span>
+          <div>
+            <strong>{advice.title}</strong>
+            <p>{advice.items.join(" / ")}</p>
+          </div>
+        </div>
+        <div className="outfit-tags">
+          {advice.items.map((item) => <span key={item}>{item}</span>)}
+        </div>
+      </section>
+    </section>
+  );
+}
+
+const newsTabs = [
+  { id: "politics", label: "时政", icon: "🏛️" },
+  { id: "finance", label: "财经", icon: "💹" },
+  { id: "consume", label: "消费", icon: "🛍️" },
+];
+
+function NewsBoard() {
+  const [category, setCategory] = useState("politics");
+  const [news, setNews] = useState([]);
+  const [status, setStatus] = useState("正在读取新闻...");
+
+  async function loadNews(nextCategory = category, force = false) {
+    const cacheKey = `newsCache:${nextCategory}`;
+    const cache = readStorage(cacheKey, null);
+    if (!force && cache && Date.now() - cache.savedAt < 10 * 60 * 1000) {
+      setNews(cache.news || []);
+      setStatus(`缓存新闻 · ${nowText(new Date(cache.savedAt))}`);
+      return;
+    }
+
+    setStatus("正在更新新闻...");
+    try {
+      const response = await fetch(`/api/news?category=${encodeURIComponent(nextCategory)}`);
+      const data = await response.json();
+      const nextNews = Array.isArray(data.news) ? data.news : [];
+      setNews(nextNews);
+      writeStorage(cacheKey, { savedAt: Date.now(), news: nextNews });
+      setStatus(`${data.source || "免费新闻源"} · ${nowText()}`);
+    } catch {
+      if (cache?.news) {
+        setNews(cache.news);
+        setStatus(`新闻更新失败，显示缓存 · ${nowText(new Date(cache.savedAt))}`);
+      } else {
+        setNews([]);
+        setStatus("新闻暂时不可用");
+      }
+    }
+  }
+
+  useEffect(() => {
+    loadNews(category);
+  }, [category]);
+
+  const activeTab = newsTabs.find((item) => item.id === category) || newsTabs[0];
+
+  return (
+    <section className="news-shell">
+      <div className="news-title">
+        <span>📰</span>
+        <div>
+          <h2>时事新闻</h2>
+          <p>时政 · 财经 · 消费 · 免费 RSS 源每日更新</p>
+        </div>
+      </div>
+      <div className="news-tabs">
+        {newsTabs.map((item) => (
+          <button className={category === item.id ? "active" : ""} type="button" key={item.id} onClick={() => setCategory(item.id)}>
+            <span>{item.icon}</span>{item.label}
+          </button>
+        ))}
+      </div>
+      <section className="news-card">
+        <div className="panel-head">
+          <div>
+            <h2>{activeTab.icon} {activeTab.label}要闻</h2>
+            <p>{status}</p>
+          </div>
+          <button className="chip-button" type="button" onClick={() => loadNews(category, true)}>刷新</button>
+        </div>
+        <div className="news-list">
+          {news.length === 0 && <p className="empty">还没有新闻数据，请稍后刷新。</p>}
+          {news.map((item, index) => (
+            <a className="news-row" href={item.url || "#"} target="_blank" rel="noreferrer" key={`${item.title}-${index}`}>
+              <span>{index + 1}</span>
+              <div>
+                <strong>{item.title}</strong>
+                <small>{[item.source, item.publishedAt ? item.publishedAt.slice(0, 16) : ""].filter(Boolean).join(" · ")}</small>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
+    </section>
+  );
+}
+
+function TodayTimePanel({ clock = "--:--:--" }) {
+  return (
+    <section className="today-time-panel" aria-label="今日时间">
+      <strong>{clock}</strong>
+      <span>{todayDisplay()}</span>
+      <small>七夜online · 今日速递</small>
+    </section>
+  );
+}
+
+function DailyQuoteCard() {
+  return (
+    <section className="daily-quote-card">
+      <div className="panel-head">
+        <h2>今日金句</h2>
+        <span className="tag">每日共勉</span>
+      </div>
+      <strong>人生没有白走的路，每一步都算数。</strong>
+      <p>No step in life is wasted; every single one counts.</p>
     </section>
   );
 }
@@ -639,9 +1063,15 @@ function WeatherCard({ compact = false }) {
 function MarketBoard({ compact = false }) {
   const [quotes, setQuotes] = useState([]);
   const [status, setStatus] = useState("正在读取行情...");
+  const [stockInput, setStockInput] = useState("");
 
   async function loadQuotes(force = false) {
-    const assets = localStorage.getItem(key("assets")) || defaultAssets;
+    const savedAssets = localStorage.getItem(key("assets"));
+    const assets = normalizeSavedAssets(savedAssets);
+    if (savedAssets !== assets) {
+      localStorage.setItem(key("assets"), assets);
+      localStorage.removeItem(key("marketCache"));
+    }
     const cache = readStorage("marketCache", null);
     if (!force && cache && Date.now() - cache.savedAt < 60000) {
       setQuotes(cache.quotes);
@@ -667,6 +1097,24 @@ function MarketBoard({ compact = false }) {
     }
   }
 
+  function addStock(event) {
+    event.preventDefault();
+    const nextStock = stockInput.trim();
+    if (!nextStock) return;
+
+    const current = normalizeSavedAssets(localStorage.getItem(key("assets")))
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (!current.some((item) => item.toLowerCase() === nextStock.toLowerCase())) {
+      const next = [...current, nextStock].join(",");
+      localStorage.setItem(key("assets"), next);
+      localStorage.removeItem(key("marketCache"));
+      setStockInput("");
+      loadQuotes(true);
+    }
+  }
+
   useEffect(() => {
     loadQuotes();
     const timer = setInterval(() => loadQuotes(), 60000);
@@ -682,6 +1130,12 @@ function MarketBoard({ compact = false }) {
         </div>
         <button className="chip-button" type="button" onClick={() => loadQuotes(true)}>刷新</button>
       </div>
+      {!compact && (
+        <form className="market-add-form" onSubmit={addStock}>
+          <input value={stockInput} onChange={(event) => setStockInput(event.target.value)} placeholder="添加股票代码，例如 600584" />
+          <button className="chip-button" type="submit">添加</button>
+        </form>
+      )}
       <div className="quote-list">
         {quotes.length === 0 && <p className="empty">还没有行情数据。</p>}
         {quotes.map((quote, index) => {
@@ -873,7 +1327,7 @@ function NoteList({ notes, onDelete, onEdit }) {
 
 function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations }) {
   const today = new Date();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [tmdbQuery, setTmdbQuery] = useState("");
   const allItems = Array.isArray(items) ? items : [];
   const searchResults = Array.isArray(tmdbResults) ? tmdbResults : [];
@@ -912,9 +1366,6 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
   const calendarDays = expanded ? monthDays : week;
   const [selectedDate, setSelectedDate] = useState(week[0].dateKey);
   const selected = monthDays.find((day) => day.dateKey === selectedDate) || week[0];
-  const activeWatchItems = allItems
-    .filter((item) => item.status !== "看过的剧" && item.status !== "暂停/弃剧")
-    .slice(0, 6);
   const timeline = selected.items
     .filter((item) => item.status !== "看过的剧" && item.status !== "暂停/弃剧")
     .sort((a, b) => String(a.airTime || "23:59").localeCompare(String(b.airTime || "23:59")));
@@ -942,30 +1393,11 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
           ))}
         </div>
       </section>
-      <section className="watch-list">
-        <div className="panel-head">
-          <h2>正在追的剧</h2>
-          <span className="tag">{activeWatchItems.length} 部</span>
-        </div>
-        <div className="watch-list-grid">
-          {activeWatchItems.length === 0 && <p className="empty">还没有正在追的剧。可以从下面搜索影视，点击结果加入观影列表。</p>}
-          {activeWatchItems.map((item) => (
-            <article className="watch-list-card" key={item.id}>
-              <div className="poster-box">
-                {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
-              </div>
-              <div>
-                <strong>{item.title}</strong>
-                <p>{[item.status || "想看的剧", item.platform || item.source, item.nextAirDate ? `下次 ${item.nextAirDate}` : "", item.currentEpisode ? `第 ${item.currentEpisode} 集` : ""].filter(Boolean).join(" · ")}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
       <div className="watch-timeline">
         {timeline.length === 0 && <p className="empty">这一天还没有追剧更新。给剧集填写“下次更新日期”和“更新时间”后，会显示在这里。</p>}
         {timeline.map((item) => {
           const current = Number(item.currentEpisode || 0);
+          const updateEpisode = current > 0 ? current + 1 : 0;
           const total = Number(item.totalEpisodes || 0);
           const progress = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
           return (
@@ -984,7 +1416,7 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
                   <p>{[item.year, item.type || "剧集", ...(item.tags || [])].filter(Boolean).join(" · ")}</p>
                   <div className="episode-line">
                     <span>第 {item.season || 1} 季</span>
-                    <strong>{current || "--"} 集</strong>
+                    <strong>{updateEpisode ? `${updateEpisode} 集` : "-- 集"}</strong>
                     {total > 0 && <span>共 {total} 集</span>}
                   </div>
                   {total > 0 && <div className="watch-progress"><i style={{ width: `${progress}%` }} /></div>}
@@ -1165,105 +1597,211 @@ function ConsultationList({ consultations, onDelete, onEdit }) {
   );
 }
 
-function CheckinPanel({ habits, done, onAdd, onToggle }) {
-  return (
-    <section className="panel">
-      <div className="panel-head"><h2>今日签到</h2><span className="tag">{todayKey()}</span></div>
-      <div className="check-list">
-        {habits.length === 0 && <p className="empty">还没有习惯，添加一个开始坚持。</p>}
-        {habits.map((item) => (
-          <label className="check-row" key={item.id}>
-            <input type="checkbox" checked={Boolean(done[item.id])} onChange={() => onToggle(item.id)} />
-            <span>{item.title}</span>
-          </label>
-        ))}
-      </div>
-      <form className="quick-form" onSubmit={onAdd}>
-        <input name="title" placeholder="例如：复盘、运动、早睡" required />
-        <button type="submit">添加</button>
-      </form>
-    </section>
-  );
-}
-
-function CalendarView({ plans, notes, habits, done, selectedDay, onSelectDay }) {
-  const days = Array.from({ length: 31 }, (_, index) => {
-    const day = index + 1;
+function DietTracker({ records, waterTarget, onAddWater, onAddMeal, onDelete, onSaveTarget }) {
+  const [meal, setMeal] = useState("早餐");
+  const [foodInput, setFoodInput] = useState("");
+  const [visionStatus, setVisionStatus] = useState("上传食物图片，自动估算热量。");
+  const [visionResult, setVisionResult] = useState(null);
+  const target = Number(waterTarget) || defaultWaterTarget;
+  const todayRecords = records.filter((item) => item.date === todayKey());
+  const waterRecords = todayRecords.filter((item) => item.type === "water");
+  const mealRecords = todayRecords.filter((item) => item.type === "meal");
+  const waterTotal = waterRecords.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const calorieTotal = mealRecords.reduce((sum, item) => sum + Number(item.calories || 0), 0);
+  const percent = Math.min(100, Math.round((waterTotal / target) * 100));
+  const remaining = Math.max(0, target - waterTotal);
+  const targetCups = Math.ceil(target / cupSize);
+  const finishedCups = waterRecords.reduce((sum, item) => sum + Number(item.cups || Number(item.amount || 0) / cupSize), 0);
+  const remainingCups = Math.max(0, targetCups - finishedCups);
+  const estimate = estimateMealCalories(foodInput);
+  const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date();
-    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    return {
-      day,
-      dateKey,
-      plans: plans.filter((plan) => plan.date === dateKey).length,
-      notes: notes.filter((note) => note.date === dateKey).length,
-      checked: dateKey === todayKey() ? Object.values(done).filter(Boolean).length : 0,
-    };
+    date.setDate(date.getDate() - (6 - index));
+    const dateKey = todayKey(date);
+    const total = records
+      .filter((item) => item.type === "water" && item.date === dateKey)
+      .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    return { dateKey, label: index === 6 ? "今天" : `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`, total };
   });
 
-  const dayPlans = plans.filter((plan) => plan.date === selectedDay);
-  const dayNotes = notes.filter((note) => note.date === selectedDay);
-  const selectedDone = Object.entries(done)
-    .filter(([, checked]) => checked)
-    .length;
+  function addCustomCups() {
+    const value = Number(window.prompt("输入喝水杯数", "1"));
+    if (Number.isFinite(value) && value > 0) onAddWater(value);
+  }
+
+  function saveTarget(event) {
+    event.preventDefault();
+    const value = Number(new FormData(event.currentTarget).get("target"));
+    if (Number.isFinite(value) && value >= cupSize) onSaveTarget(value);
+  }
+
+  function submitMeal(event) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const title = String(data.get("title") || "").trim();
+    const manualCalories = Number(data.get("calories") || 0);
+    const estimated = estimateMealCalories(title);
+    const calories = estimated.calories || manualCalories;
+    if (!title || !Number.isFinite(calories) || calories <= 0) return;
+    onAddMeal({ meal, title, calories, matchedFoods: estimated.matched.map((item) => item.name) });
+    setFoodInput("");
+    event.currentTarget.reset();
+  }
+
+  async function analyzeFoodImage(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setVisionStatus("正在识别图片...");
+    setVisionResult(null);
+    try {
+      const data = new FormData();
+      data.append("image", file);
+      const response = await fetch("/api/food-vision", { method: "POST", body: data });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "图片识别失败");
+      setVisionResult(result);
+      setVisionStatus(`识别完成：约 ${result.calories || 0} kcal`);
+    } catch (error) {
+      setVisionStatus(error.message || "图片识别失败，请稍后重试");
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  function addVisionMeal() {
+    if (!visionResult?.calories) return;
+    onAddMeal({
+      meal,
+      title: visionResult.title,
+      calories: visionResult.calories,
+      matchedFoods: (visionResult.foods || []).map((item) => item.name).filter(Boolean),
+      note: visionResult.note,
+      source: "图片识别",
+    });
+    setVisionResult(null);
+    setVisionStatus("已加入饮食记录。");
+  }
 
   return (
-    <section className="panel">
-      <div className="panel-head"><h2>本月日历</h2><span className="tag">{habits.length} 个习惯</span></div>
-      <div className="calendar-grid">
-        {days.map((day) => (
-          <button
-            type="button"
-            className={day.dateKey === selectedDay ? "calendar-day today selected" : day.dateKey === todayKey() ? "calendar-day today" : "calendar-day"}
-            key={day.dateKey}
-            onClick={() => onSelectDay(day.dateKey)}
-          >
-            <strong>{day.day}</strong>
-            <span>{day.plans ? `${day.plans} 计划` : ""}</span>
-            <span>{day.notes ? `${day.notes} 记录` : ""}</span>
-            <span>{day.checked ? `${day.checked} 签到` : ""}</span>
-          </button>
-        ))}
+    <section className="diet-shell">
+      <div className="diet-title">
+        <span>🍱</span>
+        <div>
+          <h2>每日饮食喝水</h2>
+          <p>{todayDisplay()} · 今天也要好好照顾自己</p>
+        </div>
       </div>
-      <div className="calendar-detail">
+
+      <section className="diet-card water-card">
         <div className="panel-head">
-          <div>
-            <h2>{selectedDay}</h2>
-            <p>当天详情</p>
+          <h2>喝水打卡</h2>
+          <span className="tag">目标 {targetCups} 杯</span>
+        </div>
+        <form className="water-target-form" onSubmit={saveTarget}>
+          <label>
+            <span>每日目标</span>
+            <input name="target" type="number" min={cupSize} step={cupSize} defaultValue={target} />
+          </label>
+          <button type="submit">保存目标</button>
+        </form>
+        <div className="water-summary">
+          <div className="water-ring" style={{ "--water-percent": `${percent}%` }}>
+            <strong>{percent}%</strong>
+            <span>{finishedCups} / {targetCups} 杯</span>
+          </div>
+          <div className="water-copy">
+            <p>已喝 <strong>{finishedCups}</strong> / {targetCups} 杯</p>
+            <p>还需喝 <strong>{remainingCups}</strong> 杯</p>
+            <small>一杯 {cupSize} ml · 已喝 {waterTotal} ml，还需 {remaining} ml</small>
           </div>
         </div>
-        <div className="record-list">
-          {dayPlans.length === 0 && dayNotes.length === 0 && <p className="empty">这一天还没有计划或记录。</p>}
-          {dayPlans.map((plan) => (
-            <article className="record" key={plan.id}>
-              <div className="record-head"><strong>{plan.title}</strong><span>计划</span></div>
-              <p className="record-meta">{plan.priority}优先级 · {plan.status}</p>
-              {plan.note && <p>{plan.note}</p>}
-            </article>
+        <div className="water-actions">
+          {[1, 2, 3].map((cups) => (
+            <button type="button" key={cups} onClick={() => onAddWater(cups)}>
+              <span>{cups === 1 ? "🥛" : cups === 2 ? "🍶" : "💧"}</span>
+              <strong>{cups}杯</strong>
+            </button>
           ))}
-          {dayNotes.map((note) => (
-            <article className="record" key={note.id}>
-              <div className="record-head"><strong>{note.title}</strong><span>{noteTypeLabel(note.type)}</span></div>
-              {note.content && <p>{note.content}</p>}
-            </article>
+          <button type="button" onClick={addCustomCups}>
+            <span>✏️</span>
+            <strong>自定义</strong>
+          </button>
+        </div>
+        <div className="diet-log-list">
+          {waterRecords.length === 0 && <p className="empty">还没有喝水记录。</p>}
+          {waterRecords.slice(0, 3).map((item) => (
+            <div className="diet-log-row" key={item.id}>
+              <span>💧 {item.cups || Number(item.amount || 0) / cupSize} 杯 <small>{item.amount} ml · {item.time}</small></span>
+              <button type="button" onClick={() => onDelete(item.id)}>删除</button>
+            </div>
           ))}
-          {selectedDay === todayKey() && (
-            <article className="record">
-              <div className="record-head"><strong>签到</strong><span>{selectedDone}/{habits.length || 0}</span></div>
-              <p className="record-meta">今天已完成的习惯</p>
-            </article>
+        </div>
+        <div className="water-trend">
+          <p>最近7天趋势</p>
+          <div>
+            {days.map((day) => (
+              <span key={day.dateKey}>
+                <i style={{ height: `${Math.max(4, Math.min(74, (day.total / target) * 74))}px` }} />
+                <small>{day.label}</small>
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="diet-card meal-card">
+        <div className="panel-head">
+          <h2>饮食热量记录</h2>
+          <span className="tag">今日 {calorieTotal} kcal</span>
+        </div>
+        <div className="meal-tabs">
+          {["早餐", "午餐", "晚餐", "加餐"].map((item) => (
+            <button className={meal === item ? "active" : ""} type="button" key={item} onClick={() => setMeal(item)}>{item}</button>
+          ))}
+        </div>
+        <div className="food-vision-box">
+          <label>
+            <span>📷 拍照识别</span>
+            <input type="file" accept="image/*" capture="environment" onChange={analyzeFoodImage} />
+          </label>
+          <p>{visionStatus}</p>
+          {visionResult && (
+            <div className="vision-result">
+              <strong>{visionResult.title}</strong>
+              <small>{visionResult.foods?.map((item) => `${item.name}${item.portion ? ` ${item.portion}` : ""}`).join("、") || "已识别食物"}</small>
+              <b>{visionResult.calories} kcal</b>
+              <button type="button" onClick={addVisionMeal}>加入{meal}</button>
+            </div>
           )}
         </div>
-      </div>
+        <form className="meal-form" onSubmit={submitMeal}>
+          <input name="title" value={foodInput} onChange={(event) => setFoodInput(event.target.value)} placeholder="输入食物，例如 鸡蛋 牛奶 米饭" />
+          <input name="calories" type="number" min="1" inputMode="numeric" placeholder="可选 kcal" />
+          <small>{estimate.calories ? `估算 ${estimate.calories} kcal · ${estimate.matched.map((item) => item.name).join("、")}` : "输入常见食物后自动估算，识别不到可填右侧 kcal"}</small>
+          <button type="submit">添加饮食</button>
+        </form>
+        <div className="diet-log-list">
+          {mealRecords.length === 0 && <p className="empty">今天还没有饮食记录。</p>}
+          {mealRecords.map((item) => (
+            <div className="diet-log-row" key={item.id}>
+              <span>{item.meal} · {item.title} <small>{item.calories} kcal · {item.matchedFoods?.length ? `已识别 ${item.matchedFoods.join("、")} · ` : ""}{item.time}</small></span>
+              <button type="button" onClick={() => onDelete(item.id)}>删除</button>
+            </div>
+          ))}
+        </div>
+      </section>
     </section>
   );
 }
 
 export default function Workbench() {
   const [activePage, setActivePage] = useState("today");
-  const [clock, setClock] = useState("--:--");
+  const [clock, setClock] = useState("--:--:--");
   const [plans, setPlans] = useState([]);
   const [notes, setNotes] = useState([]);
   const [consultations, setConsultations] = useState([]);
+  const [dietRecords, setDietRecords] = useState([]);
+  const [waterTarget, setWaterTarget] = useState(defaultWaterTarget);
   const [habits, setHabits] = useState([]);
   const [done, setDone] = useState({});
   const [assetInput, setAssetInput] = useState(defaultAssets);
@@ -1271,8 +1809,8 @@ export default function Workbench() {
   const [syncStatus, setSyncStatus] = useState("本地保存，登录后开启云同步");
   const [backupStatus, setBackupStatus] = useState("尚未导出");
   const [editing, setEditing] = useState(null);
-  const [selectedDay, setSelectedDay] = useState(todayKey());
   const [overviewOpen, setOverviewOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [displayMode, setDisplayMode] = useState("mobile");
   const [ponyTheme, setPonyTheme] = useState("rmb");
   const [tmdbResults, setTmdbResults] = useState([]);
@@ -1302,6 +1840,14 @@ export default function Workbench() {
       setConsultations(cloud.consultations);
       writeStorage("consultations", cloud.consultations);
     }
+    if (Array.isArray(cloud.dietRecords)) {
+      setDietRecords(cloud.dietRecords);
+      writeStorage("dietRecords", cloud.dietRecords);
+    }
+    if (Number(cloud.waterTarget)) {
+      setWaterTarget(Number(cloud.waterTarget));
+      writeStorage("waterTarget", Number(cloud.waterTarget));
+    }
     if (Array.isArray(cloud.habits || cloud.checkins)) {
       const nextHabits = cloud.habits || cloud.checkins;
       setHabits(nextHabits);
@@ -1312,8 +1858,9 @@ export default function Workbench() {
       writeStorage(`done:${todayKey()}`, cloud[`done:${todayKey()}`]);
     }
     if (typeof cloud.assets === "string") {
-      setAssetInput(cloud.assets);
-      localStorage.setItem(key("assets"), cloud.assets);
+      const nextAssets = normalizeSavedAssets(cloud.assets);
+      setAssetInput(nextAssets);
+      localStorage.setItem(key("assets"), nextAssets);
     }
   }
 
@@ -1327,6 +1874,8 @@ export default function Workbench() {
         saveCloudItem(nextSession, "notes", merged.notes),
         saveCloudItem(nextSession, "plans", merged.plans),
         saveCloudItem(nextSession, "consultations", merged.consultations),
+        saveCloudItem(nextSession, "dietRecords", merged.dietRecords),
+        saveCloudItem(nextSession, "waterTarget", merged.waterTarget),
         saveCloudItem(nextSession, "habits", merged.habits),
         saveCloudItem(nextSession, `done:${todayKey()}`, merged[`done:${todayKey()}`]),
         saveCloudItem(nextSession, "assets", merged.assets),
@@ -1346,6 +1895,8 @@ export default function Workbench() {
         saveCloudItem(nextSession, "notes", readStorage("notes", [])),
         saveCloudItem(nextSession, "plans", readStorage("plans", [])),
         saveCloudItem(nextSession, "consultations", readStorage("consultations", [])),
+        saveCloudItem(nextSession, "dietRecords", readStorage("dietRecords", [])),
+        saveCloudItem(nextSession, "waterTarget", readStorage("waterTarget", defaultWaterTarget)),
         saveCloudItem(nextSession, "habits", readStorage("habits", [])),
         saveCloudItem(nextSession, `done:${todayKey()}`, readStorage(`done:${todayKey()}`, {})),
         saveCloudItem(nextSession, "assets", localStorage.getItem(key("assets")) || defaultAssets),
@@ -1363,14 +1914,16 @@ export default function Workbench() {
     setPlans(readStorage("plans", []));
     setNotes(readStorage("notes", []));
     setConsultations(readStorage("consultations", []));
+    setDietRecords(readStorage("dietRecords", []));
+    setWaterTarget(readStorage("waterTarget", defaultWaterTarget));
     setHabits(readStorage("habits", readStorage("checkins", [])));
     setDone(readStorage(`done:${todayKey()}`, {}));
-    setAssetInput(localStorage.getItem(key("assets")) || defaultAssets);
+    setAssetInput(normalizeSavedAssets(localStorage.getItem(key("assets"))));
     setDisplayMode(localStorage.getItem(key("displayMode")) === "desktop" ? "desktop" : "mobile");
     setPonyTheme(ponyThemes.some((theme) => theme.id === localStorage.getItem(key("ponyTheme"))) ? localStorage.getItem(key("ponyTheme")) : "rmb");
-    setClock(nowText());
+    setClock(clockText());
     loadTmdbRecommendations();
-    const timer = setInterval(() => setClock(nowText()), 30000);
+    const timer = setInterval(() => setClock(clockText()), 1000);
 
     if (supabase && localStorage.getItem(key("accessUnlocked")) === "true") {
       setSession(fixedSession);
@@ -1403,6 +1956,7 @@ export default function Workbench() {
   function switchPage(page) {
     setActivePage(page);
     localStorage.setItem(key("activePage"), page);
+    setMenuOpen(false);
   }
 
   function toggleDisplayMode() {
@@ -1462,6 +2016,44 @@ export default function Workbench() {
     setConsultations(next);
     persist("consultations", next);
     setTmdbStatus(`已加入：${item.title}`);
+  }
+
+  function saveDietRecords(next) {
+    setDietRecords(next);
+    persist("dietRecords", next);
+  }
+
+  function addWater(cups) {
+    const amount = cups * cupSize;
+    const next = [{
+      id: crypto.randomUUID(),
+      type: "water",
+      cups,
+      amount,
+      date: todayKey(),
+      time: clock.slice(0, 5),
+    }, ...dietRecords];
+    saveDietRecords(next);
+  }
+
+  function saveWaterTarget(value) {
+    setWaterTarget(value);
+    persist("waterTarget", value);
+  }
+
+  function addMeal(item) {
+    const next = [{
+      id: crypto.randomUUID(),
+      type: "meal",
+      date: todayKey(),
+      time: clock.slice(0, 5),
+      ...item,
+    }, ...dietRecords];
+    saveDietRecords(next);
+  }
+
+  function deleteDietRecord(id) {
+    saveDietRecords(dietRecords.filter((item) => item.id !== id));
   }
 
   function savePlan(plan) {
@@ -1527,23 +2119,6 @@ export default function Workbench() {
     switchPage("consultations");
   }
 
-  function addHabit(event) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const title = String(data.get("title") || "").trim();
-    if (!title) return;
-    const next = [...habits, { id: crypto.randomUUID(), title }];
-    setHabits(next);
-    persist("habits", next);
-    event.currentTarget.reset();
-  }
-
-  function toggleHabit(id) {
-    const next = { ...done, [id]: !done[id] };
-    setDone(next);
-    persist(`done:${todayKey()}`, next);
-  }
-
   function saveAssets(event) {
     event.preventDefault();
     const next = assetInput.trim() || defaultAssets;
@@ -1555,7 +2130,7 @@ export default function Workbench() {
 
   function exportMarkdown() {
     const lines = [
-      "# 七夜的工作台导出",
+      "# 七夜online导出",
       "",
       `导出时间：${new Date().toISOString()}`,
       "",
@@ -1567,6 +2142,9 @@ export default function Workbench() {
       "",
       "## 观影记录",
       ...consultations.map((item) => `### ${item.title}\n\n分类：${item.status || "想看的剧"}\n\n类型：${item.type || "剧集"}\n\n评分：${item.rating || "未评分"}\n\n平台：${item.platform || item.source || ""}\n\n评价：${item.review || item.conclusion || ""}\n\n后续：${item.note || item.nextAction || ""}\n`),
+      "",
+      "## 饮食记录",
+      ...dietRecords.map((item) => item.type === "water" ? `- ${item.date} ${item.time} 喝水 ${item.cups || Number(item.amount || 0) / cupSize} 杯（${item.amount} ml）` : `- ${item.date} ${item.time} ${item.meal} ${item.title} ${item.calories} kcal`),
     ];
     const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -1584,6 +2162,8 @@ export default function Workbench() {
       plans,
       notes,
       consultations,
+      dietRecords,
+      waterTarget,
       habits,
       done,
       assets: assetInput,
@@ -1617,6 +2197,14 @@ export default function Workbench() {
       if (Array.isArray(payload.consultations)) {
         setConsultations(payload.consultations);
         persist("consultations", payload.consultations);
+      }
+      if (Array.isArray(payload.dietRecords)) {
+        setDietRecords(payload.dietRecords);
+        persist("dietRecords", payload.dietRecords);
+      }
+      if (Number(payload.waterTarget)) {
+        setWaterTarget(Number(payload.waterTarget));
+        persist("waterTarget", Number(payload.waterTarget));
       }
       if (Array.isArray(payload.habits)) {
         setHabits(payload.habits);
@@ -1672,25 +2260,29 @@ export default function Workbench() {
   const sortedRecent = [...recent].sort((a, b) => String(b.time || "").localeCompare(String(a.time || "")));
   const skillSummaries = [
     { id: "today", name: "今日速看", icon: "home", badge: "首页", summary: `计划 ${stats.plans} · 签到 ${stats.checkin}` },
+    { id: "consultations", name: "观影记录", icon: "chat", badge: "观影", summary: `${stats.consultations} 条` },
+    { id: "market", name: "股市行情", icon: "trend", badge: "行情", summary: "金价、指数、自选股" },
+    { id: "diet", name: "饮食记录", icon: "food", badge: "饮食", summary: `${dietRecords.filter((item) => item.date === todayKey()).length} 条` },
+    { id: "wear", name: "穿衣助手", icon: "wear", badge: "穿搭", summary: "无锡天气穿搭" },
+    { id: "news", name: "时事新闻", icon: "news", badge: "新闻", summary: "时政财经消费" },
     { id: "plans", name: "每日安排", icon: "checklist", badge: "待办", summary: `${todayPlans.length} 条待办` },
     { id: "notes", name: "灵感记录", icon: "note", badge: "记录", summary: `${notes.length} 条记录` },
-    { id: "market", name: "股市行情", icon: "trend", badge: "行情", summary: "金价、指数、自选股" },
-    { id: "calendar", name: "日历行程", icon: "calendar", badge: "习惯", summary: `${habits.length} 个习惯` },
-    { id: "consultations", name: "观影记录", icon: "chat", badge: "观影", summary: `${stats.consultations} 条` },
     { id: "settings", name: "数据设置", icon: "settings", badge: "备份", summary: session ? "云同步在线" : "本地模式" },
   ];
 
   return (
-    <main className={`phone-shell ${displayMode === "desktop" ? "desktop-shell" : "mobile-shell"} page-${activePage} pony-theme-${ponyTheme}`}>
+    <main className={`phone-shell ${displayMode === "desktop" ? "desktop-shell" : "mobile-shell"} ${menuOpen ? "menu-open" : ""} page-${activePage} pony-theme-${ponyTheme}`}>
       <div className="phone-status">
+        <button className="menu-toggle" type="button" aria-label="打开菜单" onClick={() => setMenuOpen(true)}>☰</button>
         <strong>{clock}</strong>
         <span>{session ? "云同步在线" : "本地模式"}</span>
       </div>
       <section className="app-body">
+        <button className="menu-backdrop" type="button" aria-label="关闭菜单" onClick={() => setMenuOpen(false)} />
         <nav className="side-nav" aria-label="工作台导航">
-          <button className="profile-button" type="button" onClick={() => setOverviewOpen(true)} aria-label="打开技能总览">
+          <button className="profile-button" type="button" onClick={() => { setMenuOpen(false); setOverviewOpen(true); }} aria-label="打开技能总览">
             <span className="avatar-mark"><CultivationAvatar /></span>
-            <strong>七夜工作台</strong>
+            <strong>七夜online</strong>
           </button>
           <div className="side-nav-list">
             {pages.filter((page) => page.id !== "settings").map((page) => (
@@ -1705,43 +2297,37 @@ export default function Workbench() {
               <span className="nav-symbol"><AnimeNavIcon name="settings" /></span>
               <small>设置</small>
             </button>
-            <button className="more-button" type="button" onClick={() => setOverviewOpen(true)} aria-label="更多技能">...</button>
+            <button className="more-button" type="button" onClick={() => { setMenuOpen(false); setOverviewOpen(true); }} aria-label="更多技能">...</button>
           </div>
         </nav>
 
         <section className="work-area">
-          <div className="day-line"><span>📅</span><strong>{todayKey()}（今天）</strong></div>
+          {activePage !== "today" && (
+            <>
+              <div className="day-line"><span>📅</span><strong>{todayKey()}（今天）</strong></div>
 
-          <header className="module-head">
-            <div className="module-title-row">
-              <span className="module-icon"><WorkbenchIcon name={pages.find((page) => page.id === activePage)?.icon || "spark"} /></span>
-              <div>
-                <h1>{pageNames[activePage]}</h1>
-                <p>{pageDescriptions[activePage]}</p>
-              </div>
-              <button className="date-pill" type="button" onClick={toggleDisplayMode}>{displayMode === "desktop" ? "手机端" : "网页端"}</button>
-            </div>
-            <div className="module-tabs" aria-label="内容切换">
-              <button className="active" type="button">今日内容</button>
-              <button type="button">历史记录</button>
-            </div>
-          </header>
+              <header className="module-head">
+                <div className="module-title-row">
+                  <span className="module-icon"><WorkbenchIcon name={pages.find((page) => page.id === activePage)?.icon || "spark"} /></span>
+                  <div>
+                    <h1>{pageNames[activePage]}</h1>
+                    <p>{pageDescriptions[activePage]}</p>
+                  </div>
+                  <button className="date-pill" type="button" onClick={toggleDisplayMode}>{displayMode === "desktop" ? "手机端" : "网页端"}</button>
+                </div>
+                <div className="module-tabs" aria-label="内容切换">
+                  <button className="active" type="button">今日内容</button>
+                  <button type="button">历史记录</button>
+                </div>
+              </header>
+            </>
+          )}
 
         <section className="content">
           {activePage === "today" && (
             <>
-              <section className="hero-card">
-                <span><WorkbenchIcon name="spark" /></span>
-                <div>
-                  <small>今日工作台</small>
-                  <h2>先抓住今天最重要的几件事</h2>
-                  <p>天气、计划、签到、行情和最近整理，集中在这一屏。</p>
-                  <div className="hero-actions">
-                    <button type="button" onClick={() => switchPage("plans")}>写计划</button>
-                    <button type="button" onClick={() => switchPage("notes")}>记一笔</button>
-                  </div>
-                </div>
-              </section>
+              <TodayTimePanel clock={clock} />
+              <DailyQuoteCard />
               <section className="dashboard-strip" aria-label="今日概览">
                 <div className="dashboard-tile dashboard-tile-primary">
                   <span>今日计划</span>
@@ -1765,16 +2351,18 @@ export default function Workbench() {
                   <QuickAction label="新建计划" onClick={() => switchPage("plans")} />
                   <QuickAction label="快速记录" onClick={() => switchPage("notes")} />
                   <QuickAction label="观影记录" onClick={() => switchPage("consultations")} />
-                  <QuickAction label="查看日历" onClick={() => switchPage("calendar")} />
+                  <QuickAction label="股市行情" onClick={() => switchPage("market")} />
+                  <QuickAction label="饮食记录" onClick={() => switchPage("diet")} />
+                  <QuickAction label="穿衣助手" onClick={() => switchPage("wear")} />
+                  <QuickAction label="时事新闻" onClick={() => switchPage("news")} />
                 </div>
               </section>
               <section className="stats-grid">
                 <StatButton label="今日计划" value={stats.plans} onClick={() => switchPage("plans")} />
-                <StatButton label="今日签到" value={stats.checkin} onClick={() => switchPage("calendar")} />
                 <StatButton label="记录总数" value={stats.notes} onClick={() => switchPage("notes")} />
                 <StatButton label="追剧清单" value={`${stats.consultations} 部`} onClick={() => switchPage("consultations")} />
               </section>
-              <WeatherCard compact />
+              <WeatherCard compact clock={clock} />
               <section className="panel">
                 <div className="panel-head"><h2>今日计划</h2><span className="tag">{todayKey()}</span></div>
                 <div className="record-list">
@@ -1832,12 +2420,13 @@ export default function Workbench() {
 
           {activePage === "market" && <MarketBoard />}
 
-          {activePage === "calendar" && (
-            <>
-              <CheckinPanel habits={habits} done={done} onAdd={addHabit} onToggle={toggleHabit} />
-              <CalendarView plans={plans} notes={notes} habits={habits} done={done} selectedDay={selectedDay} onSelectDay={setSelectedDay} />
-            </>
+          {activePage === "diet" && (
+            <DietTracker records={dietRecords} waterTarget={waterTarget} onAddWater={addWater} onAddMeal={addMeal} onDelete={deleteDietRecord} onSaveTarget={saveWaterTarget} />
           )}
+
+          {activePage === "wear" && <ClothingAssistant />}
+
+          {activePage === "news" && <NewsBoard />}
 
           {activePage === "settings" && (
             <>
@@ -1861,7 +2450,7 @@ export default function Workbench() {
               <section className="panel">
                 <h2>自选资产</h2>
                 <form className="stack-form" onSubmit={saveAssets}>
-                  <input value={assetInput} onChange={(event) => setAssetInput(event.target.value)} placeholder="SGE_AU9999,s_sh000001,s_sz399001,sh600519,sz300750" />
+                  <input value={assetInput} onChange={(event) => setAssetInput(event.target.value)} placeholder="hf_GC,sh603629,sh688507" />
                   <button type="submit">保存自选</button>
                 </form>
               </section>
