@@ -363,8 +363,8 @@ textarea { resize: vertical; }
 .news-title > span { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 16px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); box-shadow: var(--shadow); }
 .news-title h2 { margin: 0; font-size: 28px; line-height: 1.15; }
 .news-title p { margin: 5px 0 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
-.news-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.news-tabs button { min-height: 54px; border: 0; border-radius: 18px; color: var(--muted); background: rgba(255, 255, 255, 0.86); box-shadow: var(--shadow); font-size: 15px; font-weight: 950; }
+.news-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.news-tabs button { min-height: 52px; border: 0; border-radius: 18px; color: var(--muted); background: rgba(255, 255, 255, 0.86); box-shadow: var(--shadow); font-size: 14px; font-weight: 950; }
 .news-tabs button span { margin-right: 5px; }
 .news-tabs button.active { color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); }
 .news-card { display: grid; gap: 14px; padding: 18px 16px; border: 1px solid rgba(234, 215, 208, 0.82); border-radius: 20px; background: rgba(255, 255, 255, 0.94); box-shadow: 0 18px 34px rgba(117, 25, 35, 0.12); }

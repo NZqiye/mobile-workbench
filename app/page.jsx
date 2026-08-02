@@ -11,7 +11,7 @@ const pages = [
   { id: "market", name: "股市行情", icon: "trend" },
   { id: "diet", name: "饮食记录", icon: "food" },
   { id: "wear", name: "穿衣助手", icon: "wear" },
-  { id: "news", name: "时事新闻", icon: "news" },
+  { id: "news", name: "热榜时讯", icon: "news" },
   { id: "plans", name: "每日安排", icon: "checklist" },
   { id: "notes", name: "灵感记录", icon: "note" },
   { id: "settings", name: "设置", icon: "settings" },
@@ -24,7 +24,7 @@ const pageDescriptions = {
   market: "金价、指数、自选资产观察",
   diet: "每日喝水、饮食热量和最近趋势",
   wear: "江苏无锡天气和今日穿搭推荐",
-  news: "时政、财经、消费新闻每日更新",
+  news: "微博、B站、抖音等热榜集中查看",
   consultations: "观影清单、想法和资料整理",
   settings: "账号同步、备份恢复和自选配置",
 };
@@ -62,9 +62,15 @@ const defaultChineseHolidays2026 = [
 const legacyDefaultAssets = "SGE_AU9999,s_sh000001,s_sz399001,sh600519,sz300750";
 const stockDefaultAssets = "sh600584,sh603629,sh688507";
 const defaultAssets = "hf_GC,sh603629,sh688507";
+const marketSymbolNames = {
+  hf_GC: "COMEX黄金",
+  sh600584: "长电科技",
+  sh603629: "利通电子",
+  sh688507: "索辰科技",
+};
 const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
 const defaultChineseHolidaysSeedKey = "defaultChineseHolidays2026Seeded";
-const marketCacheVersion = 2;
+const marketCacheVersion = 3;
 const defaultWaterTarget = 2000;
 const cupSize = 250;
 const foodCalories = [
@@ -997,13 +1003,16 @@ function ClothingAssistant() {
 }
 
 const newsTabs = [
-  { id: "politics", label: "时政", icon: "🏛️" },
-  { id: "finance", label: "财经", icon: "💹" },
-  { id: "consume", label: "消费", icon: "🛍️" },
+  { id: "weibo", label: "微博热搜", icon: "🔥" },
+  { id: "bilibili", label: "B站热搜", icon: "📺" },
+  { id: "douyin", label: "抖音热搜", icon: "🎵" },
+  { id: "sina", label: "新浪热榜", icon: "📰" },
+  { id: "weread", label: "微信读书", icon: "📚" },
+  { id: "history", label: "历史上的今天", icon: "📜" },
 ];
 
 function NewsBoard() {
-  const [category, setCategory] = useState("politics");
+  const [category, setCategory] = useState("weibo");
   const [news, setNews] = useState([]);
   const [status, setStatus] = useState("正在读取新闻...");
   const [error, setError] = useState("");
@@ -1050,8 +1059,8 @@ function NewsBoard() {
       <div className="news-title">
         <span>📰</span>
         <div>
-          <h2>时事新闻</h2>
-          <p>时政 · 财经 · 消费 · 免费 RSS 源每日更新</p>
+          <h2>热榜时讯</h2>
+          <p>微博 · B站 · 抖音 · 新浪 · 微信读书 · 历史上的今天</p>
         </div>
       </div>
       <div className="news-tabs">
@@ -1064,7 +1073,7 @@ function NewsBoard() {
       <section className="news-card">
         <div className="panel-head">
           <div>
-            <h2>{activeTab.icon} {activeTab.label}要闻</h2>
+            <h2>{activeTab.icon} {activeTab.label}</h2>
             <p>{status}</p>
           </div>
           <button className="chip-button" type="button" onClick={() => loadNews(category, true)}>刷新</button>
@@ -1110,6 +1119,13 @@ function DailyQuoteCard() {
   );
 }
 
+function normalizeMarketQuote(quote) {
+  const mappedName = marketSymbolNames[quote.symbol];
+  const name = String(quote.name || "");
+  const brokenName = !name || name.includes("�") || /^[\d.]+$/.test(name);
+  return { ...quote, name: mappedName || (brokenName ? quote.symbol : name) };
+}
+
 function MarketBoard({ compact = false }) {
   const [quotes, setQuotes] = useState([]);
   const [status, setStatus] = useState("正在读取行情...");
@@ -1124,7 +1140,7 @@ function MarketBoard({ compact = false }) {
     }
     const cache = readStorage("marketCache", null);
     if (!force && cache?.version === marketCacheVersion && Date.now() - cache.savedAt < 60000) {
-      setQuotes(cache.quotes);
+      setQuotes((cache.quotes || []).map(normalizeMarketQuote));
       setStatus(`缓存行情 · ${nowText(new Date(cache.savedAt))}`);
       return;
     }
@@ -1133,13 +1149,13 @@ function MarketBoard({ compact = false }) {
     try {
       const response = await fetch(`/api/market-quotes?symbols=${encodeURIComponent(assets)}`);
       const data = await response.json();
-      const nextQuotes = Array.isArray(data.quotes) ? data.quotes : [];
+      const nextQuotes = Array.isArray(data.quotes) ? data.quotes.map(normalizeMarketQuote) : [];
       setQuotes(nextQuotes);
       writeStorage("marketCache", { version: marketCacheVersion, savedAt: Date.now(), quotes: nextQuotes });
       setStatus(`${nextQuotes.some((quote) => quote.source === "示例") ? "示例行情" : "行情已更新"} · ${nowText()}`);
     } catch {
       if (cache?.quotes) {
-        setQuotes(cache.quotes);
+        setQuotes(cache.quotes.map(normalizeMarketQuote));
         setStatus(`行情更新失败，显示上次数据 · ${nowText(new Date(cache.savedAt))}`);
       } else {
         setStatus("行情暂时不可用");
@@ -1460,7 +1476,7 @@ function NoteList({ notes, onDelete, onEdit }) {
 
 function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations }) {
   const today = new Date();
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [tmdbQuery, setTmdbQuery] = useState("");
   const allItems = Array.isArray(items) ? items : [];
   const searchResults = Array.isArray(tmdbResults) ? tmdbResults : [];
@@ -2475,7 +2491,7 @@ export default function Workbench() {
     { id: "market", name: "股市行情", icon: "trend", badge: "行情", summary: "金价、指数、自选股" },
     { id: "diet", name: "饮食记录", icon: "food", badge: "饮食", summary: `${dietRecords.filter((item) => item.date === todayKey()).length} 条` },
     { id: "wear", name: "穿衣助手", icon: "wear", badge: "穿搭", summary: "无锡天气穿搭" },
-    { id: "news", name: "时事新闻", icon: "news", badge: "新闻", summary: "时政财经消费" },
+    { id: "news", name: "热榜时讯", icon: "news", badge: "热榜", summary: "微博B站抖音" },
     { id: "plans", name: "每日安排", icon: "checklist", badge: "安排", summary: `${todayPlans.length} 条任务` },
     { id: "notes", name: "灵感记录", icon: "note", badge: "记录", summary: `${notes.length} 条记录` },
     { id: "settings", name: "数据设置", icon: "settings", badge: "备份", summary: session ? "云同步在线" : "本地模式" },
@@ -2565,7 +2581,7 @@ export default function Workbench() {
                   <QuickAction label="股市行情" onClick={() => switchPage("market")} />
                   <QuickAction label="饮食记录" onClick={() => switchPage("diet")} />
                   <QuickAction label="穿衣助手" onClick={() => switchPage("wear")} />
-                  <QuickAction label="时事新闻" onClick={() => switchPage("news")} />
+                  <QuickAction label="热榜时讯" onClick={() => switchPage("news")} />
                 </div>
               </section>
               <section className="stats-grid">
