@@ -1,5 +1,4 @@
-import { loadTmdbDetails } from "../details/route";
-import { fetchTmdb, mapResult, tmdbToken } from "../search/route";
+import { fetchTmdb, loadTmdbDetails, mapTmdbResult, tmdbToken } from "../../../../lib/tmdb";
 
 const tmdbAccountId = process.env.TMDB_ACCOUNT_ID;
 const tmdbSessionId = process.env.TMDB_SESSION_ID;
@@ -39,7 +38,7 @@ export async function GET() {
         return true;
       })
       .map(async (item) => {
-        const baseItem = mapResult({ ...item, media_type: "tv" });
+        const baseItem = mapTmdbResult({ ...item, media_type: "tv" });
         try {
           return { ...baseItem, ...(await loadTmdbDetails(item.id, "tv")) };
         } catch {
