@@ -1,4 +1,4 @@
-import { mapResult, tmdbToken } from "../search/route";
+import { fetchTmdb, mapTmdbResult, tmdbToken } from "../../../../lib/tmdb";
 
 const sections = [
   ["trending", "今日趋势", "https://api.themoviedb.org/3/trending/all/day"],
@@ -7,27 +7,31 @@ const sections = [
 ];
 
 async function loadSection([id, title, source]) {
-  const url = new URL(source);
-  url.searchParams.set("language", "zh-CN");
-  url.searchParams.set("page", "1");
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${tmdbToken}`,
-      accept: "application/json",
-    },
-  });
-  const text = await response.text();
-  const data = text ? JSON.parse(text) : {};
-  if (!response.ok) throw new Error(data.status_message || "TMDB 推荐请求失败");
+  const pages = await Promise.all([1, 2].map(async (page) => {
+    const url = new URL(source);
+    url.searchParams.set("language", "zh-CN");
+    url.searchParams.set("page", String(page));
+    const response = await fetchTmdb(url);
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
+    if (!response.ok) throw new Error(data.status_message || "TMDB 推荐请求失败");
+    return data.results || [];
+  }));
+  const seen = new Set();
 
   return {
     id,
     title,
-    items: (data.results || [])
+    items: pages.flat()
       .filter((item) => item.media_type !== "person")
-      .slice(0, 8)
-      .map((item) => mapResult({ ...item, media_type: item.media_type || (id === "tv" ? "tv" : "movie") })),
+      .filter((item) => {
+        const key = item.id || item.name || item.title;
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 16)
+      .map((item) => mapTmdbResult({ ...item, media_type: item.media_type || (id === "tv" ? "tv" : "movie") })),
   };
 }
 
@@ -37,10 +41,15 @@ export async function GET() {
       return Response.json({ error: "本地缺少 TMDB_ACCESS_TOKEN，请在 .env.local 中配置 TMDB 读访问令牌" }, { status: 500 });
     }
 
-    return Response.json({ sections: await Promise.all(sections.map(loadSection)) });
+    const settled = await Promise.allSettled(sections.map(loadSection));
+    const loadedSections = settled
+      .filter((item) => item.status === "fulfilled")
+      .map((item) => item.value);
+    if (loadedSections.length === 0) throw settled.find((item) => item.status === "rejected")?.reason || new Error("TMDB 推荐暂时不可用");
+    return Response.json({ sections: loadedSections });
   } catch (error) {
     const message = error.message === "fetch failed"
-      ? "本地网络暂时无法连接 TMDB，线上 Vercel 环境可正常使用"
+      ? "暂时无法连接 TMDB，请稍后重试"
       : error.message || "TMDB 推荐暂时不可用";
     return Response.json({ error: message }, { status: 500 });
   }
