@@ -40,7 +40,7 @@ DAILY_HOT_API_BASE=DailyHotApi 地址，建议正式部署时填写自建地址
 
 如果要使用“饮食记录”的拍照识别热量功能，需要配置 `OPENAI_API_KEY`。可选配置 `OPENAI_VISION_MODEL`，不填时默认使用项目内置的视觉模型名称。
 
-“时事新闻”使用 DailyHotApi 热榜接口。正式部署建议在 Vercel 配置 `DAILY_HOT_API_BASE`，填入你自建的 DailyHotApi 地址；不配置时会尝试默认公开地址，但公开地址不保证长期可用。
+“热榜时讯”使用 DailyHotApi 热榜接口。正式部署建议在 Vercel 配置 `DAILY_HOT_API_BASE`，填入你自建的 DailyHotApi 地址；不配置时会尝试默认公开地址，但公开地址不保证长期可用。
 
 Supabase Dashboard 里需要确认：
 
