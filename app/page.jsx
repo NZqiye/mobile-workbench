@@ -1474,7 +1474,24 @@ function NoteList({ notes, onDelete, onEdit }) {
   );
 }
 
-function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations }) {
+function parseEpisodeList(value, fallbackEpisode) {
+  const text = String(value || "").trim();
+  if (!text) return fallbackEpisode ? [fallbackEpisode] : [];
+  const range = text.match(/^(\d+)\s*[-~至到]\s*(\d+)$/);
+  if (range) {
+    const start = Number(range[1]);
+    const end = Number(range[2]);
+    if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
+      return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+    }
+  }
+  return text
+    .split(/[,，、\s]+/)
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item) && item > 0);
+}
+
+function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
   const [tmdbQuery, setTmdbQuery] = useState("");
@@ -1517,6 +1534,11 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
   const selected = monthDays.find((day) => day.dateKey === selectedDate) || week[0];
   const timeline = selected.items
     .filter((item) => item.status !== "看过的剧" && item.status !== "暂停/弃剧")
+    .flatMap((item) => {
+      const current = Number(item.currentEpisode || 0);
+      const episodes = parseEpisodeList(item.updateEpisodes, current > 0 ? current + 1 : 0);
+      return (episodes.length ? episodes : [0]).map((episode) => ({ ...item, updateEpisode: episode }));
+    })
     .sort((a, b) => String(a.airTime || "23:59").localeCompare(String(b.airTime || "23:59")));
 
   return (
@@ -1545,12 +1567,11 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
       <div className="watch-timeline">
         {timeline.length === 0 && <p className="empty">这一天还没有追剧更新。给剧集填写“下次更新日期”和“更新时间”后，会显示在这里。</p>}
         {timeline.map((item) => {
-          const current = Number(item.currentEpisode || 0);
-          const updateEpisode = current > 0 ? current + 1 : 0;
+          const updateEpisode = Number(item.updateEpisode || 0);
           const total = Number(item.totalEpisodes || 0);
-          const progress = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+          const progress = total > 0 && updateEpisode > 0 ? Math.min(100, Math.round((updateEpisode / total) * 100)) : 0;
           return (
-            <article className="watch-item" key={item.id}>
+            <article className="watch-item" key={`${item.id}-${updateEpisode || "next"}`}>
               <div className="timeline-dot" />
               <div className="watch-time">{weekdayText(selected.date)} {selected.dateKey.slice(5).replace("-", "/")} {item.airTime || "--:--"}</div>
               <div className="watch-card">
@@ -1605,6 +1626,7 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
           <strong>搜索影视并加入观影列表</strong>
           <p>{tmdbStatus}</p>
         </div>
+        <button className="tmdb-sync-button" type="button" onClick={onSyncTmdbWatchlist}>同步 TMDB 片单</button>
         <form className="tmdb-search" onSubmit={(event) => {
           event.preventDefault();
           onSearchTmdb(tmdbQuery);
@@ -1646,6 +1668,7 @@ function ConsultationForm({ onSave, editing, onCancel }) {
       airTime: String(data.get("airTime") || ""),
       season: String(data.get("season") || "1"),
       currentEpisode: String(data.get("currentEpisode") || ""),
+      updateEpisodes: String(data.get("updateEpisodes") || ""),
       totalEpisodes: String(data.get("totalEpisodes") || ""),
       posterUrl: String(data.get("posterUrl") || ""),
       watchedDate: String(data.get("watchedDate") || ""),
@@ -1682,6 +1705,7 @@ function ConsultationForm({ onSave, editing, onCancel }) {
           <input name="season" defaultValue={item?.season || "1"} placeholder="第几季" />
           <input name="currentEpisode" defaultValue={item?.currentEpisode || ""} placeholder="当前集数" />
         </div>
+        <input name="updateEpisodes" defaultValue={item?.updateEpisodes || ""} placeholder="本次更新集数，例如 9,10 或 9-10" />
         <div className="inline-fields">
           <select name="rating" defaultValue={item?.rating || ""}>
             <option value="">暂不评分</option>
@@ -1732,7 +1756,7 @@ function ConsultationList({ consultations, onDelete, onEdit }) {
         {filteredConsultations.map((item) => (
           <article className="record" key={item.id}>
             <div className="record-head"><strong>{item.title}</strong><span>{item.status || "想看的剧"}</span></div>
-            <p className="record-meta">{[item.year, item.type || "剧集", item.rating ? `${item.rating} 分` : "", item.platform || item.source, item.nextAirDate ? `更新 ${item.nextAirDate} ${item.airTime || ""}` : "", item.currentEpisode ? `第 ${item.currentEpisode} 集` : "", item.totalEpisodes ? `共 ${item.totalEpisodes} 集` : "", item.watchedDate, ...(item.tags || [])].filter(Boolean).join(" · ")}</p>
+            <p className="record-meta">{[item.year, item.type || "剧集", item.rating ? `${item.rating} 分` : "", item.platform || item.source, item.nextAirDate ? `更新 ${item.nextAirDate} ${item.airTime || ""}` : "", item.updateEpisodes ? `更新第 ${item.updateEpisodes} 集` : "", item.currentEpisode ? `当前第 ${item.currentEpisode} 集` : "", item.totalEpisodes ? `共 ${item.totalEpisodes} 集` : "", item.watchedDate, ...(item.tags || [])].filter(Boolean).join(" · ")}</p>
             {(item.review || item.conclusion) && <p><strong>评价：</strong>{item.review || item.conclusion}</p>}
             {(item.note || item.nextAction) && <p><strong>后续：</strong>{item.note || item.nextAction}</p>}
             <div className="record-actions">
@@ -2163,22 +2187,70 @@ export default function Workbench() {
     }
   }
 
-  function importTmdb(item) {
+  async function importTmdb(item) {
+    setTmdbStatus(`正在读取《${item.title}》的 TMDB 详情...`);
+    let details = {};
+    try {
+      const mediaType = item.tmdbMediaType || (item.type === "电影" ? "movie" : "tv");
+      const response = await fetch(`/api/tmdb/details?id=${encodeURIComponent(item.tmdbId)}&type=${encodeURIComponent(mediaType)}`);
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!response.ok) throw new Error(data.error || "详情读取失败");
+      details = data;
+    } catch (error) {
+      setTmdbStatus(`详情读取失败，已按搜索结果加入：${error.message || "请稍后重试"}`);
+    }
+    const mergedItem = { ...item, ...details };
     const nextItem = {
       id: crypto.randomUUID(),
-      ...item,
+      ...mergedItem,
       status: "想看的剧",
       rating: "",
       watchedDate: "",
-      season: "1",
-      currentEpisode: "",
-      totalEpisodes: "",
+      season: mergedItem.season || "1",
+      currentEpisode: mergedItem.currentEpisode || "",
+      updateEpisodes: mergedItem.updateEpisodes || "",
+      totalEpisodes: mergedItem.totalEpisodes || "",
       time: nowText(),
     };
     const next = [nextItem, ...consultations];
     setConsultations(next);
     persist("consultations", next);
-    setTmdbStatus(`已加入：${item.title}`);
+    setTmdbStatus(`已加入：${mergedItem.title || item.title}${nextItem.nextAirDate ? ` · 下次 ${nextItem.nextAirDate} 更新第 ${nextItem.updateEpisodes || "--"} 集` : ""}`);
+  }
+
+  async function syncTmdbWatchlist() {
+    setTmdbStatus("正在同步 TMDB 待看片单...");
+    try {
+      const response = await fetch("/api/tmdb/watchlist");
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!response.ok) throw new Error(data.error || "TMDB 片单同步失败");
+      const incoming = Array.isArray(data.items) ? data.items : [];
+      const existingKeys = new Set(consultations.map((item) => `${item.tmdbMediaType || item.type}:${item.tmdbId || item.title}`));
+      const nextItems = incoming
+        .filter((item) => !existingKeys.has(`${item.tmdbMediaType || item.type}:${item.tmdbId || item.title}`))
+        .map((item) => ({
+          id: crypto.randomUUID(),
+          ...item,
+          status: "想看的剧",
+          rating: "",
+          watchedDate: "",
+          season: item.season || "1",
+          currentEpisode: item.currentEpisode || "",
+          updateEpisodes: item.updateEpisodes || "",
+          totalEpisodes: item.totalEpisodes || "",
+          time: nowText(),
+        }));
+      if (nextItems.length) {
+        const next = [...nextItems, ...consultations];
+        setConsultations(next);
+        persist("consultations", next);
+      }
+      setTmdbStatus(`TMDB 片单同步完成：新增 ${nextItems.length} 部，已存在 ${incoming.length - nextItems.length} 部`);
+    } catch (error) {
+      setTmdbStatus(`TMDB 片单同步失败：${error.message || "请稍后重试"}`);
+    }
   }
 
   function saveDietRecords(next) {
@@ -2651,6 +2723,7 @@ export default function Workbench() {
                 onSearchTmdb={searchTmdb}
                 onImportTmdb={importTmdb}
                 onLoadRecommendations={loadTmdbRecommendations}
+                onSyncTmdbWatchlist={syncTmdbWatchlist}
               />
             </>
           )}

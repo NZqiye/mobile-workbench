@@ -249,6 +249,7 @@ textarea { resize: vertical; }
 .tmdb-panel strong { font-size: 15px; }
 .tmdb-panel p { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
 .tmdb-panel b { color: var(--theme-main); font-size: 14px; letter-spacing: 1px; }
+.tmdb-sync-button { min-height: 40px; border: 0; border-radius: 12px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 13px; font-weight: 950; }
 .tmdb-search { display: flex; gap: 8px; align-items: center; min-width: 0; }
 .tmdb-search input { flex: 1; min-width: 0; height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: #fffdf9; color: var(--ink); outline: none; }
 .tmdb-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
