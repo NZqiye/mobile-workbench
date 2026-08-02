@@ -1,6 +1,6 @@
 {
-  "name": "七夜的工作台",
-  "short_name": "七夜工作台",
+  "name": "七夜online",
+  "short_name": "七夜online",
   "description": "移动优先的个人生活与行情工作台",
   "start_url": "/",
   "scope": "/",
