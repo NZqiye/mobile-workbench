@@ -1,9 +1,3 @@
-const fallbackNews = {
-  politics: [{ title: "DailyHotApi 暂时不可用，请稍后刷新", source: "本地兜底", url: "", publishedAt: "" }],
-  finance: [{ title: "DailyHotApi 暂时不可用，请稍后刷新", source: "本地兜底", url: "", publishedAt: "" }],
-  consume: [{ title: "DailyHotApi 暂时不可用，请稍后刷新", source: "本地兜底", url: "", publishedAt: "" }],
-};
-
 const dailyHotSources = {
   politics: ["thepaper", "sina-news", "netease-news", "toutiao"],
   finance: ["36kr", "huxiu", "ifanr", "wallstreetcn"],
@@ -27,12 +21,17 @@ function normalizeDailyHotItems(data, category, sourceId) {
 }
 
 async function loadDailyHotSource(sourceId, category) {
-  const response = await fetch(`${dailyHotBase()}/${sourceId}`, {
+  const url = `${dailyHotBase()}/${sourceId}`;
+  const response = await fetch(url, {
     headers: { "User-Agent": "qiyeworkbench/1.0" },
     next: { revalidate: 600 },
   });
-  if (!response.ok) throw new Error(`DailyHotApi 不可用：${response.status}`);
-  return normalizeDailyHotItems(await response.json(), category, sourceId);
+  if (!response.ok) throw new Error(`${sourceId} 返回 ${response.status}`);
+  try {
+    return normalizeDailyHotItems(await response.json(), category, sourceId);
+  } catch {
+    throw new Error(`${sourceId} 返回内容无法解析`);
+  }
 }
 
 async function loadDailyHot(category) {
@@ -58,7 +57,8 @@ export async function GET(request) {
   return Response.json({
     category,
     updatedAt: new Date().toISOString(),
-    source: news.length ? "DailyHotApi 热榜接口" : "本地兜底",
-    news: news.length ? news : fallbackNews[category] || fallbackNews.politics,
+    source: news.length ? "DailyHotApi 热榜接口" : "DailyHotApi 暂时不可用",
+    error: news.length ? "" : "当前 DailyHotApi 地址没有返回可用新闻，请检查 DAILY_HOT_API_BASE 或稍后刷新。",
+    news,
   });
 }
