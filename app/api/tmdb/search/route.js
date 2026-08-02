@@ -1,19 +1,4 @@
-export const tmdbToken = process.env.TMDB_ACCESS_TOKEN;
-export const imageBase = "https://image.tmdb.org/t/p/w342";
-
-export function mapResult(item) {
-  return {
-    tmdbId: item.id,
-    title: item.name || item.title || "未命名",
-    year: (item.first_air_date || item.release_date || "").slice(0, 4),
-    type: item.media_type === "movie" ? "电影" : "剧集",
-    platform: "TMDB",
-    posterUrl: item.poster_path ? `${imageBase}${item.poster_path}` : "",
-    review: item.overview || "",
-    nextAirDate: item.first_air_date || item.release_date || "",
-    tags: [],
-  };
-}
+import { fetchTmdb, mapTmdbResult, tmdbToken } from "../../../../lib/tmdb";
 
 export async function GET(request) {
   try {
@@ -32,12 +17,7 @@ export async function GET(request) {
     url.searchParams.set("language", "zh-CN");
     url.searchParams.set("include_adult", "false");
 
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${tmdbToken}`,
-        accept: "application/json",
-      },
-    });
+    const response = await fetchTmdb(url);
 
     const text = await response.text();
     const data = text ? JSON.parse(text) : {};
@@ -48,12 +28,12 @@ export async function GET(request) {
     const results = (data.results || [])
       .filter((item) => item.media_type === "tv" || item.media_type === "movie")
       .slice(0, 8)
-      .map(mapResult);
+      .map(mapTmdbResult);
 
     return Response.json({ results });
   } catch (error) {
     const message = error.message === "fetch failed"
-      ? "本地网络暂时无法连接 TMDB，线上 Vercel 环境可正常使用"
+      ? "暂时无法连接 TMDB，请稍后重试"
       : error.message || "TMDB 接口暂时不可用";
     return Response.json({ error: message }, { status: 500 });
   }
