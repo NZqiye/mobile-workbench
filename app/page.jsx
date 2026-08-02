@@ -842,11 +842,17 @@ function NoteList({ notes, onDelete, onEdit }) {
   );
 }
 
-function WatchSchedule({ items, tmdbResults, tmdbStatus, onSearchTmdb, onImportTmdb }) {
+function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
   const [tmdbQuery, setTmdbQuery] = useState("");
-  const allItems = items;
+  const allItems = Array.isArray(items) ? items : [];
+  const searchResults = Array.isArray(tmdbResults) ? tmdbResults : [];
+  const recommendationSections = Array.isArray(tmdbSections) ? tmdbSections : [];
+  function itemsForDate(dateKey) {
+    return allItems.filter((item) => item.nextAirDate === dateKey);
+  }
+
   const week = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(today);
     date.setDate(today.getDate() + index);
@@ -855,6 +861,7 @@ function WatchSchedule({ items, tmdbResults, tmdbStatus, onSearchTmdb, onImportT
       date,
       dateKey,
       items: allItems.filter((item) => item.nextAirDate === dateKey || item.watchedDate === dateKey),
+      updates: itemsForDate(dateKey),
     };
   });
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -870,6 +877,7 @@ function WatchSchedule({ items, tmdbResults, tmdbStatus, onSearchTmdb, onImportT
       dateKey,
       inMonth: date.getMonth() === today.getMonth(),
       items: allItems.filter((item) => item.nextAirDate === dateKey || item.watchedDate === dateKey),
+      updates: itemsForDate(dateKey),
     };
   });
   const calendarDays = expanded ? monthDays : week;
@@ -881,33 +889,6 @@ function WatchSchedule({ items, tmdbResults, tmdbStatus, onSearchTmdb, onImportT
 
   return (
     <section className="watch-shell">
-      <div className="watch-toolbar">
-        <button type="button">↺</button>
-        <button type="button">♡</button>
-        <strong>追更</strong>
-      </div>
-      <section className="tmdb-panel">
-        <div>
-          <strong>TMDB 搜索导入</strong>
-          <p>{tmdbStatus}</p>
-        </div>
-        <form className="tmdb-search" onSubmit={(event) => {
-          event.preventDefault();
-          onSearchTmdb(tmdbQuery);
-        }}>
-          <input value={tmdbQuery} onChange={(event) => setTmdbQuery(event.target.value)} placeholder="搜索剧名" />
-          <button className="chip-button" type="submit">搜索</button>
-        </form>
-        <div className="tmdb-results">
-          {tmdbResults.map((item) => (
-            <button className="tmdb-result" type="button" key={`${item.type}-${item.tmdbId}`} onClick={() => onImportTmdb(item)}>
-              {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
-              <strong>{item.title}</strong>
-              <small>{[item.year, item.type].filter(Boolean).join(" · ")}</small>
-            </button>
-          ))}
-        </div>
-      </section>
       <section className="watch-calendar">
         <div className="panel-head">
           <h2>{monthTitle(selected.date)}</h2>
@@ -918,13 +899,19 @@ function WatchSchedule({ items, tmdbResults, tmdbStatus, onSearchTmdb, onImportT
             <button className={`${day.dateKey === selectedDate ? "week-day active" : "week-day"} ${day.inMonth === false ? "outside-month" : ""}`} type="button" key={day.dateKey} onClick={() => setSelectedDate(day.dateKey)}>
               <span>{weekdayText(day.date)}</span>
               <strong>{day.date.getDate()}</strong>
-              <i className={day.items.length ? "has-update" : ""} />
+              <i className={day.updates.length ? "has-update" : ""} />
+              {day.updates.length > 0 && (
+                <small className="day-updates">
+                  {expanded ? `${day.updates.length} 部更新` : day.updates.slice(0, 1).map((item) => item.title).join("")}
+                  {!expanded && day.updates.length > 1 ? ` +${day.updates.length - 1}` : ""}
+                </small>
+              )}
             </button>
           ))}
         </div>
       </section>
       <div className="watch-timeline">
-        {timeline.length === 0 && <p className="empty">这一天还没有追更安排。给剧集填写“下次更新日期”和“更新时间”后，会显示在这里。</p>}
+        {timeline.length === 0 && <p className="empty">这一天还没有追剧更新。给剧集填写“下次更新日期”和“更新时间”后，会显示在这里。</p>}
         {timeline.map((item) => {
           const current = Number(item.currentEpisode || 0);
           const total = Number(item.totalEpisodes || 0);
@@ -955,6 +942,53 @@ function WatchSchedule({ items, tmdbResults, tmdbStatus, onSearchTmdb, onImportT
           );
         })}
       </div>
+      <section className="tmdb-recommendations">
+        <div className="panel-head">
+          <div>
+            <h2>影视资源推荐</h2>
+            <p>{tmdbRecommendationStatus}</p>
+          </div>
+          <button className="chip-button" type="button" onClick={onLoadRecommendations}>刷新推荐</button>
+        </div>
+        {recommendationSections.map((section) => (
+          <div className="tmdb-section" key={section.id}>
+            <h3>{section.title}</h3>
+            <div className="tmdb-poster-row">
+              {(Array.isArray(section.items) ? section.items : []).map((item) => (
+                <button className="tmdb-poster-card" type="button" key={`${section.id}-${item.tmdbId}`} onClick={() => onImportTmdb(item)}>
+                  <div className="tmdb-poster">
+                    {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+                  </div>
+                  <strong>{item.title}</strong>
+                  <small>{item.year || "暂无年份"}</small>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
+      <section className="tmdb-panel">
+        <div>
+          <strong>搜索影视并加入观影列表</strong>
+          <p>{tmdbStatus}</p>
+        </div>
+        <form className="tmdb-search" onSubmit={(event) => {
+          event.preventDefault();
+          onSearchTmdb(tmdbQuery);
+        }}>
+          <input value={tmdbQuery} onChange={(event) => setTmdbQuery(event.target.value)} placeholder="搜索剧名" />
+          <button className="chip-button" type="submit">搜索</button>
+        </form>
+        <div className="tmdb-results">
+          {searchResults.map((item) => (
+            <button className="tmdb-result" type="button" key={`${item.type}-${item.tmdbId}`} onClick={() => onImportTmdb(item)}>
+              {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+              <strong>{item.title}</strong>
+              <small>{[item.year, item.type].filter(Boolean).join(" · ")}</small>
+            </button>
+          ))}
+        </div>
+      </section>
     </section>
   );
 }
@@ -1068,7 +1102,6 @@ function ConsultationList({ consultations, onDelete, onEdit }) {
             <p className="record-meta">{[item.year, item.type || "剧集", item.rating ? `${item.rating} 分` : "", item.platform || item.source, item.nextAirDate ? `更新 ${item.nextAirDate} ${item.airTime || ""}` : "", item.currentEpisode ? `第 ${item.currentEpisode} 集` : "", item.totalEpisodes ? `共 ${item.totalEpisodes} 集` : "", item.watchedDate, ...(item.tags || [])].filter(Boolean).join(" · ")}</p>
             {(item.review || item.conclusion) && <p><strong>评价：</strong>{item.review || item.conclusion}</p>}
             {(item.note || item.nextAction) && <p><strong>后续：</strong>{item.note || item.nextAction}</p>}
-            <p className="record-meta">Trakt 接入预留：后续可同步 watchlist、watched history、ratings。</p>
             <div className="record-actions">
               <button type="button" onClick={() => onEdit(item)}>编辑</button>
               <button type="button" onClick={() => onDelete(item.id)}>删除</button>
@@ -1191,7 +1224,9 @@ export default function Workbench() {
   const [displayMode, setDisplayMode] = useState("mobile");
   const [ponyTheme, setPonyTheme] = useState("rmb");
   const [tmdbResults, setTmdbResults] = useState([]);
-  const [tmdbStatus, setTmdbStatus] = useState("输入剧名，从 TMDB 导入海报、年份和简介");
+  const [tmdbStatus, setTmdbStatus] = useState("输入剧名搜索，点击结果即可加入观影列表");
+  const [tmdbSections, setTmdbSections] = useState([]);
+  const [tmdbRecommendationStatus, setTmdbRecommendationStatus] = useState("正在准备热门影视推荐");
 
   function persist(name, value) {
     writeStorage(name, value);
@@ -1272,6 +1307,7 @@ export default function Workbench() {
     setDisplayMode(localStorage.getItem(key("displayMode")) === "desktop" ? "desktop" : "mobile");
     setPonyTheme(ponyThemes.some((theme) => theme.id === localStorage.getItem(key("ponyTheme"))) ? localStorage.getItem(key("ponyTheme")) : "rmb");
     setClock(nowText());
+    loadTmdbRecommendations();
     const timer = setInterval(() => setClock(nowText()), 30000);
 
     let subscription;
@@ -1327,16 +1363,31 @@ export default function Workbench() {
     localStorage.setItem(key("ponyTheme"), theme);
   }
 
+  async function loadTmdbRecommendations() {
+    setTmdbRecommendationStatus("正在加载热门影视...");
+    try {
+      const response = await fetch("/api/tmdb/recommendations");
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!response.ok) throw new Error(data.error || "推荐加载失败");
+      setTmdbSections(Array.isArray(data.sections) ? data.sections : []);
+      setTmdbRecommendationStatus("来自 TMDB 的每日热门推荐");
+    } catch (error) {
+      setTmdbRecommendationStatus(error.message || "推荐暂时不可用");
+    }
+  }
+
   async function searchTmdb(query) {
     const keyword = query.trim();
     if (!keyword) return;
     setTmdbStatus("正在搜索 TMDB...");
     try {
       const response = await fetch(`/api/tmdb/search?query=${encodeURIComponent(keyword)}`);
-      const data = await response.json();
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : {};
       if (!response.ok) throw new Error(data.error || data.status_message || "搜索失败");
       setTmdbResults(Array.isArray(data.results) ? data.results : []);
-      setTmdbStatus(`找到 ${data.results?.length || 0} 条结果，点击卡片可加入追剧清单`);
+      setTmdbStatus(`找到 ${data.results?.length || 0} 条结果，点击卡片即可加入观影列表`);
     } catch (error) {
       setTmdbStatus(`TMDB 搜索失败：${error.message}`);
     }
@@ -1598,6 +1649,8 @@ export default function Workbench() {
         </nav>
 
         <section className="work-area">
+          <div className="day-line"><span>📅</span><strong>{todayKey()}（今天）</strong></div>
+
           <header className="module-head">
             <div className="module-title-row">
               <span className="module-icon"><WorkbenchIcon name={pages.find((page) => page.id === activePage)?.icon || "spark"} /></span>
@@ -1612,8 +1665,6 @@ export default function Workbench() {
               <button type="button">历史记录</button>
             </div>
           </header>
-
-          <div className="day-line"><span>📅</span><strong>{todayKey()}（今天）</strong></div>
 
         <section className="content">
           {activePage === "today" && (
@@ -1709,11 +1760,12 @@ export default function Workbench() {
                 items={consultations}
                 tmdbResults={tmdbResults}
                 tmdbStatus={tmdbStatus}
+                tmdbSections={tmdbSections}
+                tmdbRecommendationStatus={tmdbRecommendationStatus}
                 onSearchTmdb={searchTmdb}
                 onImportTmdb={importTmdb}
+                onLoadRecommendations={loadTmdbRecommendations}
               />
-              <ConsultationForm onSave={saveConsultation} editing={editing} onCancel={cancelEditing} />
-              <ConsultationList consultations={consultations} onDelete={deleteConsultation} onEdit={editConsultation} />
             </>
           )}
 
