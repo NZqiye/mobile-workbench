@@ -1,7 +1,10 @@
 const dailyHotSources = {
-  politics: ["thepaper", "sina-news", "netease-news", "toutiao"],
-  finance: ["36kr", "huxiu", "ifanr", "wallstreetcn"],
-  consume: ["toutiao", "weibo", "baidu", "douyin"],
+  weibo: ["weibo"],
+  bilibili: ["bilibili"],
+  douyin: ["douyin"],
+  sina: ["sina-news"],
+  weread: ["weread"],
+  history: ["history"],
 };
 
 function dailyHotBase() {
@@ -35,7 +38,7 @@ async function loadDailyHotSource(sourceId, category) {
 }
 
 async function loadDailyHot(category) {
-  const sources = dailyHotSources[category] || dailyHotSources.politics;
+  const sources = dailyHotSources[category] || dailyHotSources.weibo;
   const settled = await Promise.allSettled(sources.map((source) => loadDailyHotSource(source, category)));
   const seen = new Set();
   return settled
@@ -51,7 +54,7 @@ async function loadDailyHot(category) {
 }
 
 export async function GET(request) {
-  const category = request.nextUrl.searchParams.get("category") || "politics";
+  const category = request.nextUrl.searchParams.get("category") || "weibo";
   const news = await loadDailyHot(category);
 
   return Response.json({
