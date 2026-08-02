@@ -19,7 +19,7 @@ const pages = [
 const pageNames = Object.fromEntries(pages.map((page) => [page.id, page.name]));
 const pageDescriptions = {
   today: "时间、天气、计划和行情集中整理",
-  plans: "每日安排、待办事项、复盘跟进",
+  plans: "习惯打卡、任务安排和纪念日倒数",
   notes: "生活记录、灵感、饮食与树洞",
   market: "金价、指数、自选资产观察",
   diet: "每日喝水、饮食热量和最近趋势",
@@ -44,10 +44,26 @@ const noteTypes = [
   { value: "idea", label: "灵感" },
 ];
 const consultationStatuses = ["想看的剧", "正在看", "看过的剧", "暂停/弃剧"];
+const anniversaryTypes = [
+  { id: "countdown", label: "倒数日", note: "未来值得期待的日子" },
+  { id: "memory", label: "纪念日", note: "过去值得纪念的日子" },
+  { id: "birthday", label: "生日", note: "重要的人的生日" },
+  { id: "festival", label: "节日", note: "仪式感的节日" },
+];
+const defaultChineseHolidays2026 = [
+  { id: "holiday-2026-new-year", title: "2026 元旦假期（1/1-1/3）", date: "2026-01-01", type: "festival", calendarType: "solar" },
+  { id: "holiday-2026-spring-festival", title: "2026 春节假期（2/15-2/23）", date: "2026-02-15", type: "festival", calendarType: "solar" },
+  { id: "holiday-2026-qingming", title: "2026 清明节假期（4/4-4/6）", date: "2026-04-04", type: "festival", calendarType: "solar" },
+  { id: "holiday-2026-labor-day", title: "2026 劳动节假期（5/1-5/5）", date: "2026-05-01", type: "festival", calendarType: "solar" },
+  { id: "holiday-2026-dragon-boat", title: "2026 端午节假期（6/19-6/21）", date: "2026-06-19", type: "festival", calendarType: "solar" },
+  { id: "holiday-2026-mid-autumn", title: "2026 中秋节假期（9/25-9/27）", date: "2026-09-25", type: "festival", calendarType: "solar" },
+  { id: "holiday-2026-national-day", title: "2026 国庆节假期（10/1-10/7）", date: "2026-10-01", type: "festival", calendarType: "solar" },
+];
 const legacyDefaultAssets = "SGE_AU9999,s_sh000001,s_sz399001,sh600519,sz300750";
 const stockDefaultAssets = "sh600584,sh603629,sh688507";
 const defaultAssets = "hf_GC,sh603629,sh688507";
 const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
+const defaultChineseHolidaysSeedKey = "defaultChineseHolidays2026Seeded";
 const defaultWaterTarget = 2000;
 const cupSize = 250;
 const foodCalories = [
@@ -410,6 +426,27 @@ function todayDisplay(date = new Date()) {
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 · ${["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()]}`;
 }
 
+function daysUntil(dateKey) {
+  const today = new Date(todayKey());
+  const target = new Date(dateKey);
+  if (Number.isNaN(target.getTime())) return null;
+  return Math.ceil((target - today) / (24 * 60 * 60 * 1000));
+}
+
+function anniversaryMeta(item) {
+  const original = new Date(item.date);
+  const today = new Date(todayKey());
+  if (Number.isNaN(original.getTime())) return { elapsed: null, nextDays: null, nextDate: "" };
+  const elapsed = Math.floor((today - original) / (24 * 60 * 60 * 1000));
+  let next = new Date(today.getFullYear(), original.getMonth(), original.getDate());
+  if (next < today) next = new Date(today.getFullYear() + 1, original.getMonth(), original.getDate());
+  return {
+    elapsed,
+    nextDays: Math.ceil((next - today) / (24 * 60 * 60 * 1000)),
+    nextDate: todayKey(next),
+  };
+}
+
 function parseFoodCount(value) {
   if (!value) return 1;
   const normalized = { 一: 1, 两: 2, 二: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9, 十: 10 }[value];
@@ -501,6 +538,12 @@ function mergeById(localItems, cloudItems) {
   return Array.from(merged.values());
 }
 
+function withDefaultChineseHolidays(items) {
+  const existingIds = new Set(items.map((item) => item.id));
+  const missing = defaultChineseHolidays2026.filter((item) => !existingIds.has(item.id));
+  return missing.length ? [...missing, ...items] : items;
+}
+
 function mergeCloudWithLocal(cloud) {
   const localAssets = localStorage.getItem(key("assets"));
   return {
@@ -508,6 +551,7 @@ function mergeCloudWithLocal(cloud) {
     plans: mergeById(readStorage("plans", []), cloud.plans),
     consultations: mergeById(readStorage("consultations", []), cloud.consultations),
     dietRecords: mergeById(readStorage("dietRecords", []), cloud.dietRecords),
+    anniversaries: mergeById(readStorage("anniversaries", []), cloud.anniversaries),
     waterTarget: Number(cloud.waterTarget || readStorage("waterTarget", defaultWaterTarget)) || defaultWaterTarget,
     habits: mergeById(readStorage("habits", readStorage("checkins", [])), cloud.habits || cloud.checkins),
     [`done:${todayKey()}`]: {
@@ -1153,47 +1197,6 @@ function MarketBoard({ compact = false }) {
   );
 }
 
-function PlanForm({ onSave, editing, onCancel }) {
-  const item = editing?.kind === "plan" ? editing.item : null;
-
-  function submit(event) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const title = String(data.get("title") || "").trim();
-    if (!title) return;
-    onSave({
-      id: item?.id || crypto.randomUUID(),
-      date: String(data.get("date") || todayKey()),
-      title,
-      priority: String(data.get("priority") || "中"),
-      status: String(data.get("status") || "未完成"),
-      note: String(data.get("note") || ""),
-      time: item?.time || nowText(),
-    });
-    event.currentTarget.reset();
-    onCancel?.();
-  }
-
-  return (
-    <section className="panel">
-      <div className="panel-head">
-        <h2>{item ? "编辑计划" : "添加计划"}</h2>
-        {item && <button className="chip-button" type="button" onClick={onCancel}>取消编辑</button>}
-      </div>
-      <form className="stack-form" onSubmit={submit}>
-        <input name="title" defaultValue={item?.title || ""} placeholder="今天要完成什么" required />
-        <div className="inline-fields">
-          <input name="date" type="date" defaultValue={getItemDate(item)} />
-          <select name="priority" defaultValue={item?.priority || "中"}><option>高</option><option>中</option><option>低</option></select>
-        </div>
-        <select name="status" defaultValue={item?.status || "未完成"}><option>未完成</option><option>已完成</option></select>
-        <textarea name="note" rows="3" defaultValue={item?.note || ""} placeholder="补充说明、地点、截止时间" />
-        <button type="submit">{item ? "保存修改" : "保存计划"}</button>
-      </form>
-    </section>
-  );
-}
-
 function itemMatchesQuery(item, query, fields) {
   const keyword = query.trim().toLowerCase();
   if (!keyword) return true;
@@ -1206,41 +1209,145 @@ function itemMatchesQuery(item, query, fields) {
     .some((value) => String(value).toLowerCase().includes(keyword));
 }
 
-function PlanList({ plans, onToggle, onDelete, onEdit }) {
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("all");
-  const filteredPlans = plans.filter((plan) =>
-    (status === "all" || plan.status === status) &&
-    itemMatchesQuery(plan, query, ["title", "note", "date", "priority", "status"]),
+function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onToggleHabit, onDeleteHabit, onAddTask, onToggleTask, onDeleteTask, onAddAnniversary, onDeleteAnniversary }) {
+  const unfinishedTasks = tasks.filter((task) => task.status !== "已完成").slice(0, 8);
+  const sortedAnniversaries = [...anniversaries].sort((a, b) => (anniversaryMeta(a).nextDays ?? 99999) - (anniversaryMeta(b).nextDays ?? 99999));
+  const renderAnniversaryCards = (items, type) => (
+    <div className="anniversary-grid">
+      {items.map((item) => {
+        const meta = anniversaryMeta(item);
+        const calendarLabel = item.calendarType === "lunar" ? "农历" : "公历";
+        const highlightElapsed = type.id === "memory";
+        return (
+          <div className={`anniversary-card ${type.id}`} key={item.id}>
+            <span>{item.date} · {calendarLabel}</span>
+            <strong>{item.title}</strong>
+            <div className="anniversary-days">
+              <b>{highlightElapsed ? "已过" : "还有"} {highlightElapsed ? (meta.elapsed === null ? "--" : Math.max(0, meta.elapsed)) : (meta.nextDays === null ? "--" : meta.nextDays)} 天</b>
+              <small>{highlightElapsed ? "下次还有" : "已过"} {highlightElapsed ? (meta.nextDays === null ? "--" : meta.nextDays) : (meta.elapsed === null ? "--" : Math.max(0, meta.elapsed))} 天</small>
+            </div>
+            <button type="button" onClick={() => onDeleteAnniversary(item.id)}>删除</button>
+          </div>
+        );
+      })}
+    </div>
   );
 
   return (
-    <section className="panel">
-      <div className="panel-head"><h2>计划列表</h2><span className="tag">{filteredPlans.length}/{plans.length} 条</span></div>
-      <div className="filter-panel">
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索计划、备注或日期" />
-        <select value={status} onChange={(event) => setStatus(event.target.value)}>
-          <option value="all">全部状态</option>
-          <option value="未完成">未完成</option>
-          <option value="已完成">已完成</option>
-        </select>
-      </div>
-      <div className="record-list">
-        {plans.length === 0 && <p className="empty">还没有计划，先添加一条。</p>}
-        {plans.length > 0 && filteredPlans.length === 0 && <p className="empty">没有匹配的计划。</p>}
-        {filteredPlans.map((plan) => (
-          <article className={`record ${plan.status === "已完成" ? "done-record" : ""}`} key={plan.id}>
-            <div className="record-head"><strong>{plan.title}</strong><span>{plan.date}</span></div>
-            <p className="record-meta">{plan.priority}优先级 · {plan.status}</p>
-            {plan.note && <p>{plan.note}</p>}
-            <div className="record-actions">
-              <button type="button" onClick={() => onEdit(plan)}>编辑</button>
-              <button type="button" onClick={() => onToggle(plan.id)}>{plan.status === "已完成" ? "恢复" : "完成"}</button>
-              <button type="button" onClick={() => onDelete(plan.id)}>删除</button>
+    <section className="arrange-shell">
+      <section className="arrange-card">
+        <div className="panel-head">
+          <div>
+            <h2>习惯打卡</h2>
+            <p>{todayKey()} · {Object.values(done).filter(Boolean).length}/{habits.length} 已完成</p>
+          </div>
+        </div>
+        <form className="quick-form" onSubmit={onAddHabit}>
+          <input name="title" placeholder="新增打卡项目，例如 早睡、运动、复盘" required />
+          <button type="submit">添加</button>
+        </form>
+        <div className="arrange-list">
+          {habits.length === 0 && <p className="empty">还没有习惯，先加一个每天想坚持的小事。</p>}
+          {habits.map((habit) => (
+            <div className="habit-row" key={habit.id}>
+              <label>
+                <input type="checkbox" checked={Boolean(done[habit.id])} onChange={() => onToggleHabit(habit.id)} />
+                <span>{habit.title}</span>
+              </label>
+              <button type="button" onClick={() => onDeleteHabit(habit.id)}>删除</button>
             </div>
-          </article>
-        ))}
-      </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="arrange-card">
+        <div className="panel-head">
+          <div>
+            <h2>任务安排</h2>
+            <p>记录近期工作，完成后勾掉即可。</p>
+          </div>
+        </div>
+        <form className="task-form" onSubmit={onAddTask}>
+          <input name="title" placeholder="近期要处理的工作" required />
+          <input name="note" placeholder="备注，可选" />
+          <button type="submit">添加任务</button>
+        </form>
+        <div className="arrange-list">
+          {unfinishedTasks.length === 0 && <p className="empty">暂无未完成任务。</p>}
+          {unfinishedTasks.map((task) => (
+            <div className="task-row" key={task.id}>
+              <label>
+                <input type="checkbox" checked={task.status === "已完成"} onChange={() => onToggleTask(task.id)} />
+                <span>{task.title}<small>{[task.note, task.date].filter(Boolean).join(" · ")}</small></span>
+              </label>
+              <button type="button" onClick={() => onDeleteTask(task.id)}>删除</button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="arrange-card">
+        <div className="panel-head">
+          <div>
+            <h2>纪念日</h2>
+            <p>倒数重要日子还有多久到。</p>
+          </div>
+        </div>
+        <form className="anniversary-form" onSubmit={onAddAnniversary}>
+          <input name="title" placeholder="纪念日名称，例如 生日、考试、旅行" required />
+          <div className="anniversary-fields">
+            <input name="date" type="date" required />
+            <select name="type" defaultValue="countdown">
+              {anniversaryTypes.map((type) => <option value={type.id} key={type.id}>{type.label}</option>)}
+            </select>
+            <select name="calendarType" defaultValue="solar">
+              <option value="solar">公历</option>
+              <option value="lunar">农历</option>
+            </select>
+          </div>
+          <button type="submit">添加纪念日</button>
+        </form>
+        <div className="anniversary-sections">
+          {sortedAnniversaries.length === 0 && <p className="empty">还没有纪念日。</p>}
+          {anniversaryTypes.map((type) => {
+            const items = sortedAnniversaries.filter((item) => (item.type || "memory") === type.id);
+            return (
+              <section className="anniversary-section" key={type.id}>
+                <div className="anniversary-section-head">
+                  <div>
+                    <strong>{type.label}</strong>
+                    <span>{type.note}</span>
+                  </div>
+                  <b>{items.length}</b>
+                </div>
+                {items.length === 0 ? (
+                  <p className="anniversary-empty">暂无{type.label}</p>
+                ) : type.id === "birthday" ? (
+                  <div className="birthday-groups">
+                    {[
+                      { id: "solar", label: "公历生日" },
+                      { id: "lunar", label: "农历生日" },
+                    ].map((group) => {
+                      const birthdayItems = items.filter((item) => (item.calendarType || "solar") === group.id);
+                      return (
+                        <section className="birthday-group" key={group.id}>
+                          <div className="birthday-group-head">
+                            <strong>{group.label}</strong>
+                            <span>{birthdayItems.length}</span>
+                          </div>
+                          {birthdayItems.length === 0 ? <p className="anniversary-empty">暂无{group.label}</p> : renderAnniversaryCards(birthdayItems, type)}
+                        </section>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  renderAnniversaryCards(items, type)
+                )}
+              </section>
+            );
+          })}
+        </div>
+      </section>
     </section>
   );
 }
@@ -1801,6 +1908,7 @@ export default function Workbench() {
   const [notes, setNotes] = useState([]);
   const [consultations, setConsultations] = useState([]);
   const [dietRecords, setDietRecords] = useState([]);
+  const [anniversaries, setAnniversaries] = useState([]);
   const [waterTarget, setWaterTarget] = useState(defaultWaterTarget);
   const [habits, setHabits] = useState([]);
   const [done, setDone] = useState({});
@@ -1844,6 +1952,10 @@ export default function Workbench() {
       setDietRecords(cloud.dietRecords);
       writeStorage("dietRecords", cloud.dietRecords);
     }
+    if (Array.isArray(cloud.anniversaries)) {
+      setAnniversaries(cloud.anniversaries);
+      writeStorage("anniversaries", cloud.anniversaries);
+    }
     if (Number(cloud.waterTarget)) {
       setWaterTarget(Number(cloud.waterTarget));
       writeStorage("waterTarget", Number(cloud.waterTarget));
@@ -1875,6 +1987,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "plans", merged.plans),
         saveCloudItem(nextSession, "consultations", merged.consultations),
         saveCloudItem(nextSession, "dietRecords", merged.dietRecords),
+        saveCloudItem(nextSession, "anniversaries", merged.anniversaries),
         saveCloudItem(nextSession, "waterTarget", merged.waterTarget),
         saveCloudItem(nextSession, "habits", merged.habits),
         saveCloudItem(nextSession, `done:${todayKey()}`, merged[`done:${todayKey()}`]),
@@ -1896,6 +2009,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "plans", readStorage("plans", [])),
         saveCloudItem(nextSession, "consultations", readStorage("consultations", [])),
         saveCloudItem(nextSession, "dietRecords", readStorage("dietRecords", [])),
+        saveCloudItem(nextSession, "anniversaries", readStorage("anniversaries", [])),
         saveCloudItem(nextSession, "waterTarget", readStorage("waterTarget", defaultWaterTarget)),
         saveCloudItem(nextSession, "habits", readStorage("habits", [])),
         saveCloudItem(nextSession, `done:${todayKey()}`, readStorage(`done:${todayKey()}`, {})),
@@ -1915,6 +2029,13 @@ export default function Workbench() {
     setNotes(readStorage("notes", []));
     setConsultations(readStorage("consultations", []));
     setDietRecords(readStorage("dietRecords", []));
+    let nextAnniversaries = readStorage("anniversaries", []);
+    if (localStorage.getItem(key(defaultChineseHolidaysSeedKey)) !== "true") {
+      nextAnniversaries = withDefaultChineseHolidays(nextAnniversaries);
+      writeStorage("anniversaries", nextAnniversaries);
+      localStorage.setItem(key(defaultChineseHolidaysSeedKey), "true");
+    }
+    setAnniversaries(nextAnniversaries);
     setWaterTarget(readStorage("waterTarget", defaultWaterTarget));
     setHabits(readStorage("habits", readStorage("checkins", [])));
     setDone(readStorage(`done:${todayKey()}`, {}));
@@ -2056,12 +2177,69 @@ export default function Workbench() {
     saveDietRecords(dietRecords.filter((item) => item.id !== id));
   }
 
-  function savePlan(plan) {
-    const next = plans.some((item) => item.id === plan.id)
-      ? mapItemsById(plans, plan.id, () => plan)
-      : [plan, ...plans];
+  function addHabit(event) {
+    event.preventDefault();
+    const title = String(new FormData(event.currentTarget).get("title") || "").trim();
+    if (!title) return;
+    const next = [{ id: crypto.randomUUID(), title }, ...habits];
+    setHabits(next);
+    persist("habits", next);
+    event.currentTarget.reset();
+  }
+
+  function toggleHabit(id) {
+    const next = { ...done, [id]: !done[id] };
+    setDone(next);
+    persist(`done:${todayKey()}`, next);
+  }
+
+  function deleteHabit(id) {
+    const nextHabits = habits.filter((item) => item.id !== id);
+    const nextDone = { ...done };
+    delete nextDone[id];
+    setHabits(nextHabits);
+    setDone(nextDone);
+    persist("habits", nextHabits);
+    persist(`done:${todayKey()}`, nextDone);
+  }
+
+  function addTask(event) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const title = String(data.get("title") || "").trim();
+    if (!title) return;
+    const next = [{
+      id: crypto.randomUUID(),
+      date: todayKey(),
+      title,
+      priority: "中",
+      status: "未完成",
+      note: String(data.get("note") || ""),
+      time: nowText(),
+    }, ...plans];
     setPlans(next);
     persist("plans", next);
+    event.currentTarget.reset();
+  }
+
+  function addAnniversary(event) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const title = String(data.get("title") || "").trim();
+    const date = String(data.get("date") || "");
+    const type = String(data.get("type") || "countdown");
+    const calendarType = String(data.get("calendarType") || "solar");
+    if (!title || !date) return;
+    const next = [{ id: crypto.randomUUID(), title, date, type, calendarType }, ...anniversaries];
+    setAnniversaries(next);
+    persist("anniversaries", next);
+    event.currentTarget.reset();
+  }
+
+  function deleteAnniversary(id) {
+    const next = anniversaries.filter((item) => item.id !== id);
+    setAnniversaries(next);
+    persist("anniversaries", next);
   }
 
   function togglePlan(id) {
@@ -2074,11 +2252,6 @@ export default function Workbench() {
     const next = plans.filter((plan) => plan.id !== id);
     setPlans(next);
     persist("plans", next);
-  }
-
-  function editPlan(item) {
-    setEditing({ kind: "plan", item });
-    switchPage("plans");
   }
 
   function saveNote(note) {
@@ -2134,8 +2307,15 @@ export default function Workbench() {
       "",
       `导出时间：${new Date().toISOString()}`,
       "",
-      "## 计划",
-      ...plans.map((plan) => `- [${plan.status === "已完成" ? "x" : " "}] ${plan.date} ${plan.title}（${plan.priority}）${plan.note ? `：${plan.note}` : ""}`),
+      "## 任务安排",
+      ...plans.map((plan) => `- [${plan.status === "已完成" ? "x" : " "}] ${plan.date} ${plan.title}${plan.note ? `：${plan.note}` : ""}`),
+      "",
+      "## 纪念日",
+      ...anniversaries.map((item) => {
+        const meta = anniversaryMeta(item);
+        const typeLabel = anniversaryTypes.find((type) => type.id === (item.type || "memory"))?.label || "纪念日";
+        return `- [${typeLabel}] ${item.date} ${item.calendarType === "lunar" ? "阴历" : "阳历"} ${item.title}：已过 ${meta.elapsed ?? "--"} 天，下次还有 ${meta.nextDays ?? "--"} 天`;
+      }),
       "",
       "## 记录",
       ...notes.map((note) => `### ${note.date} ${note.title}\n\n类型：${noteTypeLabel(note.type)}\n\n${note.content || ""}\n`),
@@ -2163,6 +2343,7 @@ export default function Workbench() {
       notes,
       consultations,
       dietRecords,
+      anniversaries,
       waterTarget,
       habits,
       done,
@@ -2201,6 +2382,10 @@ export default function Workbench() {
       if (Array.isArray(payload.dietRecords)) {
         setDietRecords(payload.dietRecords);
         persist("dietRecords", payload.dietRecords);
+      }
+      if (Array.isArray(payload.anniversaries)) {
+        setAnniversaries(payload.anniversaries);
+        persist("anniversaries", payload.anniversaries);
       }
       if (Number(payload.waterTarget)) {
         setWaterTarget(Number(payload.waterTarget));
@@ -2259,13 +2444,13 @@ export default function Workbench() {
 
   const sortedRecent = [...recent].sort((a, b) => String(b.time || "").localeCompare(String(a.time || "")));
   const skillSummaries = [
-    { id: "today", name: "今日速看", icon: "home", badge: "首页", summary: `计划 ${stats.plans} · 签到 ${stats.checkin}` },
+    { id: "today", name: "今日速看", icon: "home", badge: "首页", summary: `任务 ${stats.plans} · 签到 ${stats.checkin}` },
     { id: "consultations", name: "观影记录", icon: "chat", badge: "观影", summary: `${stats.consultations} 条` },
     { id: "market", name: "股市行情", icon: "trend", badge: "行情", summary: "金价、指数、自选股" },
     { id: "diet", name: "饮食记录", icon: "food", badge: "饮食", summary: `${dietRecords.filter((item) => item.date === todayKey()).length} 条` },
     { id: "wear", name: "穿衣助手", icon: "wear", badge: "穿搭", summary: "无锡天气穿搭" },
     { id: "news", name: "时事新闻", icon: "news", badge: "新闻", summary: "时政财经消费" },
-    { id: "plans", name: "每日安排", icon: "checklist", badge: "待办", summary: `${todayPlans.length} 条待办` },
+    { id: "plans", name: "每日安排", icon: "checklist", badge: "安排", summary: `${todayPlans.length} 条任务` },
     { id: "notes", name: "灵感记录", icon: "note", badge: "记录", summary: `${notes.length} 条记录` },
     { id: "settings", name: "数据设置", icon: "settings", badge: "备份", summary: session ? "云同步在线" : "本地模式" },
   ];
@@ -2330,7 +2515,7 @@ export default function Workbench() {
               <DailyQuoteCard />
               <section className="dashboard-strip" aria-label="今日概览">
                 <div className="dashboard-tile dashboard-tile-primary">
-                  <span>今日计划</span>
+                  <span>今日任务</span>
                   <strong>{stats.plans}</strong>
                   <small>完成 / 总数</small>
                 </div>
@@ -2348,7 +2533,7 @@ export default function Workbench() {
               <section className="panel quick-panel">
                 <div className="panel-head"><h2>快速入口</h2><span className="tag">一步到位</span></div>
                 <div className="quick-grid">
-                  <QuickAction label="新建计划" onClick={() => switchPage("plans")} />
+                  <QuickAction label="任务安排" onClick={() => switchPage("plans")} />
                   <QuickAction label="快速记录" onClick={() => switchPage("notes")} />
                   <QuickAction label="观影记录" onClick={() => switchPage("consultations")} />
                   <QuickAction label="股市行情" onClick={() => switchPage("market")} />
@@ -2358,13 +2543,13 @@ export default function Workbench() {
                 </div>
               </section>
               <section className="stats-grid">
-                <StatButton label="今日计划" value={stats.plans} onClick={() => switchPage("plans")} />
+                <StatButton label="今日任务" value={stats.plans} onClick={() => switchPage("plans")} />
                 <StatButton label="记录总数" value={stats.notes} onClick={() => switchPage("notes")} />
                 <StatButton label="追剧清单" value={`${stats.consultations} 部`} onClick={() => switchPage("consultations")} />
               </section>
               <WeatherCard compact clock={clock} />
               <section className="panel">
-                <div className="panel-head"><h2>今日计划</h2><span className="tag">{todayKey()}</span></div>
+                <div className="panel-head"><h2>今日任务</h2><span className="tag">{todayKey()}</span></div>
                 <div className="record-list">
                   {todayPlans.length === 0 && <p className="empty">今天没有未完成计划。</p>}
                   {todayPlans.map((plan) => (
@@ -2390,10 +2575,20 @@ export default function Workbench() {
           )}
 
           {activePage === "plans" && (
-            <>
-              <PlanForm onSave={savePlan} editing={editing} onCancel={cancelEditing} />
-              <PlanList plans={plans} onToggle={togglePlan} onDelete={deletePlan} onEdit={editPlan} />
-            </>
+            <DailyArrangement
+              habits={habits}
+              done={done}
+              tasks={plans}
+              anniversaries={anniversaries}
+              onAddHabit={addHabit}
+              onToggleHabit={toggleHabit}
+              onDeleteHabit={deleteHabit}
+              onAddTask={addTask}
+              onToggleTask={togglePlan}
+              onDeleteTask={deletePlan}
+              onAddAnniversary={addAnniversary}
+              onDeleteAnniversary={deleteAnniversary}
+            />
           )}
 
           {activePage === "notes" && (
