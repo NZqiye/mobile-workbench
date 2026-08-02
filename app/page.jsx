@@ -41,6 +41,7 @@ const noteTypes = [
 ];
 const consultationStatuses = ["想看的剧", "正在看", "看过的剧", "暂停/弃剧"];
 const defaultAssets = "SGE_AU9999,s_sh000001,s_sz399001,sh600519,sz300750";
+const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
 
 function WorkbenchIcon({ name }) {
   const icons = {
@@ -355,6 +356,34 @@ function mapItemsById(items, id, updater) {
   return items.map((item) => (item.id === id ? updater(item) : item));
 }
 
+function mergeById(localItems, cloudItems) {
+  const merged = new Map();
+  if (Array.isArray(cloudItems)) {
+    cloudItems.forEach((item) => merged.set(item.id || crypto.randomUUID(), item));
+  }
+  if (Array.isArray(localItems)) {
+    localItems.forEach((item) => {
+      const id = item.id || crypto.randomUUID();
+      if (!merged.has(id)) merged.set(id, { ...item, id });
+    });
+  }
+  return Array.from(merged.values());
+}
+
+function mergeCloudWithLocal(cloud) {
+  return {
+    notes: mergeById(readStorage("notes", []), cloud.notes),
+    plans: mergeById(readStorage("plans", []), cloud.plans),
+    consultations: mergeById(readStorage("consultations", []), cloud.consultations),
+    habits: mergeById(readStorage("habits", readStorage("checkins", [])), cloud.habits || cloud.checkins),
+    [`done:${todayKey()}`]: {
+      ...readStorage(`done:${todayKey()}`, {}),
+      ...(cloud[`done:${todayKey()}`] || {}),
+    },
+    assets: typeof cloud.assets === "string" ? cloud.assets : localStorage.getItem(key("assets")) || defaultAssets,
+  };
+}
+
 function migrateLegacyData() {
   const existingNotes = readStorage("notes", null);
   const existingPlans = readStorage("plans", null);
@@ -516,14 +545,14 @@ function SkillOverview({ open, skills, activePage, stats, session, onClose, onSe
 }
 
 function SyncPanel({ session, syncStatus, onLogin, onLogout, onSync, onExport }) {
-  const [email, setEmail] = useState("");
+  const [accessCode, setAccessCode] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function submit(event) {
     event.preventDefault();
-    if (!email.trim()) return;
+    if (!accessCode.trim()) return;
     setBusy(true);
-    await onLogin(email.trim());
+    await onLogin(accessCode.trim());
     setBusy(false);
   }
 
@@ -542,14 +571,14 @@ function SyncPanel({ session, syncStatus, onLogin, onLogout, onSync, onExport })
       {!hasSupabaseConfig && <p className="empty">还没有配置 Supabase，先在 `.env.local` 填入地址和 anon key。</p>}
       {hasSupabaseConfig && !session && (
         <form className="stack-form" onSubmit={submit}>
-          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="输入邮箱接收登录链接" required />
-          <button type="submit" disabled={busy}>{busy ? "发送中" : "发送登录链接"}</button>
+          <input type="password" value={accessCode} onChange={(event) => setAccessCode(event.target.value)} placeholder="输入固定访问码" required />
+          <button type="submit" disabled={busy}>{busy ? "验证中" : "解锁云同步"}</button>
         </form>
       )}
       {session && (
         <div className="account-box">
           <strong>{session.user.email}</strong>
-          <button type="button" onClick={onLogout}>退出登录</button>
+          <button type="button" onClick={onLogout}>锁定</button>
         </div>
       )}
     </section>
@@ -883,6 +912,9 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
   const calendarDays = expanded ? monthDays : week;
   const [selectedDate, setSelectedDate] = useState(week[0].dateKey);
   const selected = monthDays.find((day) => day.dateKey === selectedDate) || week[0];
+  const activeWatchItems = allItems
+    .filter((item) => item.status !== "看过的剧" && item.status !== "暂停/弃剧")
+    .slice(0, 6);
   const timeline = selected.items
     .filter((item) => item.status !== "看过的剧" && item.status !== "暂停/弃剧")
     .sort((a, b) => String(a.airTime || "23:59").localeCompare(String(b.airTime || "23:59")));
@@ -907,6 +939,26 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
                 </small>
               )}
             </button>
+          ))}
+        </div>
+      </section>
+      <section className="watch-list">
+        <div className="panel-head">
+          <h2>正在追的剧</h2>
+          <span className="tag">{activeWatchItems.length} 部</span>
+        </div>
+        <div className="watch-list-grid">
+          {activeWatchItems.length === 0 && <p className="empty">还没有正在追的剧。可以从下面搜索影视，点击结果加入观影列表。</p>}
+          {activeWatchItems.map((item) => (
+            <article className="watch-list-card" key={item.id}>
+              <div className="poster-box">
+                {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+              </div>
+              <div>
+                <strong>{item.title}</strong>
+                <p>{[item.status || "想看的剧", item.platform || item.source, item.nextAirDate ? `下次 ${item.nextAirDate}` : "", item.currentEpisode ? `第 ${item.currentEpisode} 集` : ""].filter(Boolean).join(" · ")}</p>
+              </div>
+            </article>
           ))}
         </div>
       </section>
@@ -1269,8 +1321,18 @@ export default function Workbench() {
     if (!nextSession) return;
     setSyncStatus("正在从云端同步...");
     try {
-      applyCloud(await loadCloudItems(nextSession));
+      const merged = mergeCloudWithLocal(await loadCloudItems(nextSession));
+      applyCloud(merged);
+      await Promise.all([
+        saveCloudItem(nextSession, "notes", merged.notes),
+        saveCloudItem(nextSession, "plans", merged.plans),
+        saveCloudItem(nextSession, "consultations", merged.consultations),
+        saveCloudItem(nextSession, "habits", merged.habits),
+        saveCloudItem(nextSession, `done:${todayKey()}`, merged[`done:${todayKey()}`]),
+        saveCloudItem(nextSession, "assets", merged.assets),
+      ]);
       setSyncStatus(`云同步已连接 · ${nowText()}`);
+      loadTmdbRecommendations();
     } catch (error) {
       setSyncStatus(`同步失败：${error.message || "请稍后再试"}`);
     }
@@ -1310,22 +1372,13 @@ export default function Workbench() {
     loadTmdbRecommendations();
     const timer = setInterval(() => setClock(nowText()), 30000);
 
-    let subscription;
-    if (supabase) {
-      supabase.auth.getSession().then(({ data }) => {
-        setSession(data.session);
-        if (data.session) syncFromCloud(data.session);
-      });
-      subscription = supabase.auth.onAuthStateChange((_event, dataSession) => {
-        setSession(dataSession);
-        if (dataSession) syncFromCloud(dataSession);
-        else setSyncStatus("本地保存，登录后开启云同步");
-      }).data.subscription;
+    if (supabase && localStorage.getItem(key("accessUnlocked")) === "true") {
+      setSession(fixedSession);
+      syncFromCloud(fixedSession);
     }
 
     return () => {
       clearInterval(timer);
-      subscription?.unsubscribe();
     };
   }, []);
 
@@ -1373,7 +1426,7 @@ export default function Workbench() {
       setTmdbSections(Array.isArray(data.sections) ? data.sections : []);
       setTmdbRecommendationStatus("来自 TMDB 的每日热门推荐");
     } catch (error) {
-      setTmdbRecommendationStatus(error.message || "推荐暂时不可用");
+      setTmdbRecommendationStatus(error.message || "推荐暂时不可用，请点刷新推荐重试");
     }
   }
 
@@ -1389,7 +1442,7 @@ export default function Workbench() {
       setTmdbResults(Array.isArray(data.results) ? data.results : []);
       setTmdbStatus(`找到 ${data.results?.length || 0} 条结果，点击卡片即可加入观影列表`);
     } catch (error) {
-      setTmdbStatus(`TMDB 搜索失败：${error.message}`);
+      setTmdbStatus(`TMDB 搜索暂时失败：${error.message || "请稍后重试"}`);
     }
   }
 
@@ -1588,20 +1641,28 @@ export default function Workbench() {
     }
   }
 
-  async function login(email) {
+  async function login(accessCode) {
     if (!supabase) return;
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin },
-    });
-    setSyncStatus(error ? `登录邮件发送失败：${error.message}` : "登录链接已发送，请在手机邮箱里打开");
+    try {
+      const response = await fetch("/api/access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: accessCode }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "访问码验证失败");
+      localStorage.setItem(key("accessUnlocked"), "true");
+      setSession(fixedSession);
+      await syncFromCloud(fixedSession);
+    } catch (error) {
+      setSyncStatus(error.message || "访问码验证失败");
+    }
   }
 
   async function logout() {
-    if (!supabase) return;
-    await supabase.auth.signOut();
+    localStorage.removeItem(key("accessUnlocked"));
     setSession(null);
-    setSyncStatus("已退出登录，本机继续本地保存");
+    setSyncStatus("已锁定，本机继续本地保存");
   }
 
   function cancelEditing() {
@@ -1805,8 +1866,8 @@ export default function Workbench() {
                 </form>
               </section>
               <section className="panel">
-                <h2>手机登录</h2>
-                <p className="empty">手机打开同一个网址，进入“设置”，输入邮箱，点邮件里的登录链接。登录后点“同步”，电脑和手机就会使用同一份云端数据。</p>
+                <h2>手机同步</h2>
+                <p className="empty">手机打开同一个网址，进入“设置”，输入固定访问码解锁云同步。解锁后点“同步”，电脑和手机就会使用同一份云端数据。</p>
               </section>
             </>
           )}
