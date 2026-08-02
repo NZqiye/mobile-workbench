@@ -1,4 +1,4 @@
-# 七夜的 Next.js 个人工作台
+# 七夜online
 
 这是移动优先的 PWA 工作台，包含生活记录、习惯打卡、待办、每日复盘、树洞、国内行情看板和 Supabase 云同步。
 
@@ -34,7 +34,13 @@ http://localhost:3000
 ```text
 NEXT_PUBLIC_SUPABASE_URL=你的 Supabase Project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY=你的 Supabase anon / publishable key
+OPENAI_API_KEY=你的 OpenAI API Key
+DAILY_HOT_API_BASE=DailyHotApi 地址，可选
 ```
+
+如果要使用“饮食记录”的拍照识别热量功能，需要配置 `OPENAI_API_KEY`。可选配置 `OPENAI_VISION_MODEL`，不填时默认使用项目内置的视觉模型名称。
+
+“时事新闻”使用 DailyHotApi 热榜接口。可选配置 `DAILY_HOT_API_BASE`，例如填入你自建的 DailyHotApi 地址；不配置时默认使用 `https://api-hot.imsyy.top`。
 
 Supabase Dashboard 里需要确认：
 
