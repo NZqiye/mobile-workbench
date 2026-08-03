@@ -675,10 +675,11 @@ function StatButton({ label, value, onClick }) {
   );
 }
 
-function QuickAction({ label, onClick }) {
+function QuickAction({ label, icon, onClick }) {
   return (
     <button className="quick-action" type="button" onClick={onClick}>
-      {label}
+      <span className="quick-action-icon"><AnimeNavIcon name={icon} /></span>
+      <span>{label}</span>
     </button>
   );
 }
@@ -834,7 +835,10 @@ function WeatherCard({ compact = false, clock = "--:--" }) {
           <strong>{weather ? `${weather.current ?? "--"}°` : "--"}</strong>
           <small>{weather ? `${weatherLabel(weather.code)} · ${weather.min ?? "--"}° / ${weather.max ?? "--"}° · 降水 ${weather.rain ?? "--"}%` : "正在读取无锡天气"}</small>
         </div>
-        <b>{weather ? weatherLabel(weather.code) : "天气"}</b>
+        <b className="weather-badge">
+          <span>{weatherIcon(weather?.code)}</span>
+          <small>{weather ? weatherLabel(weather.code) : "天气"}</small>
+        </b>
       </div>
       <div className="weather-forecast">
         {(weather?.forecast || []).slice(0, 5).map((day) => (
@@ -1139,6 +1143,27 @@ function dedupeConsultations(items) {
     seen.add(key);
     return true;
   });
+}
+
+function mergeTmdbFields(item, fresh) {
+  return {
+    ...item,
+    title: fresh.title || item.title,
+    year: fresh.year || item.year,
+    type: fresh.type || item.type,
+    platform: fresh.platform || item.platform,
+    tmdbId: fresh.tmdbId || item.tmdbId,
+    tmdbMediaType: fresh.tmdbMediaType || item.tmdbMediaType,
+    posterUrl: fresh.posterUrl || item.posterUrl,
+    review: fresh.review || item.review,
+    season: fresh.season || item.season || "1",
+    currentEpisode: fresh.currentEpisode || item.currentEpisode || "",
+    nextAirDate: fresh.nextAirDate || item.nextAirDate || "",
+    updateEpisodes: fresh.updateEpisodes || item.updateEpisodes || "",
+    totalEpisodes: fresh.totalEpisodes || item.totalEpisodes || "",
+    tags: fresh.tags?.length ? fresh.tags : item.tags,
+    time: nowText(),
+  };
 }
 
 function MarketBoard({ compact = false }) {
@@ -1506,7 +1531,7 @@ function parseEpisodeList(value, fallbackEpisode) {
     .filter((item) => Number.isFinite(item) && item > 0);
 }
 
-function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist }) {
+function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
   const [tmdbQuery, setTmdbQuery] = useState("");
@@ -1561,7 +1586,10 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
       <section className="watch-calendar">
         <div className="panel-head">
           <h2>{monthTitle(selected.date)}</h2>
-          <button className="calendar-toggle" type="button" onClick={() => setExpanded(!expanded)}>{expanded ? "⌃" : "⌄"}</button>
+          <div className="calendar-actions">
+            <button className="chip-button" type="button" onClick={onRefreshTmdbTracked}>刷新更新</button>
+            <button className="calendar-toggle" type="button" onClick={() => setExpanded(!expanded)}>{expanded ? "⌃" : "⌄"}</button>
+          </div>
         </div>
         <div className={expanded ? "week-grid month-grid" : "week-grid"}>
           {calendarDays.map((day) => (
@@ -1788,8 +1816,6 @@ function ConsultationList({ consultations, onDelete, onEdit }) {
 function DietTracker({ records, waterTarget, onAddWater, onAddMeal, onDelete, onSaveTarget }) {
   const [meal, setMeal] = useState("早餐");
   const [foodInput, setFoodInput] = useState("");
-  const [visionStatus, setVisionStatus] = useState("上传食物图片，自动估算热量。");
-  const [visionResult, setVisionResult] = useState(null);
   const target = Number(waterTarget) || defaultWaterTarget;
   const todayRecords = records.filter((item) => item.date === todayKey());
   const waterRecords = todayRecords.filter((item) => item.type === "water");
@@ -1826,48 +1852,15 @@ function DietTracker({ records, waterTarget, onAddWater, onAddMeal, onDelete, on
   function submitMeal(event) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
-    const title = String(data.get("title") || "").trim();
+    const titleInput = String(data.get("title") || "").trim();
     const manualCalories = Number(data.get("calories") || 0);
-    const estimated = estimateMealCalories(title);
-    const calories = estimated.calories || manualCalories;
-    if (!title || !Number.isFinite(calories) || calories <= 0) return;
+    const estimated = estimateMealCalories(titleInput);
+    const calories = manualCalories || estimated.calories;
+    const title = titleInput || `${meal}热量`;
+    if (!Number.isFinite(calories) || calories <= 0) return;
     onAddMeal({ meal, title, calories, matchedFoods: estimated.matched.map((item) => item.name) });
     setFoodInput("");
     event.currentTarget.reset();
-  }
-
-  async function analyzeFoodImage(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setVisionStatus("正在识别图片...");
-    setVisionResult(null);
-    try {
-      const data = new FormData();
-      data.append("image", file);
-      const response = await fetch("/api/food-vision", { method: "POST", body: data });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "图片识别失败");
-      setVisionResult(result);
-      setVisionStatus(`识别完成：约 ${result.calories || 0} kcal`);
-    } catch (error) {
-      setVisionStatus(error.message || "图片识别失败，请稍后重试");
-    } finally {
-      event.target.value = "";
-    }
-  }
-
-  function addVisionMeal() {
-    if (!visionResult?.calories) return;
-    onAddMeal({
-      meal,
-      title: visionResult.title,
-      calories: visionResult.calories,
-      matchedFoods: (visionResult.foods || []).map((item) => item.name).filter(Boolean),
-      note: visionResult.note,
-      source: "图片识别",
-    });
-    setVisionResult(null);
-    setVisionStatus("已加入饮食记录。");
   }
 
   return (
@@ -1947,26 +1940,11 @@ function DietTracker({ records, waterTarget, onAddWater, onAddMeal, onDelete, on
             <button className={meal === item ? "active" : ""} type="button" key={item} onClick={() => setMeal(item)}>{item}</button>
           ))}
         </div>
-        <div className="food-vision-box">
-          <label>
-            <span>📷 拍照识别</span>
-            <input type="file" accept="image/*" capture="environment" onChange={analyzeFoodImage} />
-          </label>
-          <p>{visionStatus}</p>
-          {visionResult && (
-            <div className="vision-result">
-              <strong>{visionResult.title}</strong>
-              <small>{visionResult.foods?.map((item) => `${item.name}${item.portion ? ` ${item.portion}` : ""}`).join("、") || "已识别食物"}</small>
-              <b>{visionResult.calories} kcal</b>
-              <button type="button" onClick={addVisionMeal}>加入{meal}</button>
-            </div>
-          )}
-        </div>
         <form className="meal-form" onSubmit={submitMeal}>
-          <input name="title" value={foodInput} onChange={(event) => setFoodInput(event.target.value)} placeholder="输入食物，例如 鸡蛋 牛奶 米饭" />
-          <input name="calories" type="number" min="1" inputMode="numeric" placeholder="可选 kcal" />
-          <small>{estimate.calories ? `估算 ${estimate.calories} kcal · ${estimate.matched.map((item) => item.name).join("、")}` : "输入常见食物后自动估算，识别不到可填右侧 kcal"}</small>
-          <button type="submit">添加饮食</button>
+          <input name="title" value={foodInput} onChange={(event) => setFoodInput(event.target.value)} placeholder="食物名称，可不填" />
+          <input name="calories" type="number" min="1" inputMode="numeric" placeholder={`${meal} kcal`} />
+          <small>{estimate.calories ? `已估算 ${estimate.calories} kcal · ${estimate.matched.map((item) => item.name).join("、")}；也可以直接改右侧热量` : `直接输入 ${meal} 热量即可，食物名称可选`}</small>
+          <button type="submit">添加{meal}热量</button>
         </form>
         <div className="diet-log-list">
           {mealRecords.length === 0 && <p className="empty">今天还没有饮食记录。</p>}
@@ -2140,6 +2118,16 @@ export default function Workbench() {
     };
   }, []);
 
+  useEffect(() => {
+    if (activePage !== "consultations") return;
+    if (!consultations.some((item) => item.tmdbId && (item.tmdbMediaType || "tv") !== "movie")) return;
+
+    const refreshKey = key("tmdbTrackedRefreshDate");
+    if (localStorage.getItem(refreshKey) === todayKey()) return;
+    localStorage.setItem(refreshKey, todayKey());
+    refreshTmdbTrackedItems({ automatic: true });
+  }, [activePage, consultations.length]);
+
   const stats = useMemo(() => {
     const finishedHabits = habits.filter((item) => done[item.id]).length;
     const todayPlans = plans.filter((plan) => plan.date === todayKey());
@@ -2261,7 +2249,12 @@ export default function Workbench() {
       const data = text ? JSON.parse(text) : {};
       if (!response.ok) throw new Error(data.error || "TMDB 片单同步失败");
       const incoming = Array.isArray(data.items) ? data.items : [];
+      const incomingByKey = new Map(incoming.map((item) => [consultationKey(item), item]));
       const existingKeys = new Set(consultations.map(consultationKey));
+      const refreshedItems = consultations.map((item) => {
+        const fresh = incomingByKey.get(consultationKey(item));
+        return fresh ? mergeTmdbFields(item, fresh) : item;
+      });
       const nextItems = incoming
         .filter((item) => !existingKeys.has(consultationKey(item)))
         .map((item) => ({
@@ -2276,14 +2269,46 @@ export default function Workbench() {
           totalEpisodes: item.totalEpisodes || "",
           time: nowText(),
         }));
-      if (nextItems.length) {
-        const next = dedupeConsultations([...nextItems, ...consultations]);
-        setConsultations(next);
-        persist("consultations", next);
-      }
-      setTmdbStatus(`TMDB 片单同步完成：新增 ${nextItems.length} 部，已存在 ${incoming.length - nextItems.length} 部`);
+      const refreshedCount = incoming.length - nextItems.length;
+      const next = dedupeConsultations([...nextItems, ...refreshedItems]);
+      setConsultations(next);
+      persist("consultations", next);
+      setTmdbStatus(`TMDB 片单同步完成：新增 ${nextItems.length} 部，刷新 ${refreshedCount} 部`);
     } catch (error) {
       setTmdbStatus(`TMDB 片单同步失败：${error.message || "请稍后重试"}`);
+    }
+  }
+
+  async function refreshTmdbTrackedItems(options = {}) {
+    const automatic = options.automatic === true;
+    const tracked = consultations.filter((item) => item.tmdbId && (item.tmdbMediaType || "tv") !== "movie");
+    if (automatic && !tracked.length) return;
+    if (!tracked.length) {
+      setTmdbStatus("当前没有可刷新的 TMDB 剧集。");
+      return;
+    }
+    setTmdbStatus(`正在刷新 ${tracked.length} 部剧集更新...`);
+    try {
+      const settled = await Promise.allSettled(tracked.map(async (item) => {
+        const response = await fetch(`/api/tmdb/details?id=${encodeURIComponent(item.tmdbId)}&type=${encodeURIComponent(item.tmdbMediaType || "tv")}`);
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : {};
+        if (!response.ok) throw new Error(data.error || `${item.title} 更新失败`);
+        return { key: consultationKey(item), item: { ...item, ...data } };
+      }));
+      const freshByKey = new Map(settled
+        .filter((result) => result.status === "fulfilled")
+        .map((result) => [result.value.key, result.value.item]));
+      if (!freshByKey.size) throw settled.find((result) => result.status === "rejected")?.reason || new Error("没有刷新到剧集更新");
+      const next = consultations.map((item) => {
+        const fresh = freshByKey.get(consultationKey(item));
+        return fresh ? mergeTmdbFields(item, fresh) : item;
+      });
+      setConsultations(next);
+      persist("consultations", next);
+      setTmdbStatus(`剧集更新已刷新：${freshByKey.size}/${tracked.length} 部`);
+    } catch (error) {
+      setTmdbStatus(`剧集更新刷新失败：${error.message || "请稍后重试"}`);
     }
   }
 
@@ -2642,7 +2667,7 @@ export default function Workbench() {
 
               <header className="module-head">
                 <div className="module-title-row">
-                  <span className="module-icon"><WorkbenchIcon name={pages.find((page) => page.id === activePage)?.icon || "spark"} /></span>
+                  <span className="module-icon"><AnimeNavIcon name={pages.find((page) => page.id === activePage)?.icon || "spark"} /></span>
                   <div>
                     <h1>{pageNames[activePage]}</h1>
                     <p>{pageDescriptions[activePage]}</p>
@@ -2682,13 +2707,13 @@ export default function Workbench() {
               <section className="panel quick-panel">
                 <div className="panel-head"><h2>快速入口</h2><span className="tag">一步到位</span></div>
                 <div className="quick-grid">
-                  <QuickAction label="任务安排" onClick={() => switchPage("plans")} />
-                  <QuickAction label="快速记录" onClick={() => switchPage("notes")} />
-                  <QuickAction label="观影记录" onClick={() => switchPage("consultations")} />
-                  <QuickAction label="股市行情" onClick={() => switchPage("market")} />
-                  <QuickAction label="饮食记录" onClick={() => switchPage("diet")} />
-                  <QuickAction label="穿衣助手" onClick={() => switchPage("wear")} />
-                  <QuickAction label="热榜时讯" onClick={() => switchPage("news")} />
+                  <QuickAction icon="checklist" label="任务安排" onClick={() => switchPage("plans")} />
+                  <QuickAction icon="note" label="快速记录" onClick={() => switchPage("notes")} />
+                  <QuickAction icon="chat" label="观影记录" onClick={() => switchPage("consultations")} />
+                  <QuickAction icon="trend" label="股市行情" onClick={() => switchPage("market")} />
+                  <QuickAction icon="food" label="饮食记录" onClick={() => switchPage("diet")} />
+                  <QuickAction icon="wear" label="穿衣助手" onClick={() => switchPage("wear")} />
+                  <QuickAction icon="news" label="热榜时讯" onClick={() => switchPage("news")} />
                 </div>
               </section>
               <section className="stats-grid">
@@ -2759,6 +2784,7 @@ export default function Workbench() {
                 onImportTmdb={importTmdb}
                 onLoadRecommendations={loadTmdbRecommendations}
                 onSyncTmdbWatchlist={syncTmdbWatchlist}
+                onRefreshTmdbTracked={refreshTmdbTrackedItems}
               />
             </>
           )}
