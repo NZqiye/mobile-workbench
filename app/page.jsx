@@ -1553,6 +1553,20 @@ function watchEntriesForDate(items, dateKey) {
   });
 }
 
+function dayUpdateLabel(updates, expanded) {
+  const groups = updates.reduce((acc, item) => {
+    const title = item.title || "";
+    if (!title) return acc;
+    acc.set(title, (acc.get(title) || 0) + 1);
+    return acc;
+  }, new Map());
+  const grouped = Array.from(groups, ([title, count]) => ({ title, count }));
+  if (expanded) return `${grouped.length || updates.length} 部更新`;
+  const first = grouped[0];
+  if (!first) return "";
+  return `${first.title}${first.count > 1 ? ` ${first.count}集` : ""}${grouped.length > 1 ? ` +${grouped.length - 1}` : ""}`;
+}
+
 function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
@@ -1622,8 +1636,7 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
               <i className={day.updates.length ? "has-update" : ""} />
               {day.updates.length > 0 && (
                 <small className="day-updates">
-                  {expanded ? `${day.updates.length} 部更新` : day.updates.slice(0, 1).map((item) => item.title).join("")}
-                  {!expanded && day.updates.length > 1 ? ` +${day.updates.length - 1}` : ""}
+                  {dayUpdateLabel(day.updates, expanded)}
                 </small>
               )}
             </button>

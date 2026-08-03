@@ -418,14 +418,14 @@ textarea { resize: vertical; }
 .watch-item { position: relative; display: grid; gap: 14px; }
 .timeline-dot { position: absolute; left: -31px; top: 3px; width: 13px; height: 13px; border: 3px solid #fff; border-radius: 50%; background: #050505; box-shadow: 0 0 0 2px #d6d6d8; }
 .watch-time { color: #050505; font-size: 22px; font-weight: 950; }
-.watch-card { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 14px; align-items: center; min-height: 112px; padding: 0 0 8px; }
+.watch-card { display: grid; grid-template-columns: 78px minmax(0, 1fr); gap: 14px; align-items: center; min-width: 0; min-height: 112px; padding: 0 0 8px; overflow: hidden; }
 .poster-box { display: grid; place-items: center; width: 78px; height: 104px; overflow: hidden; border-radius: 10px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 28px; font-weight: 950; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.14); }
 .poster-box img { width: 100%; height: 100%; object-fit: cover; }
-.watch-info { display: grid; gap: 10px; min-width: 0; }
-.watch-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.watch-title-row strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #050505; font-size: 24px; line-height: 1.12; }
-.watch-title-row small { color: #bdb8bd; font-size: 15px; font-weight: 950; }
-.watch-info p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8f8f96; font-size: 17px; font-weight: 800; }
+.watch-info { display: grid; gap: 9px; min-width: 0; overflow: hidden; }
+.watch-title-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: start; min-width: 0; }
+.watch-title-row strong { display: -webkit-box; min-width: 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: #050505; font-size: 22px; line-height: 1.08; text-wrap: balance; }
+.watch-title-row small { flex: 0 0 auto; max-width: 48px; overflow: hidden; color: #bdb8bd; font-size: 13px; font-weight: 950; line-height: 1.2; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+.watch-info p { min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8f8f96; font-size: 15px; font-weight: 800; }
 .episode-line { display: grid; grid-template-columns: auto auto 1fr; gap: 8px; align-items: baseline; color: #686870; font-size: 17px; font-weight: 950; }
 .episode-line strong { color: #686870; font-size: 17px; }
 .episode-line span:last-child { justify-self: end; }
