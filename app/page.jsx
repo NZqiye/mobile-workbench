@@ -1160,6 +1160,7 @@ function mergeTmdbFields(item, fresh) {
     currentEpisode: fresh.currentEpisode || item.currentEpisode || "",
     nextAirDate: fresh.nextAirDate || item.nextAirDate || "",
     updateEpisodes: fresh.updateEpisodes || item.updateEpisodes || "",
+    episodeSchedule: Array.isArray(fresh.episodeSchedule) ? fresh.episodeSchedule : item.episodeSchedule || [],
     totalEpisodes: fresh.totalEpisodes || item.totalEpisodes || "",
     tags: fresh.tags?.length ? fresh.tags : item.tags,
     time: nowText(),
@@ -1531,6 +1532,27 @@ function parseEpisodeList(value, fallbackEpisode) {
     .filter((item) => Number.isFinite(item) && item > 0);
 }
 
+function watchEntriesForDate(items, dateKey) {
+  return items.flatMap((item) => {
+    if (Array.isArray(item.episodeSchedule) && item.episodeSchedule.length) {
+      return item.episodeSchedule
+        .filter((episode) => episode.date === dateKey)
+        .map((episode) => ({
+          ...item,
+          nextAirDate: episode.date,
+          updateEpisode: episode.episode,
+          episodeTitle: episode.title || "",
+          season: episode.season || item.season,
+        }));
+    }
+
+    if (item.nextAirDate !== dateKey) return [];
+    const current = Number(item.currentEpisode || 0);
+    const episodes = parseEpisodeList(item.updateEpisodes, current > 0 ? current + 1 : 0);
+    return (episodes.length ? episodes : [0]).map((episode) => ({ ...item, updateEpisode: episode }));
+  });
+}
+
 function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
@@ -1539,7 +1561,7 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
   const searchResults = Array.isArray(tmdbResults) ? tmdbResults : [];
   const recommendationSections = Array.isArray(tmdbSections) ? tmdbSections : [];
   function itemsForDate(dateKey) {
-    return allItems.filter((item) => item.nextAirDate === dateKey);
+    return watchEntriesForDate(allItems, dateKey);
   }
 
   const week = Array.from({ length: 7 }, (_, index) => {
@@ -1549,7 +1571,7 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
     return {
       date,
       dateKey,
-      items: allItems.filter((item) => item.nextAirDate === dateKey || item.watchedDate === dateKey),
+      items: [...itemsForDate(dateKey), ...allItems.filter((item) => item.watchedDate === dateKey)],
       updates: itemsForDate(dateKey),
     };
   });
@@ -1565,7 +1587,7 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
       date,
       dateKey,
       inMonth: date.getMonth() === today.getMonth(),
-      items: allItems.filter((item) => item.nextAirDate === dateKey || item.watchedDate === dateKey),
+      items: [...itemsForDate(dateKey), ...allItems.filter((item) => item.watchedDate === dateKey)],
       updates: itemsForDate(dateKey),
     };
   });
@@ -1575,6 +1597,7 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
   const timeline = selected.items
     .filter((item) => item.status !== "看过的剧" && item.status !== "暂停/弃剧")
     .flatMap((item) => {
+      if (item.updateEpisode) return [item];
       const current = Number(item.currentEpisode || 0);
       const episodes = parseEpisodeList(item.updateEpisodes, current > 0 ? current + 1 : 0);
       return (episodes.length ? episodes : [0]).map((episode) => ({ ...item, updateEpisode: episode }));
@@ -2122,7 +2145,7 @@ export default function Workbench() {
     if (activePage !== "consultations") return;
     if (!consultations.some((item) => item.tmdbId && (item.tmdbMediaType || "tv") !== "movie")) return;
 
-    const refreshKey = key("tmdbTrackedRefreshDate");
+    const refreshKey = key("tmdbTrackedRefreshDate:v2");
     if (localStorage.getItem(refreshKey) === todayKey()) return;
     localStorage.setItem(refreshKey, todayKey());
     refreshTmdbTrackedItems({ automatic: true });
