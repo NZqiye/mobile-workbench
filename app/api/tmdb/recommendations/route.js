@@ -1,15 +1,15 @@
 import { fetchTmdb, mapTmdbResult, tmdbToken } from "../../../../lib/tmdb";
 
 const sections = [
-  ["trending", "今日趋势", "https://api.themoviedb.org/3/trending/all/day"],
-  ["movies", "电影热门", "https://api.themoviedb.org/3/movie/popular"],
-  ["tv", "电视剧热门", "https://api.themoviedb.org/3/tv/popular"],
+  ["airingToday", "今日更新影视", "https://api.themoviedb.org/3/tv/airing_today"],
+  ["onTheAir", "即将播放影视", "https://api.themoviedb.org/3/tv/on_the_air"],
 ];
 
 async function loadSection([id, title, source]) {
   const pages = await Promise.all([1, 2].map(async (page) => {
     const url = new URL(source);
     url.searchParams.set("language", "zh-CN");
+    url.searchParams.set("timezone", "Asia/Shanghai");
     url.searchParams.set("page", String(page));
     const response = await fetchTmdb(url);
     const text = await response.text();
@@ -31,7 +31,7 @@ async function loadSection([id, title, source]) {
         return true;
       })
       .slice(0, 16)
-      .map((item) => mapTmdbResult({ ...item, media_type: item.media_type || (id === "tv" ? "tv" : "movie") })),
+      .map((item) => mapTmdbResult({ ...item, media_type: "tv" })),
   };
 }
 
