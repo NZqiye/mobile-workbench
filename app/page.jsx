@@ -1606,7 +1606,7 @@ function mediaAirText(item) {
   return `${Number(month)}月${Number(day)}日 ${item.type === "电影" ? "上映" : "播出"}`;
 }
 
-function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked }) {
+function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked, onDeleteItem }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
   const [tmdbQuery, setTmdbQuery] = useState("");
@@ -1614,6 +1614,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
   const [tvSectionId, setTvSectionId] = useState("tvPopular");
   const [recommendationMenuOpen, setRecommendationMenuOpen] = useState(false);
   const allItems = Array.isArray(items) ? items : [];
+  const managedWatchItems = allItems.filter((item) => item.status !== "已归档");
   const searchResults = Array.isArray(tmdbResults) ? tmdbResults : [];
   const recommendationSections = Array.isArray(tmdbSections) ? tmdbSections : [];
   const visibleRecommendationSections = recommendationSections.length ? recommendationSections : [
@@ -1636,6 +1637,10 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
     if (activeView === "movies") setMovieSectionId(id);
     if (activeView === "tv") setTvSectionId(id);
     setRecommendationMenuOpen(false);
+  }
+  function removeWatchItem(item) {
+    if (!onDeleteItem) return;
+    if (window.confirm(`确定把《${item.title}》移出片单吗？`)) onDeleteItem(item.id);
   }
   function itemsForDate(dateKey) {
     return watchEntriesForDate(allItems, dateKey);
@@ -1763,6 +1768,29 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
               );
             })}
           </div>
+          <section className="watch-list-panel">
+            <div className="panel-head">
+              <div>
+                <h2>我的片单</h2>
+                <p>已加入 {managedWatchItems.length} 部，点移除可从待看片单删掉</p>
+              </div>
+            </div>
+            <div className="watch-list">
+              {managedWatchItems.length === 0 && <p className="empty">还没有加入影视，先搜索或从电影/电视剧里添加。</p>}
+              {managedWatchItems.map((item) => (
+                <article className="watch-list-row" key={item.id}>
+                  <div className="watch-list-poster">
+                    {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+                  </div>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <small>{[item.status, item.year, item.type || "剧集"].filter(Boolean).join(" · ")}</small>
+                  </div>
+                  <button type="button" onClick={() => removeWatchItem(item)}>移除</button>
+                </article>
+              ))}
+            </div>
+          </section>
         </>
       )}
       {selectedRecommendationSection && (
@@ -1797,9 +1825,13 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
               {(Array.isArray(selectedRecommendationSection.items) ? selectedRecommendationSection.items : []).length === 0 && <p className="empty">暂无片单，稍后点刷新片单重试。</p>}
               {(Array.isArray(selectedRecommendationSection.items) ? selectedRecommendationSection.items : []).map((item) => (
                 <button className="media-feed-card" type="button" key={`${selectedRecommendationSection.id}-${item.tmdbId}`} onClick={() => onImportTmdb(item)}>
-                  <div className="media-cover">
-                    {item.backdropUrl || item.posterUrl ? <img src={item.backdropUrl || item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
-                    <i className="media-play" aria-hidden="true">▶</i>
+                  <div className="media-gallery">
+                    <div className="media-still">
+                      {item.backdropUrl ? <img src={item.backdropUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+                    </div>
+                    <div className="media-poster-thumb">
+                      {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+                    </div>
                   </div>
                   <strong className="media-feed-title">{item.title}</strong>
                   <span className="media-air">{mediaAirText(item)}</span>
@@ -2907,6 +2939,7 @@ export default function Workbench() {
                 onLoadRecommendations={loadTmdbRecommendations}
                 onSyncTmdbWatchlist={syncTmdbWatchlist}
                 onRefreshTmdbTracked={refreshTmdbTrackedItems}
+                onDeleteItem={deleteConsultation}
               />
             </>
           )}
