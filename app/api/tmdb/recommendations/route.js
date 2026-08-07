@@ -5,6 +5,7 @@ const sections = [
   ["onTheAir", "即将播放影视", "https://api.themoviedb.org/3/tv/on_the_air"],
 ];
 const maxPages = 5;
+const backdropBase = "https://image.tmdb.org/t/p/w780";
 
 async function readPage(source, page) {
   const url = new URL(source);
@@ -38,7 +39,12 @@ async function loadSection([id, title, source]) {
         seen.add(key);
         return true;
       })
-      .map((item) => mapTmdbResult({ ...item, media_type: "tv" })),
+      .map((item) => ({
+        ...mapTmdbResult({ ...item, media_type: "tv" }),
+        backdropUrl: item.backdrop_path ? `${backdropBase}${item.backdrop_path}` : "",
+        airDate: item.first_air_date || "",
+        summary: item.overview || "",
+      })),
   };
 }
 
