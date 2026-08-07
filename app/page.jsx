@@ -10,20 +10,16 @@ const pages = [
   { id: "consultations", name: "观影记录", icon: "chat" },
   { id: "market", name: "股市行情", icon: "trend" },
   { id: "diet", name: "饮食记录", icon: "food" },
-  { id: "wear", name: "穿衣助手", icon: "wear" },
   { id: "news", name: "热榜时讯", icon: "news" },
   { id: "plans", name: "每日安排", icon: "checklist" },
-  { id: "notes", name: "灵感记录", icon: "note" },
   { id: "settings", name: "设置", icon: "settings" },
 ];
 const pageNames = Object.fromEntries(pages.map((page) => [page.id, page.name]));
 const pageDescriptions = {
   today: "时间、天气、计划和行情集中整理",
   plans: "习惯打卡、任务安排和纪念日倒数",
-  notes: "生活记录、灵感、饮食与树洞",
   market: "金价、指数、自选资产观察",
   diet: "每日喝水、饮食热量和最近趋势",
-  wear: "江苏无锡天气和今日穿搭推荐",
   news: "微博、B站、抖音等热榜集中查看",
   consultations: "观影清单、想法和资料整理",
   settings: "账号同步、备份恢复和自选配置",
@@ -1111,14 +1107,50 @@ function TodayTimePanel({ clock = "--:--:--" }) {
 }
 
 function DailyQuoteCard() {
+  const fallbackQuote = {
+    text: "人生没有白走的路，每一步都算数。",
+    from: "本地备用",
+    author: "",
+  };
+  const [quote, setQuote] = useState(fallbackQuote);
+  const [status, setStatus] = useState("每日更新");
+
+  useEffect(() => {
+    const cacheKey = `dailyQuote:${todayKey()}`;
+    const cache = readStorage(cacheKey, null);
+    if (cache?.text) {
+      setQuote(cache);
+      setStatus("今日已更新");
+      return;
+    }
+
+    fetch("/api/daily-quote")
+      .then((response) => response.json())
+      .then((data) => {
+        const nextQuote = {
+          text: data.text || fallbackQuote.text,
+          from: data.from || fallbackQuote.from,
+          author: data.author || "",
+        };
+        setQuote(nextQuote);
+        writeStorage(cacheKey, nextQuote);
+        setStatus("今日已更新");
+      })
+      .catch(() => {
+        setStatus("使用本地备用");
+      });
+  }, []);
+
+  const source = [quote.author, quote.from].filter(Boolean).join(" · ");
+
   return (
     <section className="daily-quote-card">
       <div className="panel-head">
         <h2>今日金句</h2>
-        <span className="tag">每日共勉</span>
+        <span className="tag">{status}</span>
       </div>
-      <strong>人生没有白走的路，每一步都算数。</strong>
-      <p>No step in life is wasted; every single one counts.</p>
+      <strong>{quote.text}</strong>
+      <p>{source || "每天给自己一句提醒"}</p>
     </section>
   );
 }
@@ -1574,6 +1606,10 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
   const allItems = Array.isArray(items) ? items : [];
   const searchResults = Array.isArray(tmdbResults) ? tmdbResults : [];
   const recommendationSections = Array.isArray(tmdbSections) ? tmdbSections : [];
+  const visibleRecommendationSections = recommendationSections.length ? recommendationSections : [
+    { id: "airingToday", title: "今日更新影视", items: [] },
+    { id: "onTheAir", title: "即将播放影视", items: [] },
+  ];
   function itemsForDate(dateKey) {
     return watchEntriesForDate(allItems, dateKey);
   }
@@ -1620,6 +1656,29 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
 
   return (
     <section className="watch-shell">
+      <section className="tmdb-panel">
+        <div>
+          <strong>搜索影视</strong>
+          <p>{tmdbStatus}</p>
+        </div>
+        <button className="tmdb-sync-button" type="button" onClick={onSyncTmdbWatchlist}>同步 TMDB 片单</button>
+        <form className="tmdb-search" onSubmit={(event) => {
+          event.preventDefault();
+          onSearchTmdb(tmdbQuery);
+        }}>
+          <input value={tmdbQuery} onChange={(event) => setTmdbQuery(event.target.value)} placeholder="搜索剧名" />
+          <button className="chip-button" type="submit">搜索</button>
+        </form>
+        <div className="tmdb-results">
+          {searchResults.map((item) => (
+            <button className="tmdb-result" type="button" key={`${item.type}-${item.tmdbId}`} onClick={() => onImportTmdb(item)}>
+              {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+              <strong>{item.title}</strong>
+              <small>{[item.year, item.type].filter(Boolean).join(" · ")}</small>
+            </button>
+          ))}
+        </div>
+      </section>
       <section className="watch-calendar">
         <div className="panel-head">
           <h2>{monthTitle(selected.date)}</h2>
@@ -1675,18 +1734,18 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
           );
         })}
       </div>
-      <section className="tmdb-recommendations">
-        <div className="panel-head">
-          <div>
-            <h2>影视资源推荐</h2>
-            <p>{tmdbRecommendationStatus}</p>
+      {visibleRecommendationSections.map((section) => (
+        <section className="tmdb-recommendations" key={section.id}>
+          <div className="panel-head">
+            <div>
+              <h2>{section.title}</h2>
+              <p>{tmdbRecommendationStatus}</p>
+            </div>
+            <button className="chip-button" type="button" onClick={onLoadRecommendations}>刷新片单</button>
           </div>
-          <button className="chip-button" type="button" onClick={onLoadRecommendations}>刷新推荐</button>
-        </div>
-        {recommendationSections.map((section) => (
-          <div className="tmdb-section" key={section.id}>
-            <h3>{section.title}</h3>
+          <div className="tmdb-section">
             <div className="tmdb-poster-row">
+              {(Array.isArray(section.items) ? section.items : []).length === 0 && <p className="empty">暂无片单，稍后点刷新片单重试。</p>}
               {(Array.isArray(section.items) ? section.items : []).map((item) => (
                 <button className="tmdb-poster-card" type="button" key={`${section.id}-${item.tmdbId}`} onClick={() => onImportTmdb(item)}>
                   <div className="tmdb-poster">
@@ -1698,31 +1757,8 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
               ))}
             </div>
           </div>
-        ))}
-      </section>
-      <section className="tmdb-panel">
-        <div>
-          <strong>搜索影视并加入观影列表</strong>
-          <p>{tmdbStatus}</p>
-        </div>
-        <button className="tmdb-sync-button" type="button" onClick={onSyncTmdbWatchlist}>同步 TMDB 片单</button>
-        <form className="tmdb-search" onSubmit={(event) => {
-          event.preventDefault();
-          onSearchTmdb(tmdbQuery);
-        }}>
-          <input value={tmdbQuery} onChange={(event) => setTmdbQuery(event.target.value)} placeholder="搜索剧名" />
-          <button className="chip-button" type="submit">搜索</button>
-        </form>
-        <div className="tmdb-results">
-          {searchResults.map((item) => (
-            <button className="tmdb-result" type="button" key={`${item.type}-${item.tmdbId}`} onClick={() => onImportTmdb(item)}>
-              {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
-              <strong>{item.title}</strong>
-              <small>{[item.year, item.type].filter(Boolean).join(" · ")}</small>
-            </button>
-          ))}
-        </div>
-      </section>
+        </section>
+      ))}
     </section>
   );
 }
@@ -2019,7 +2055,7 @@ export default function Workbench() {
   const [tmdbResults, setTmdbResults] = useState([]);
   const [tmdbStatus, setTmdbStatus] = useState("输入剧名搜索，点击结果即可加入观影列表");
   const [tmdbSections, setTmdbSections] = useState([]);
-  const [tmdbRecommendationStatus, setTmdbRecommendationStatus] = useState("正在准备热门影视推荐");
+  const [tmdbRecommendationStatus, setTmdbRecommendationStatus] = useState("正在准备今日更新和即将播放影视");
 
   function persist(name, value) {
     writeStorage(name, value);
@@ -2172,12 +2208,12 @@ export default function Workbench() {
       checkin: `${finishedHabits}/${habits.length}`,
       plans: `${finishedPlans}/${todayPlans.length}`,
       notes: `${notes.length} 条`,
+      dietToday: dietRecords.filter((item) => item.date === todayKey()).length,
       consultations: consultations.filter((item) => item.status !== "已归档").length,
     };
-  }, [consultations, done, habits, notes, plans]);
+  }, [consultations, dietRecords, done, habits, notes, plans]);
 
   const recent = [
-    ...notes.slice(0, 3).map((record) => ({ type: "记录", title: record.title, time: record.time, page: "notes" })),
     ...consultations.slice(0, 3).map((record) => ({ type: "咨询", title: record.title, time: record.time, page: "consultations" })),
   ].slice(0, 5);
   const todayPlans = plans.filter((plan) => plan.date === todayKey() && plan.status !== "已完成").slice(0, 3);
@@ -2200,16 +2236,16 @@ export default function Workbench() {
   }
 
   async function loadTmdbRecommendations() {
-    setTmdbRecommendationStatus("正在加载热门影视...");
+    setTmdbRecommendationStatus("正在加载今日更新与即将播放影视...");
     try {
       const response = await fetch("/api/tmdb/recommendations");
       const text = await response.text();
       const data = text ? JSON.parse(text) : {};
       if (!response.ok) throw new Error(data.error || "推荐加载失败");
       setTmdbSections(Array.isArray(data.sections) ? data.sections : []);
-      setTmdbRecommendationStatus("来自 TMDB 的每日热门推荐");
+      setTmdbRecommendationStatus("来自 TMDB 的今日更新与待播影视");
     } catch (error) {
-      setTmdbRecommendationStatus(error.message || "推荐暂时不可用，请点刷新推荐重试");
+      setTmdbRecommendationStatus(error.message || "片单暂时不可用，请点刷新片单重试");
     }
   }
 
@@ -2658,10 +2694,8 @@ export default function Workbench() {
     { id: "consultations", name: "观影记录", icon: "chat", badge: "观影", summary: `${stats.consultations} 条` },
     { id: "market", name: "股市行情", icon: "trend", badge: "行情", summary: "金价、指数、自选股" },
     { id: "diet", name: "饮食记录", icon: "food", badge: "饮食", summary: `${dietRecords.filter((item) => item.date === todayKey()).length} 条` },
-    { id: "wear", name: "穿衣助手", icon: "wear", badge: "穿搭", summary: "无锡天气穿搭" },
     { id: "news", name: "热榜时讯", icon: "news", badge: "热榜", summary: "微博B站抖音" },
     { id: "plans", name: "每日安排", icon: "checklist", badge: "安排", summary: `${todayPlans.length} 条任务` },
-    { id: "notes", name: "灵感记录", icon: "note", badge: "记录", summary: `${notes.length} 条记录` },
     { id: "settings", name: "数据设置", icon: "settings", badge: "备份", summary: session ? "云同步在线" : "本地模式" },
   ];
 
@@ -2722,6 +2756,7 @@ export default function Workbench() {
           {activePage === "today" && (
             <>
               <TodayTimePanel clock={clock} />
+              <WeatherCard compact clock={clock} />
               <DailyQuoteCard />
               <section className="dashboard-strip" aria-label="今日概览">
                 <div className="dashboard-tile dashboard-tile-primary">
@@ -2735,29 +2770,26 @@ export default function Workbench() {
                   <small>咨询与线索</small>
                 </div>
                 <div className="dashboard-tile">
-                  <span>记录数</span>
-                  <strong>{stats.notes}</strong>
-                  <small>生活与灵感</small>
+                  <span>今日饮食</span>
+                  <strong>{stats.dietToday}</strong>
+                  <small>饮食与饮水记录</small>
                 </div>
               </section>
               <section className="panel quick-panel">
                 <div className="panel-head"><h2>快速入口</h2><span className="tag">一步到位</span></div>
                 <div className="quick-grid">
                   <QuickAction icon="checklist" label="任务安排" onClick={() => switchPage("plans")} />
-                  <QuickAction icon="note" label="快速记录" onClick={() => switchPage("notes")} />
                   <QuickAction icon="chat" label="观影记录" onClick={() => switchPage("consultations")} />
                   <QuickAction icon="trend" label="股市行情" onClick={() => switchPage("market")} />
                   <QuickAction icon="food" label="饮食记录" onClick={() => switchPage("diet")} />
-                  <QuickAction icon="wear" label="穿衣助手" onClick={() => switchPage("wear")} />
                   <QuickAction icon="news" label="热榜时讯" onClick={() => switchPage("news")} />
                 </div>
               </section>
               <section className="stats-grid">
                 <StatButton label="今日任务" value={stats.plans} onClick={() => switchPage("plans")} />
-                <StatButton label="记录总数" value={stats.notes} onClick={() => switchPage("notes")} />
+                <StatButton label="今日饮食" value={`${stats.dietToday} 条`} onClick={() => switchPage("diet")} />
                 <StatButton label="追剧清单" value={`${stats.consultations} 部`} onClick={() => switchPage("consultations")} />
               </section>
-              <WeatherCard compact clock={clock} />
               <section className="panel">
                 <div className="panel-head"><h2>今日任务</h2><span className="tag">{todayKey()}</span></div>
                 <div className="record-list">
@@ -2801,13 +2833,6 @@ export default function Workbench() {
             />
           )}
 
-          {activePage === "notes" && (
-            <>
-              <NoteForm onSave={saveNote} editing={editing} onCancel={cancelEditing} />
-              <NoteList notes={notes} onDelete={deleteNote} onEdit={editNote} />
-            </>
-          )}
-
           {activePage === "consultations" && (
             <>
               <WatchSchedule
@@ -2830,8 +2855,6 @@ export default function Workbench() {
           {activePage === "diet" && (
             <DietTracker records={dietRecords} waterTarget={waterTarget} onAddWater={addWater} onAddMeal={addMeal} onDelete={deleteDietRecord} onSaveTarget={saveWaterTarget} />
           )}
-
-          {activePage === "wear" && <ClothingAssistant />}
 
           {activePage === "news" && <NewsBoard />}
 
