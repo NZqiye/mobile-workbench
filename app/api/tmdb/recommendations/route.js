@@ -1,10 +1,13 @@
 import { fetchTmdb, mapTmdbResult, tmdbToken } from "../../../../lib/tmdb";
 
 const sections = [
-  ["airingToday", "今日更新影视", "https://api.themoviedb.org/3/tv/airing_today"],
-  ["onTheAir", "即将播放影视", "https://api.themoviedb.org/3/tv/on_the_air"],
+  ["movieNowPlaying", "正在上映", "https://api.themoviedb.org/3/movie/now_playing", "movie"],
+  ["movieUpcoming", "即将上映", "https://api.themoviedb.org/3/movie/upcoming", "movie"],
+  ["tvPopular", "热门影视", "https://api.themoviedb.org/3/tv/popular", "tv"],
+  ["tvAiringToday", "今日播出", "https://api.themoviedb.org/3/tv/airing_today", "tv"],
 ];
-const maxPages = 5;
+const maxPages = 3;
+const maxItems = 50;
 const backdropBase = "https://image.tmdb.org/t/p/w780";
 
 async function readPage(source, page) {
@@ -19,7 +22,7 @@ async function readPage(source, page) {
   return data;
 }
 
-async function loadSection([id, title, source]) {
+async function loadSection([id, title, source, mediaType]) {
   const firstPage = await readPage(source, 1);
   const totalPages = Math.min(Number(firstPage.total_pages || 1), maxPages);
   const restPages = totalPages > 1
@@ -39,10 +42,11 @@ async function loadSection([id, title, source]) {
         seen.add(key);
         return true;
       })
+      .slice(0, maxItems)
       .map((item) => ({
-        ...mapTmdbResult({ ...item, media_type: "tv" }),
+        ...mapTmdbResult({ ...item, media_type: mediaType }),
         backdropUrl: item.backdrop_path ? `${backdropBase}${item.backdrop_path}` : "",
-        airDate: item.first_air_date || "",
+        airDate: mediaType === "movie" ? item.release_date || "" : item.first_air_date || "",
         summary: item.overview || "",
       })),
   };
