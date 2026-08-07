@@ -4,19 +4,27 @@ const sections = [
   ["airingToday", "今日更新影视", "https://api.themoviedb.org/3/tv/airing_today"],
   ["onTheAir", "即将播放影视", "https://api.themoviedb.org/3/tv/on_the_air"],
 ];
+const maxPages = 5;
+
+async function readPage(source, page) {
+  const url = new URL(source);
+  url.searchParams.set("language", "zh-CN");
+  url.searchParams.set("timezone", "Asia/Shanghai");
+  url.searchParams.set("page", String(page));
+  const response = await fetchTmdb(url);
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : {};
+  if (!response.ok) throw new Error(data.status_message || "TMDB 推荐请求失败");
+  return data;
+}
 
 async function loadSection([id, title, source]) {
-  const pages = await Promise.all([1, 2].map(async (page) => {
-    const url = new URL(source);
-    url.searchParams.set("language", "zh-CN");
-    url.searchParams.set("timezone", "Asia/Shanghai");
-    url.searchParams.set("page", String(page));
-    const response = await fetchTmdb(url);
-    const text = await response.text();
-    const data = text ? JSON.parse(text) : {};
-    if (!response.ok) throw new Error(data.status_message || "TMDB 推荐请求失败");
-    return data.results || [];
-  }));
+  const firstPage = await readPage(source, 1);
+  const totalPages = Math.min(Number(firstPage.total_pages || 1), maxPages);
+  const restPages = totalPages > 1
+    ? await Promise.all(Array.from({ length: totalPages - 1 }, (_, index) => readPage(source, index + 2)))
+    : [];
+  const pages = [firstPage, ...restPages].map((page) => page.results || []);
   const seen = new Set();
 
   return {
@@ -30,7 +38,6 @@ async function loadSection([id, title, source]) {
         seen.add(key);
         return true;
       })
-      .slice(0, 16)
       .map((item) => mapTmdbResult({ ...item, media_type: "tv" })),
   };
 }
