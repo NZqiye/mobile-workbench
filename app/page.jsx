@@ -1603,20 +1603,40 @@ function mediaAirText(item) {
   if (!item?.airDate) return "播出日期待定";
   const [, month, day] = String(item.airDate).split("-");
   if (!month || !day) return item.airDate;
-  return `${Number(month)}月${Number(day)}日 播出`;
+  return `${Number(month)}月${Number(day)}日 ${item.type === "电影" ? "上映" : "播出"}`;
 }
 
-function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked }) {
+function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
   const [tmdbQuery, setTmdbQuery] = useState("");
+  const [movieSectionId, setMovieSectionId] = useState("movieNowPlaying");
+  const [tvSectionId, setTvSectionId] = useState("tvPopular");
+  const [recommendationMenuOpen, setRecommendationMenuOpen] = useState(false);
   const allItems = Array.isArray(items) ? items : [];
   const searchResults = Array.isArray(tmdbResults) ? tmdbResults : [];
   const recommendationSections = Array.isArray(tmdbSections) ? tmdbSections : [];
   const visibleRecommendationSections = recommendationSections.length ? recommendationSections : [
-    { id: "airingToday", title: "今日更新影视", items: [] },
-    { id: "onTheAir", title: "即将播放影视", items: [] },
+    { id: "movieNowPlaying", title: "正在上映", items: [] },
+    { id: "movieUpcoming", title: "即将上映", items: [] },
+    { id: "tvPopular", title: "热门影视", items: [] },
+    { id: "tvAiringToday", title: "今日播出", items: [] },
   ];
+  const recommendationGroups = {
+    movies: ["movieNowPlaying", "movieUpcoming"],
+    tv: ["tvPopular", "tvAiringToday"],
+  };
+  const activeRecommendationOptions = (recommendationGroups[activeView] || [])
+    .map((id) => visibleRecommendationSections.find((section) => section.id === id))
+    .filter(Boolean);
+  const selectedRecommendationId = activeView === "movies" ? movieSectionId : activeView === "tv" ? tvSectionId : "";
+  const selectedRecommendationSection = activeRecommendationOptions.find((section) => section.id === selectedRecommendationId) || activeRecommendationOptions[0];
+  const selectedRecommendationCount = Array.isArray(selectedRecommendationSection?.items) ? selectedRecommendationSection.items.length : 0;
+  function selectRecommendationSection(id) {
+    if (activeView === "movies") setMovieSectionId(id);
+    if (activeView === "tv") setTvSectionId(id);
+    setRecommendationMenuOpen(false);
+  }
   function itemsForDate(dateKey) {
     return watchEntriesForDate(allItems, dateKey);
   }
@@ -1663,98 +1683,120 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
 
   return (
     <section className="watch-shell">
-      <section className="tmdb-panel">
-        <div>
-          <strong>搜索影视</strong>
-          <p>{tmdbStatus}</p>
-        </div>
-        <button className="tmdb-sync-button" type="button" onClick={onSyncTmdbWatchlist}>同步 TMDB 片单</button>
-        <form className="tmdb-search" onSubmit={(event) => {
-          event.preventDefault();
-          onSearchTmdb(tmdbQuery);
-        }}>
-          <input value={tmdbQuery} onChange={(event) => setTmdbQuery(event.target.value)} placeholder="搜索剧名" />
-          <button className="chip-button" type="submit">搜索</button>
-        </form>
-        <div className="tmdb-results">
-          {searchResults.map((item) => (
-            <button className="tmdb-result" type="button" key={`${item.type}-${item.tmdbId}`} onClick={() => onImportTmdb(item)}>
-              {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
-              <strong>{item.title}</strong>
-              <small>{[item.year, item.type].filter(Boolean).join(" · ")}</small>
-            </button>
-          ))}
-        </div>
-      </section>
-      <section className="watch-calendar">
-        <div className="panel-head">
-          <h2>{monthTitle(selected.date)}</h2>
-          <div className="calendar-actions">
-            <button className="chip-button" type="button" onClick={onRefreshTmdbTracked}>刷新更新</button>
-            <button className="calendar-toggle" type="button" onClick={() => setExpanded(!expanded)}>{expanded ? "⌃" : "⌄"}</button>
-          </div>
-        </div>
-        <div className={expanded ? "week-grid month-grid" : "week-grid"}>
-          {calendarDays.map((day) => (
-            <button className={`${day.dateKey === selectedDate ? "week-day active" : "week-day"} ${day.inMonth === false ? "outside-month" : ""}`} type="button" key={day.dateKey} onClick={() => setSelectedDate(day.dateKey)}>
-              <span>{weekdayText(day.date)}</span>
-              <strong>{day.date.getDate()}</strong>
-              <i className={day.updates.length ? "has-update" : ""} />
-              {day.updates.length > 0 && (
-                <small className="day-updates">
-                  {dayUpdateLabel(day.updates, expanded)}
-                </small>
-              )}
-            </button>
-          ))}
-        </div>
-      </section>
-      <div className="watch-timeline">
-        {timeline.length === 0 && <p className="empty">这一天还没有追剧更新。给剧集填写“下次更新日期”和“更新时间”后，会显示在这里。</p>}
-        {timeline.map((item) => {
-          const updateEpisode = Number(item.updateEpisode || 0);
-          const total = Number(item.totalEpisodes || 0);
-          const progress = total > 0 && updateEpisode > 0 ? Math.min(100, Math.round((updateEpisode / total) * 100)) : 0;
-          return (
-            <article className="watch-item" key={`${item.id}-${updateEpisode || "next"}`}>
-              <div className="timeline-dot" />
-              <div className="watch-time">{weekdayText(selected.date)} {selected.dateKey.slice(5).replace("-", "/")} {item.airTime || "--:--"}</div>
-              <div className="watch-card">
-                <div className="poster-box">
+      {activeView === "today" && (
+        <>
+          <section className="tmdb-panel">
+            <div>
+              <strong>搜索影视</strong>
+              <p>{tmdbStatus}</p>
+            </div>
+            <button className="tmdb-sync-button" type="button" onClick={onSyncTmdbWatchlist}>同步 TMDB 片单</button>
+            <form className="tmdb-search" onSubmit={(event) => {
+              event.preventDefault();
+              onSearchTmdb(tmdbQuery);
+            }}>
+              <input value={tmdbQuery} onChange={(event) => setTmdbQuery(event.target.value)} placeholder="搜索剧名" />
+              <button className="chip-button" type="submit">搜索</button>
+            </form>
+            <div className="tmdb-results">
+              {searchResults.map((item) => (
+                <button className="tmdb-result" type="button" key={`${item.type}-${item.tmdbId}`} onClick={() => onImportTmdb(item)}>
                   {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
-                </div>
-                <div className="watch-info">
-                  <div className="watch-title-row">
-                    <strong>{item.title}</strong>
-                    <small>{item.platform || "本地"}</small>
-                  </div>
-                  <p>{[item.year, item.type || "剧集", ...(item.tags || [])].filter(Boolean).join(" · ")}</p>
-                  <div className="episode-line">
-                    <span>第 {item.season || 1} 季</span>
-                    <strong>{updateEpisode ? `${updateEpisode} 集` : "-- 集"}</strong>
-                    {total > 0 && <span>共 {total} 集</span>}
-                  </div>
-                  {total > 0 && <div className="watch-progress"><i style={{ width: `${progress}%` }} /></div>}
-                </div>
+                  <strong>{item.title}</strong>
+                  <small>{[item.year, item.type].filter(Boolean).join(" · ")}</small>
+                </button>
+              ))}
+            </div>
+          </section>
+          <section className="watch-calendar">
+            <div className="panel-head">
+              <h2>{monthTitle(selected.date)}</h2>
+              <div className="calendar-actions">
+                <button className="chip-button" type="button" onClick={onRefreshTmdbTracked}>刷新更新</button>
+                <button className="calendar-toggle" type="button" onClick={() => setExpanded(!expanded)}>{expanded ? "⌃" : "⌄"}</button>
               </div>
-            </article>
-          );
-        })}
-      </div>
-      {visibleRecommendationSections.map((section) => (
-        <section className="tmdb-recommendations" key={section.id}>
+            </div>
+            <div className={expanded ? "week-grid month-grid" : "week-grid"}>
+              {calendarDays.map((day) => (
+                <button className={`${day.dateKey === selectedDate ? "week-day active" : "week-day"} ${day.inMonth === false ? "outside-month" : ""}`} type="button" key={day.dateKey} onClick={() => setSelectedDate(day.dateKey)}>
+                  <span>{weekdayText(day.date)}</span>
+                  <strong>{day.date.getDate()}</strong>
+                  <i className={day.updates.length ? "has-update" : ""} />
+                  {day.updates.length > 0 && (
+                    <small className="day-updates">
+                      {dayUpdateLabel(day.updates, expanded)}
+                    </small>
+                  )}
+                </button>
+              ))}
+            </div>
+          </section>
+          <div className="watch-timeline">
+            {timeline.length === 0 && <p className="empty">这一天还没有追剧更新。给剧集填写“下次更新日期”和“更新时间”后，会显示在这里。</p>}
+            {timeline.map((item) => {
+              const updateEpisode = Number(item.updateEpisode || 0);
+              const total = Number(item.totalEpisodes || 0);
+              const progress = total > 0 && updateEpisode > 0 ? Math.min(100, Math.round((updateEpisode / total) * 100)) : 0;
+              return (
+                <article className="watch-item" key={`${item.id}-${updateEpisode || "next"}`}>
+                  <div className="timeline-dot" />
+                  <div className="watch-time">{weekdayText(selected.date)} {selected.dateKey.slice(5).replace("-", "/")} {item.airTime || "--:--"}</div>
+                  <div className="watch-card">
+                    <div className="poster-box">
+                      {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+                    </div>
+                    <div className="watch-info">
+                      <div className="watch-title-row">
+                        <strong>{item.title}</strong>
+                        <small>{item.platform || "本地"}</small>
+                      </div>
+                      <p>{[item.year, item.type || "剧集", ...(item.tags || [])].filter(Boolean).join(" · ")}</p>
+                      <div className="episode-line">
+                        <span>第 {item.season || 1} 季</span>
+                        <strong>{updateEpisode ? `${updateEpisode} 集` : "-- 集"}</strong>
+                        {total > 0 && <span>共 {total} 集</span>}
+                      </div>
+                      {total > 0 && <div className="watch-progress"><i style={{ width: `${progress}%` }} /></div>}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </>
+      )}
+      {selectedRecommendationSection && (
+        <section className="tmdb-recommendations">
           <div className="panel-head">
             <div>
-              <h2>{section.title}</h2>
+              <h2>{selectedRecommendationSection.title}</h2>
               <p>{tmdbRecommendationStatus}</p>
             </div>
-            <button className="chip-button" type="button" onClick={onLoadRecommendations}>刷新片单</button>
+            <div className="recommendation-actions">
+              <div className={`recommendation-menu ${recommendationMenuOpen ? "open" : ""}`}>
+                <button className="recommendation-menu-trigger" type="button" onClick={() => setRecommendationMenuOpen(!recommendationMenuOpen)} aria-expanded={recommendationMenuOpen}>
+                  <span>{selectedRecommendationSection.title}</span>
+                  <i aria-hidden="true">⌄</i>
+                </button>
+                {recommendationMenuOpen && (
+                  <div className="recommendation-menu-list">
+                    {activeRecommendationOptions.map((section) => (
+                      <button className={section.id === selectedRecommendationSection.id ? "active" : ""} type="button" key={section.id} onClick={() => selectRecommendationSection(section.id)}>
+                        {section.title}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <span className="recommendation-count">{selectedRecommendationCount} 条</span>
+              <button className="chip-button" type="button" onClick={onLoadRecommendations}>刷新片单</button>
+            </div>
           </div>
           <div className="tmdb-section">
             <div className="tmdb-feed">
-              {(Array.isArray(section.items) ? section.items : []).length === 0 && <p className="empty">暂无片单，稍后点刷新片单重试。</p>}
-              {(Array.isArray(section.items) ? section.items : []).map((item) => (
-                <button className="media-feed-card" type="button" key={`${section.id}-${item.tmdbId}`} onClick={() => onImportTmdb(item)}>
+              {(Array.isArray(selectedRecommendationSection.items) ? selectedRecommendationSection.items : []).length === 0 && <p className="empty">暂无片单，稍后点刷新片单重试。</p>}
+              {(Array.isArray(selectedRecommendationSection.items) ? selectedRecommendationSection.items : []).map((item) => (
+                <button className="media-feed-card" type="button" key={`${selectedRecommendationSection.id}-${item.tmdbId}`} onClick={() => onImportTmdb(item)}>
                   <div className="media-cover">
                     {item.backdropUrl || item.posterUrl ? <img src={item.backdropUrl || item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
                     <i className="media-play" aria-hidden="true">▶</i>
@@ -1768,7 +1810,7 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
             </div>
           </div>
         </section>
-      ))}
+      )}
     </section>
   );
 }
@@ -2065,7 +2107,8 @@ export default function Workbench() {
   const [tmdbResults, setTmdbResults] = useState([]);
   const [tmdbStatus, setTmdbStatus] = useState("输入剧名搜索，点击结果即可加入观影列表");
   const [tmdbSections, setTmdbSections] = useState([]);
-  const [tmdbRecommendationStatus, setTmdbRecommendationStatus] = useState("正在准备今日更新和即将播放影视");
+  const [tmdbRecommendationStatus, setTmdbRecommendationStatus] = useState("正在准备电影和电视剧片单");
+  const [consultationView, setConsultationView] = useState("today");
 
   function persist(name, value) {
     writeStorage(name, value);
@@ -2246,14 +2289,14 @@ export default function Workbench() {
   }
 
   async function loadTmdbRecommendations() {
-    setTmdbRecommendationStatus("正在加载今日更新与即将播放影视...");
+    setTmdbRecommendationStatus("正在加载电影和电视剧片单...");
     try {
       const response = await fetch("/api/tmdb/recommendations");
       const text = await response.text();
       const data = text ? JSON.parse(text) : {};
       if (!response.ok) throw new Error(data.error || "推荐加载失败");
       setTmdbSections(Array.isArray(data.sections) ? data.sections : []);
-      setTmdbRecommendationStatus("来自 TMDB 的今日更新与待播影视");
+      setTmdbRecommendationStatus("来自 TMDB 的电影与电视剧片单");
     } catch (error) {
       setTmdbRecommendationStatus(error.message || "片单暂时不可用，请点刷新片单重试");
     }
@@ -2754,10 +2797,17 @@ export default function Workbench() {
                   </div>
                   <button className="date-pill" type="button" onClick={toggleDisplayMode}>{displayMode === "desktop" ? "手机端" : "网页端"}</button>
                 </div>
-                <div className="module-tabs" aria-label="内容切换">
-                  <button className="active" type="button">今日内容</button>
-                  <button type="button">历史记录</button>
-                </div>
+                {activePage === "consultations" ? (
+                  <div className="module-tabs consultation-tabs" aria-label="观影内容切换">
+                    <button className={consultationView === "today" ? "active" : ""} type="button" onClick={() => setConsultationView("today")}>追剧日历</button>
+                    <button className={consultationView === "movies" ? "active" : ""} type="button" onClick={() => setConsultationView("movies")}>电影</button>
+                    <button className={consultationView === "tv" ? "active" : ""} type="button" onClick={() => setConsultationView("tv")}>电视剧</button>
+                  </div>
+                ) : (
+                  <div className="module-tabs" aria-label="内容切换">
+                    <button className="active" type="button">今日内容</button>
+                  </div>
+                )}
               </header>
             </>
           )}
@@ -2847,6 +2897,7 @@ export default function Workbench() {
             <>
               <WatchSchedule
                 items={consultations}
+                activeView={consultationView}
                 tmdbResults={tmdbResults}
                 tmdbStatus={tmdbStatus}
                 tmdbSections={tmdbSections}
