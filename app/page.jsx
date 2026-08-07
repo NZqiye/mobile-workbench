@@ -1599,6 +1599,13 @@ function dayUpdateLabel(updates, expanded) {
   return `${first.title}${first.count > 1 ? ` ${first.count}集` : ""}${grouped.length > 1 ? ` +${grouped.length - 1}` : ""}`;
 }
 
+function mediaAirText(item) {
+  if (!item?.airDate) return "播出日期待定";
+  const [, month, day] = String(item.airDate).split("-");
+  if (!month || !day) return item.airDate;
+  return `${Number(month)}月${Number(day)}日 播出`;
+}
+
 function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
@@ -1744,15 +1751,18 @@ function WatchSchedule({ items = [], tmdbResults = [], tmdbStatus, tmdbSections 
             <button className="chip-button" type="button" onClick={onLoadRecommendations}>刷新片单</button>
           </div>
           <div className="tmdb-section">
-            <div className="tmdb-poster-row">
+            <div className="tmdb-feed">
               {(Array.isArray(section.items) ? section.items : []).length === 0 && <p className="empty">暂无片单，稍后点刷新片单重试。</p>}
               {(Array.isArray(section.items) ? section.items : []).map((item) => (
-                <button className="tmdb-poster-card" type="button" key={`${section.id}-${item.tmdbId}`} onClick={() => onImportTmdb(item)}>
-                  <div className="tmdb-poster">
-                    {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+                <button className="media-feed-card" type="button" key={`${section.id}-${item.tmdbId}`} onClick={() => onImportTmdb(item)}>
+                  <div className="media-cover">
+                    {item.backdropUrl || item.posterUrl ? <img src={item.backdropUrl || item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+                    <i className="media-play" aria-hidden="true">▶</i>
                   </div>
-                  <strong>{item.title}</strong>
-                  <small>{item.year || "暂无年份"}</small>
+                  <strong className="media-feed-title">{item.title}</strong>
+                  <span className="media-air">{mediaAirText(item)}</span>
+                  <small className="media-meta">{[item.year, item.type || "剧集", item.platform || "TMDB"].filter(Boolean).join(" / ")}</small>
+                  <p className="media-summary">{item.summary || item.review || "暂无简介。"}</p>
                 </button>
               ))}
             </div>

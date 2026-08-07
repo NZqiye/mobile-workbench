@@ -296,6 +296,18 @@ textarea { resize: vertical; }
 .tmdb-poster-card strong, .tmdb-poster-card small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tmdb-poster-card strong { font-size: 13px; }
 .tmdb-poster-card small { color: var(--muted); font-size: 11px; }
+.tmdb-feed { display: grid; gap: 20px; }
+.media-feed-card { display: grid; gap: 8px; width: 100%; padding: 0 0 18px; border: 0; border-bottom: 1px solid rgba(234, 215, 208, 0.82); color: var(--ink); background: transparent; text-align: left; }
+.media-feed-card:last-child { padding-bottom: 0; border-bottom: 0; }
+.media-cover { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 8px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); box-shadow: 0 14px 26px rgba(117, 25, 35, 0.16); }
+.media-cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.22)); pointer-events: none; }
+.media-cover img { width: 100%; height: 100%; object-fit: cover; }
+.media-cover span { font-size: 34px; font-weight: 900; }
+.media-play { position: absolute; left: 50%; top: 50%; z-index: 1; display: grid; place-items: center; width: 54px; height: 54px; border: 1px solid rgba(255, 255, 255, 0.42); border-radius: 999px; color: rgba(255, 255, 255, 0.92); background: rgba(0, 0, 0, 0.34); transform: translate(-50%, -50%); font-size: 20px; font-style: normal; line-height: 1; box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28); }
+.media-feed-title { margin-top: 2px; font-size: 22px; line-height: 1.22; }
+.media-air { color: #2f73d8; font-size: 16px; font-weight: 900; }
+.media-meta { color: var(--muted); font-size: 14px; line-height: 1.45; }
+.media-summary { display: -webkit-box; overflow: hidden; margin: 0; color: #59616d; font-size: 15px; line-height: 1.62; -webkit-box-orient: vertical; -webkit-line-clamp: 5; }
 .diet-shell { display: grid; gap: 16px; padding: 4px 0 12px; background:
     radial-gradient(circle at 88% 6%, rgba(255, 255, 255, 0.24), transparent 28%),
     linear-gradient(180deg, var(--theme-soft), rgba(255, 255, 255, 0)); }
