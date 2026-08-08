@@ -100,7 +100,7 @@ const foodCalories = [
   ["奶茶", 350],
 ];
 
-function WorkbenchIcon({ name }) {
+function WorkbenchIcon({ name, className = "ui-icon" }) {
   const icons = {
     home: (
       <>
@@ -194,8 +194,146 @@ function WorkbenchIcon({ name }) {
   };
 
   return (
-    <svg className="ui-icon" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
       {icons[name] || icons.spark}
+    </svg>
+  );
+}
+
+function MotionIcon({ name, tone = "default" }) {
+  const icons = {
+    quote: (
+      <>
+        <path className="motion-icon-main" d="M7 5h10a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H8l-4 3v-4.5A3 3 0 0 1 2 14.7V8a3 3 0 0 1 3-3z" />
+        <path className="motion-icon-light" d="M7.2 10.2h3.4v2.9H8.8c.1 1 .7 1.6 1.7 2v1.4c-2.2-.5-3.3-1.8-3.3-4zm6 0h3.4v2.9h-1.8c.1 1 .7 1.6 1.7 2v1.4c-2.2-.5-3.3-1.8-3.3-4z" />
+        <circle className="motion-icon-pulse" cx="18" cy="7" r="2" />
+      </>
+    ),
+    search: (
+      <>
+        <circle className="motion-icon-main" cx="10.5" cy="10.5" r="6.5" />
+        <path className="motion-icon-light" d="M15.2 15.2 21 21" />
+        <circle className="motion-icon-pulse" cx="10.5" cy="10.5" r="2" />
+      </>
+    ),
+    sync: (
+      <>
+        <path className="motion-icon-main" d="M6.5 8.5A7 7 0 0 1 18 6l1.5 1.5" />
+        <path className="motion-icon-main" d="M17.5 15.5A7 7 0 0 1 6 18l-1.5-1.5" />
+        <path className="motion-icon-light" d="M19.5 3.8v3.7H15.8" />
+        <path className="motion-icon-light" d="M4.5 20.2v-3.7h3.7" />
+      </>
+    ),
+    movie: (
+      <>
+        <rect className="motion-icon-main" x="4" y="5" width="16" height="14" rx="3" />
+        <path className="motion-icon-light" d="M8 5v14M16 5v14M4 9h16M4 15h16" />
+        <circle className="motion-icon-pulse" cx="12" cy="12" r="2.2" />
+      </>
+    ),
+    tv: (
+      <>
+        <rect className="motion-icon-main" x="4" y="6" width="16" height="12" rx="2.6" />
+        <path className="motion-icon-light" d="M9 21h6M12 18v3M9 3l3 3 3-3" />
+        <path className="motion-icon-pulse" d="M8 10h8v4H8z" />
+      </>
+    ),
+    flame: (
+      <>
+        <path className="motion-icon-main" d="M12.2 3c1.8 3.1-.4 4.6 1.4 6.4 1.2-1 1.5-2.5 1.3-4 3.4 2.2 5 5.2 5 8.3 0 4.4-3.2 7.3-7.8 7.3S4.1 18 4.1 13.8c0-3.5 2.2-5.7 4.4-7.5.1 2.3.9 3.4 2.1 4.3C10.1 8.1 10.2 5.7 12.2 3z" />
+        <path className="motion-icon-light" d="M12 12c1.4 1.6 2.4 2.8 2.4 4.2 0 1.5-1 2.8-2.4 2.8s-2.4-1.3-2.4-2.8c0-1.4 1-2.6 2.4-4.2z" />
+      </>
+    ),
+    screen: (
+      <>
+        <rect className="motion-icon-main" x="3.8" y="6" width="16.4" height="11" rx="2.4" />
+        <path className="motion-icon-light" d="M9 10.2v2.6l2.4-1.3zM15 10.2v2.6l-2.4-1.3zM8 21h8" />
+        <circle className="motion-icon-pulse" cx="18" cy="8" r="1.5" />
+      </>
+    ),
+    music: (
+      <>
+        <path className="motion-icon-main" d="M15 4v12.2a3.2 3.2 0 1 1-2-3V7l7-1.6v8.8a3.2 3.2 0 1 1-2-3V4z" />
+        <path className="motion-icon-light" d="M15 7 20 5.8" />
+      </>
+    ),
+    news: (
+      <>
+        <path className="motion-icon-main" d="M5 4h11a2 2 0 0 1 2 2v14H6a3 3 0 0 1-3-3V6a2 2 0 0 1 2-2z" />
+        <path className="motion-icon-light" d="M8 8h6v3H8zM8 13h7M8 16h5" />
+        <circle className="motion-icon-pulse" cx="18" cy="7" r="2" />
+      </>
+    ),
+    book: (
+      <>
+        <path className="motion-icon-main" d="M5 4h6a3 3 0 0 1 3 3v13a3 3 0 0 0-3-2H5z" />
+        <path className="motion-icon-main" d="M19 4h-5a3 3 0 0 0-3 3v13a3 3 0 0 1 3-2h5z" />
+        <path className="motion-icon-light" d="M8 8h3M8 11h3M16 8h1.5M16 11h1.5" />
+      </>
+    ),
+    scroll: (
+      <>
+        <path className="motion-icon-main" d="M7 5a3 3 0 0 1 3-3h8v15a4 4 0 0 1-4 4H6a3 3 0 0 0 1-2.2z" />
+        <path className="motion-icon-light" d="M10 7h5M10 11h5M10 15h3" />
+        <path className="motion-icon-pulse" d="M6 21a3 3 0 0 1 0-6h3v3.8A2.2 2.2 0 0 1 6.8 21z" />
+      </>
+    ),
+  };
+
+  return (
+    <svg className={`motion-icon motion-icon-${name} tone-${tone}`} viewBox="0 0 24 24" aria-hidden="true">
+      {icons[name] || icons.news}
+    </svg>
+  );
+}
+
+function weatherMotionType(code) {
+  const value = Number(code);
+  if ([0, 1].includes(value)) return "sun";
+  if ([2, 3].includes(value)) return "cloud";
+  if ([45, 48].includes(value)) return "fog";
+  if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(value)) return "rain";
+  if ([71, 73, 75, 77, 85, 86].includes(value)) return "snow";
+  if ([95, 96, 99].includes(value)) return "storm";
+  return "partly";
+}
+
+function WeatherMotionIcon({ code }) {
+  const type = weatherMotionType(code);
+  const cloud = (
+    <path className="weather-cloud" d="M7.2 17.5h10.1a3.4 3.4 0 0 0 .4-6.8A5.1 5.1 0 0 0 8 9.2a3.9 3.9 0 0 0-.8 8.3z" />
+  );
+
+  return (
+    <svg className={`weather-motion-icon weather-${type}`} viewBox="0 0 32 32" aria-hidden="true">
+      {["sun", "partly"].includes(type) && (
+        <>
+          <circle className="weather-sun-core" cx="13" cy="12" r="5" />
+          <path className="weather-sun-rays" d="M13 2v4M13 18v4M3 12h4M19 12h4M5.9 4.9l2.8 2.8M17.3 16.3l2.8 2.8M20.1 4.9l-2.8 2.8M8.7 16.3l-2.8 2.8" />
+        </>
+      )}
+      {type !== "sun" && cloud}
+      {type === "rain" && (
+        <g className="weather-drops">
+          <path d="M10 21v4" />
+          <path d="M16 21v5" />
+          <path d="M22 21v4" />
+        </g>
+      )}
+      {type === "snow" && (
+        <g className="weather-snow">
+          <circle cx="10" cy="23" r="1" />
+          <circle cx="16" cy="25" r="1" />
+          <circle cx="22" cy="23" r="1" />
+        </g>
+      )}
+      {type === "storm" && <path className="weather-bolt" d="M16 18h5l-4 5h4l-7 7 2-6h-4z" />}
+      {type === "fog" && (
+        <g className="weather-fog-lines">
+          <path d="M7 21h18" />
+          <path d="M5 25h17" />
+        </g>
+      )}
     </svg>
   );
 }
@@ -427,6 +565,18 @@ function todayKey(date = new Date()) {
 
 function todayDisplay(date = new Date()) {
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 · ${["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()]}`;
+}
+
+function hasLiveClock(clock) {
+  return Boolean(clock && clock !== "--:--" && clock !== "--:--:--");
+}
+
+function visibleTodayKey(clock) {
+  return hasLiveClock(clock) ? todayKey() : "日期同步中";
+}
+
+function visibleTodayDisplay(clock) {
+  return hasLiveClock(clock) ? todayDisplay() : "日期同步中";
 }
 
 function daysUntil(dateKey) {
@@ -730,6 +880,94 @@ function SkillOverview({ open, skills, activePage, stats, session, onClose, onSe
   );
 }
 
+function DesktopContextRail({ activePage, displayMode, ponyTheme, session, stats, clock, skills, onSelect, onToggleDisplayMode, onChangeTheme }) {
+  const activeSkill = skills.find((skill) => skill.id === activePage) || skills[0];
+  const dateKey = visibleTodayKey(clock);
+  const todayStats = [
+    { label: "任务", value: stats.plans },
+    { label: "追剧", value: stats.consultations },
+    { label: "饮食", value: stats.dietToday },
+    { label: "签到", value: stats.checkin },
+  ];
+
+  return (
+    <aside className="desktop-context-rail" aria-label="网页端概览">
+      <section className="desktop-context-card desktop-context-hero">
+        <span>七夜online</span>
+        <strong>{clock}</strong>
+        <small>{dateKey} · {session ? "云同步在线" : "本地模式"}</small>
+        <button type="button" onClick={onToggleDisplayMode}>{displayMode === "desktop" ? "切回手机端" : "切到网页端"}</button>
+      </section>
+
+      <section className="desktop-context-card">
+        <div className="desktop-card-head">
+          <span>当前模块</span>
+          <b>{activeSkill?.badge}</b>
+        </div>
+        <div className="desktop-active-module">
+          <span><AnimeNavIcon name={activeSkill?.icon || "spark"} /></span>
+          <div>
+            <strong>{activeSkill?.name}</strong>
+            <small>{pageDescriptions[activePage] || activeSkill?.summary}</small>
+          </div>
+        </div>
+      </section>
+
+      <section className="desktop-context-card">
+        <div className="desktop-card-head">
+          <span>今日概览</span>
+          <b>{hasLiveClock(clock) ? dateKey.slice(5) : "--"}</b>
+        </div>
+        <div className="desktop-stat-grid">
+          {todayStats.map((item) => (
+            <div key={item.label}>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="desktop-context-card">
+        <div className="desktop-card-head">
+          <span>快速切换</span>
+          <b>{skills.length}</b>
+        </div>
+        <div className="desktop-switch-list">
+          {skills.filter((skill) => skill.id !== activePage).slice(0, 5).map((skill) => (
+            <button type="button" key={skill.id} onClick={() => onSelect(skill.id)}>
+              <span><AnimeNavIcon name={skill.icon} /></span>
+              <div>
+                <strong>{skill.name}</strong>
+                <small>{skill.summary}</small>
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="desktop-context-card">
+        <div className="desktop-card-head">
+          <span>主题</span>
+          <b>{ponyThemes.find((theme) => theme.id === ponyTheme)?.name || "默认"}</b>
+        </div>
+        <div className="desktop-theme-dots">
+          {ponyThemes.map((theme) => (
+            <button
+              className={ponyTheme === theme.id ? "active" : ""}
+              type="button"
+              key={theme.id}
+              onClick={() => onChangeTheme(theme.id)}
+              aria-label={`切换到${theme.name}主题`}
+              style={{ "--dot-main": theme.primary, "--dot-accent": theme.accent }}
+            />
+          ))}
+        </div>
+      </section>
+    </aside>
+  );
+}
+
 function SyncPanel({ session, syncStatus, onLogin, onLogout, onSync, onExport }) {
   const [accessCode, setAccessCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -774,6 +1012,7 @@ function SyncPanel({ session, syncStatus, onLogin, onLogout, onSync, onExport })
 function WeatherCard({ compact = false, clock = "--:--" }) {
   const [weather, setWeather] = useState(null);
   const [status, setStatus] = useState("正在读取天气...");
+  const dateKey = visibleTodayKey(clock);
 
   async function loadWeather(force = false) {
     const cache = readStorage("weatherCache", null);
@@ -827,12 +1066,12 @@ function WeatherCard({ compact = false, clock = "--:--" }) {
       </div>
       <div className="weather-main">
         <div>
-          <span>{weather?.location || "无锡"} · {todayKey()} · {clock}</span>
+          <span>{weather?.location || "无锡"} · {dateKey} · {clock}</span>
           <strong>{weather ? `${weather.current ?? "--"}°` : "--"}</strong>
           <small>{weather ? `${weatherLabel(weather.code)} · ${weather.min ?? "--"}° / ${weather.max ?? "--"}° · 降水 ${weather.rain ?? "--"}%` : "正在读取无锡天气"}</small>
         </div>
         <b className="weather-badge">
-          <span>{weatherIcon(weather?.code)}</span>
+          <span><WeatherMotionIcon code={weather?.code} /></span>
           <small>{weather ? weatherLabel(weather.code) : "天气"}</small>
         </b>
       </div>
@@ -1003,12 +1242,12 @@ function ClothingAssistant() {
 }
 
 const newsTabs = [
-  { id: "weibo", label: "微博热搜", icon: "🔥" },
-  { id: "bilibili", label: "B站热搜", icon: "📺" },
-  { id: "douyin", label: "抖音热搜", icon: "🎵" },
-  { id: "sina", label: "新浪热榜", icon: "📰" },
-  { id: "weread", label: "微信读书", icon: "📚" },
-  { id: "history", label: "历史上的今天", icon: "📜" },
+  { id: "weibo", label: "微博热搜", icon: "flame" },
+  { id: "bilibili", label: "B站热搜", icon: "screen" },
+  { id: "douyin", label: "抖音热搜", icon: "music" },
+  { id: "sina", label: "新浪热榜", icon: "news" },
+  { id: "weread", label: "微信读书", icon: "book" },
+  { id: "history", label: "历史上的今天", icon: "scroll" },
 ];
 
 function NewsBoard() {
@@ -1057,7 +1296,7 @@ function NewsBoard() {
   return (
     <section className="news-shell">
       <div className="news-title">
-        <span>📰</span>
+        <span><MotionIcon name="news" tone="light" /></span>
         <div>
           <h2>热榜时讯</h2>
           <p>微博 · B站 · 抖音 · 新浪 · 微信读书 · 历史上的今天</p>
@@ -1066,14 +1305,14 @@ function NewsBoard() {
       <div className="news-tabs">
         {newsTabs.map((item) => (
           <button className={category === item.id ? "active" : ""} type="button" key={item.id} onClick={() => setCategory(item.id)}>
-            <span>{item.icon}</span>{item.label}
+            <span><MotionIcon name={item.icon} /></span>{item.label}
           </button>
         ))}
       </div>
       <section className="news-card">
         <div className="panel-head">
           <div>
-            <h2>{activeTab.icon} {activeTab.label}</h2>
+            <h2 className="icon-heading"><MotionIcon name={activeTab.icon} />{activeTab.label}</h2>
             <p>{status}</p>
           </div>
           <button className="chip-button" type="button" onClick={() => loadNews(category, true)}>刷新</button>
@@ -1100,7 +1339,7 @@ function TodayTimePanel({ clock = "--:--:--" }) {
   return (
     <section className="today-time-panel" aria-label="今日时间">
       <strong>{clock}</strong>
-      <span>{todayDisplay()}</span>
+      <span>{visibleTodayDisplay(clock)}</span>
       <small>七夜online · 今日速递</small>
     </section>
   );
@@ -1146,7 +1385,7 @@ function DailyQuoteCard() {
   return (
     <section className="daily-quote-card">
       <div className="panel-head">
-        <h2>今日金句</h2>
+        <h2 className="icon-heading"><MotionIcon name="quote" />今日金句</h2>
         <span className="tag">{status}</span>
       </div>
       <strong>{quote.text}</strong>
@@ -1610,11 +1849,32 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
   const [tmdbQuery, setTmdbQuery] = useState("");
+  const [watchListOpen, setWatchListOpen] = useState(false);
+  const [watchListQuery, setWatchListQuery] = useState("");
+  const [watchListStatus, setWatchListStatus] = useState("all");
   const [movieSectionId, setMovieSectionId] = useState("movieNowPlaying");
   const [tvSectionId, setTvSectionId] = useState("tvPopular");
   const [recommendationMenuOpen, setRecommendationMenuOpen] = useState(false);
   const allItems = Array.isArray(items) ? items : [];
   const managedWatchItems = allItems.filter((item) => item.status !== "已归档");
+  const watchListKeyword = watchListQuery.trim();
+  const hasActiveWatchFilter = Boolean(watchListKeyword) || watchListStatus !== "all";
+  const filteredWatchItems = managedWatchItems.filter((item) => {
+    const statusMatched = watchListStatus === "all" || item.status === watchListStatus;
+    return statusMatched && itemMatchesQuery(item, watchListQuery, [
+      "title",
+      "status",
+      "year",
+      "type",
+      "platform",
+      "source",
+      (record) => record.tags || [],
+    ]);
+  });
+  const visibleWatchItems = watchListOpen || hasActiveWatchFilter ? filteredWatchItems.slice(0, watchListOpen ? filteredWatchItems.length : 8) : [];
+  const watchStatusSummary = consultationStatuses
+    .map((status) => ({ status, count: managedWatchItems.filter((item) => item.status === status).length }))
+    .filter((item) => item.count > 0);
   const searchResults = Array.isArray(tmdbResults) ? tmdbResults : [];
   const recommendationSections = Array.isArray(tmdbSections) ? tmdbSections : [];
   const visibleRecommendationSections = recommendationSections.length ? recommendationSections : [
@@ -1633,6 +1893,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
   const selectedRecommendationId = activeView === "movies" ? movieSectionId : activeView === "tv" ? tvSectionId : "";
   const selectedRecommendationSection = activeRecommendationOptions.find((section) => section.id === selectedRecommendationId) || activeRecommendationOptions[0];
   const selectedRecommendationCount = Array.isArray(selectedRecommendationSection?.items) ? selectedRecommendationSection.items.length : 0;
+  const selectedRecommendationIcon = selectedRecommendationSection?.id?.startsWith("movie") ? "movie" : "tv";
   function selectRecommendationSection(id) {
     if (activeView === "movies") setMovieSectionId(id);
     if (activeView === "tv") setTvSectionId(id);
@@ -1691,11 +1952,17 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
       {activeView === "today" && (
         <>
           <section className="tmdb-panel">
-            <div>
-              <strong>搜索影视</strong>
-              <p>{tmdbStatus}</p>
+            <div className="tmdb-panel-title">
+              <span><MotionIcon name="search" /></span>
+              <div>
+                <strong>搜索影视</strong>
+                <p>{tmdbStatus}</p>
+              </div>
             </div>
-            <button className="tmdb-sync-button" type="button" onClick={onSyncTmdbWatchlist}>同步 TMDB 片单</button>
+            <button className="tmdb-sync-button" type="button" onClick={onSyncTmdbWatchlist}>
+              <MotionIcon name="sync" tone="light" />
+              <span>同步 TMDB 片单</span>
+            </button>
             <form className="tmdb-search" onSubmit={(event) => {
               event.preventDefault();
               onSearchTmdb(tmdbQuery);
@@ -1772,24 +2039,50 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
             <div className="panel-head">
               <div>
                 <h2>我的片单</h2>
-                <p>已加入 {managedWatchItems.length} 部，点移除可从待看片单删掉</p>
+                <p>已加入 {managedWatchItems.length} 部，默认收起；搜索或展开后再管理</p>
               </div>
+              <button className="chip-button" type="button" onClick={() => setWatchListOpen(!watchListOpen)}>
+                {watchListOpen ? "收起片单" : "管理片单"}
+              </button>
             </div>
-            <div className="watch-list">
-              {managedWatchItems.length === 0 && <p className="empty">还没有加入影视，先搜索或从电影/电视剧里添加。</p>}
-              {managedWatchItems.map((item) => (
-                <article className="watch-list-row" key={item.id}>
-                  <div className="watch-list-poster">
-                    {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
-                  </div>
-                  <div>
-                    <strong>{item.title}</strong>
-                    <small>{[item.status, item.year, item.type || "剧集"].filter(Boolean).join(" · ")}</small>
-                  </div>
-                  <button type="button" onClick={() => removeWatchItem(item)}>移除</button>
-                </article>
+            <div className="watch-list-tools">
+              <input value={watchListQuery} onChange={(event) => setWatchListQuery(event.target.value)} placeholder="搜索片名、状态、年份、平台" />
+              {hasActiveWatchFilter && <button type="button" onClick={() => { setWatchListQuery(""); setWatchListStatus("all"); }}>清空</button>}
+            </div>
+            <div className="watch-list-summary" aria-label="片单状态概览">
+              <button className={watchListStatus === "all" ? "active" : ""} type="button" onClick={() => setWatchListStatus("all")}>全部 {managedWatchItems.length}</button>
+              {watchStatusSummary.length === 0 && <span>暂无片单</span>}
+              {watchStatusSummary.map((item) => (
+                <button className={watchListStatus === item.status ? "active" : ""} type="button" key={item.status} onClick={() => setWatchListStatus(item.status)}>
+                  {item.status} {item.count}
+                </button>
               ))}
             </div>
+            {(watchListOpen || hasActiveWatchFilter) ? (
+              <div className="watch-list">
+                {managedWatchItems.length === 0 && <p className="empty">还没有加入影视，先搜索或从电影/电视剧里添加。</p>}
+                {managedWatchItems.length > 0 && filteredWatchItems.length === 0 && <p className="empty">没有找到匹配的片单条目。</p>}
+                {visibleWatchItems.map((item) => (
+                  <article className="watch-list-row" key={item.id}>
+                    <div className="watch-list-poster">
+                      {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+                    </div>
+                    <div>
+                      <strong>{item.title}</strong>
+                      <small>{[item.status, item.year, item.type || "剧集"].filter(Boolean).join(" · ")}</small>
+                    </div>
+                    <button type="button" onClick={() => removeWatchItem(item)}>移除</button>
+                  </article>
+                ))}
+                {!watchListOpen && filteredWatchItems.length > visibleWatchItems.length && (
+                  <button className="watch-list-more" type="button" onClick={() => setWatchListOpen(true)}>
+                    展开全部 {filteredWatchItems.length} 条
+                  </button>
+                )}
+              </div>
+            ) : (
+              <p className="watch-list-collapsed">片单默认收起，后续数量变多时用搜索定位，或点“管理片单”展开处理。</p>
+            )}
           </section>
         </>
       )}
@@ -1797,20 +2090,21 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
         <section className="tmdb-recommendations">
           <div className="panel-head">
             <div>
-              <h2>{selectedRecommendationSection.title}</h2>
+              <h2 className="icon-heading"><MotionIcon name={selectedRecommendationIcon} />{selectedRecommendationSection.title}</h2>
               <p>{tmdbRecommendationStatus}</p>
             </div>
             <div className="recommendation-actions">
               <div className={`recommendation-menu ${recommendationMenuOpen ? "open" : ""}`}>
                 <button className="recommendation-menu-trigger" type="button" onClick={() => setRecommendationMenuOpen(!recommendationMenuOpen)} aria-expanded={recommendationMenuOpen}>
-                  <span>{selectedRecommendationSection.title}</span>
+                  <span><MotionIcon name={selectedRecommendationIcon} />{selectedRecommendationSection.title}</span>
                   <i aria-hidden="true">⌄</i>
                 </button>
                 {recommendationMenuOpen && (
                   <div className="recommendation-menu-list">
                     {activeRecommendationOptions.map((section) => (
                       <button className={section.id === selectedRecommendationSection.id ? "active" : ""} type="button" key={section.id} onClick={() => selectRecommendationSection(section.id)}>
-                        {section.title}
+                        <MotionIcon name={section.id.startsWith("movie") ? "movie" : "tv"} />
+                        <span>{section.title}</span>
                       </button>
                     ))}
                   </div>
@@ -2259,7 +2553,11 @@ export default function Workbench() {
     setHabits(readStorage("habits", readStorage("checkins", [])));
     setDone(readStorage(`done:${todayKey()}`, {}));
     setAssetInput(normalizeSavedAssets(localStorage.getItem(key("assets"))));
-    setDisplayMode(localStorage.getItem(key("displayMode")) === "desktop" ? "desktop" : "mobile");
+    const savedDisplayMode = localStorage.getItem(key("displayMode"));
+    const searchParams = new URLSearchParams(window.location.search);
+    const forcedWebMode = searchParams.has("web") || searchParams.get("mode") === "web";
+    setDisplayMode(forcedWebMode || savedDisplayMode === "desktop" || (!savedDisplayMode && window.innerWidth >= 960) ? "desktop" : "mobile");
+    if (forcedWebMode) localStorage.setItem(key("displayMode"), "desktop");
     setPonyTheme(ponyThemes.some((theme) => theme.id === localStorage.getItem(key("ponyTheme"))) ? localStorage.getItem(key("ponyTheme")) : "rmb");
     setClock(clockText());
     loadTmdbRecommendations();
@@ -2774,6 +3072,7 @@ export default function Workbench() {
   }
 
   const sortedRecent = [...recent].sort((a, b) => String(b.time || "").localeCompare(String(a.time || "")));
+  const dateKey = visibleTodayKey(clock);
   const skillSummaries = [
     { id: "today", name: "今日速看", icon: "home", badge: "首页", summary: `任务 ${stats.plans} · 签到 ${stats.checkin}` },
     { id: "consultations", name: "观影记录", icon: "chat", badge: "观影", summary: `${stats.consultations} 条` },
@@ -2818,7 +3117,7 @@ export default function Workbench() {
         <section className="work-area">
           {activePage !== "today" && (
             <>
-              <div className="day-line"><span>📅</span><strong>{todayKey()}（今天）</strong></div>
+              <div className="day-line"><span>📅</span><strong>{dateKey}（今天）</strong></div>
 
               <header className="module-head">
                 <div className="module-title-row">
@@ -2883,7 +3182,7 @@ export default function Workbench() {
                 <StatButton label="追剧清单" value={`${stats.consultations} 部`} onClick={() => switchPage("consultations")} />
               </section>
               <section className="panel">
-                <div className="panel-head"><h2>今日任务</h2><span className="tag">{todayKey()}</span></div>
+                <div className="panel-head"><h2>今日任务</h2><span className="tag">{dateKey}</span></div>
                 <div className="record-list">
                   {todayPlans.length === 0 && <p className="empty">今天没有未完成计划。</p>}
                   {todayPlans.map((plan) => (
@@ -2987,6 +3286,18 @@ export default function Workbench() {
         </section>
 
         </section>
+        <DesktopContextRail
+          activePage={activePage}
+          displayMode={displayMode}
+          ponyTheme={ponyTheme}
+          session={session}
+          stats={stats}
+          clock={clock}
+          skills={skillSummaries}
+          onSelect={switchPage}
+          onToggleDisplayMode={toggleDisplayMode}
+          onChangeTheme={changePonyTheme}
+        />
       </section>
       <SkillOverview
         open={overviewOpen}
