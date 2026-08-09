@@ -2015,6 +2015,7 @@ function FundBoard() {
   const [tradeCode, setTradeCode] = useState(defaultFundCodes.split(",")[0]);
   const [tradeAmount, setTradeAmount] = useState("");
   const [tradeShares, setTradeShares] = useState("");
+  const [tradeProfit, setTradeProfit] = useState("");
   const [tradeNote, setTradeNote] = useState("");
   const [fundMenuOpen, setFundMenuOpen] = useState(false);
 
@@ -2131,9 +2132,19 @@ function FundBoard() {
     }
     const amountValue = Number(tradeAmount || 0);
     const sharesValue = Number(tradeShares || 0);
+    const profitValue = Number(tradeProfit || 0);
     let shares = sharesValue > 0 ? sharesValue : (amountValue > 0 ? amountValue / price : 0);
     let amount = amountValue > 0 ? amountValue : shares * price;
     const currentHolding = Number(target.shares || 0);
+    if (tradeMode === "import") {
+      const positionValue = amountValue > 0 ? amountValue : sharesValue * price;
+      shares = sharesValue > 0 ? sharesValue : (positionValue > 0 ? positionValue / price : 0);
+      amount = positionValue - (Number.isFinite(profitValue) ? profitValue : 0);
+      if (!shares || positionValue <= 0 || amount < 0) {
+        setStatus("请填写当前市值、份额或已有收益");
+        return;
+      }
+    }
     if (!shares && !amountValue) {
       setStatus("请填写金额或份额");
       return;
@@ -2158,12 +2169,12 @@ function FundBoard() {
         trades: [
           ...(item.trades || []),
           normalizeFundTrade({
-            type: tradeMode,
+            type: tradeMode === "import" ? "buy" : tradeMode,
             amount,
             shares,
             price,
             date: nowText(),
-            note: tradeNote,
+            note: tradeMode === "import" ? (tradeNote || "导入已有持仓") : tradeNote,
           }),
         ],
       };
@@ -2171,8 +2182,9 @@ function FundBoard() {
     savePortfolio(nextPortfolio);
     setTradeAmount("");
     setTradeShares("");
+    setTradeProfit("");
     setTradeNote("");
-    setStatus(`${tradeMode === "sell" ? "已记录卖出" : "已记录定投"} · ${target.code}`);
+    setStatus(`${tradeMode === "sell" ? "已记录卖出" : tradeMode === "import" ? "已导入持仓" : "已记录定投"} · ${target.code}`);
     loadFunds(true);
   }
 
@@ -2180,7 +2192,7 @@ function FundBoard() {
     setTradeCode(code);
     setTradeMode(mode);
     setFundMenuOpen(false);
-    setStatus(mode === "sell" ? "请输入卖出金额或份额" : "请输入定投金额");
+    setStatus(mode === "sell" ? "请输入卖出金额或份额" : mode === "import" ? "请输入已有持仓市值、份额和收益" : "请输入定投金额");
   }
 
   useEffect(() => {
@@ -2243,10 +2255,11 @@ function FundBoard() {
           </div>
           <div className="module-tabs market-tabs fund-mode-tabs" aria-label="基金交易模式">
             <button className={tradeMode === "buy" ? "active" : ""} type="button" onClick={() => setTradeMode("buy")}>定投</button>
+            <button className={tradeMode === "import" ? "active" : ""} type="button" onClick={() => setTradeMode("import")}>导入</button>
             <button className={tradeMode === "sell" ? "active" : ""} type="button" onClick={() => setTradeMode("sell")}>卖出</button>
           </div>
         </div>
-        <form className="fund-trade-form" onSubmit={recordTrade}>
+        <form className={`fund-trade-form ${tradeMode === "import" ? "fund-trade-form-import" : ""}`} onSubmit={recordTrade}>
           <div className={`recommendation-menu fund-select-menu ${fundMenuOpen ? "open" : ""}`}>
             <button className="recommendation-menu-trigger fund-select-trigger" type="button" onClick={() => setFundMenuOpen(!fundMenuOpen)} aria-expanded={fundMenuOpen}>
               <span><i aria-hidden="true" />{selectedTradeOption?.name || selectedTradeOption?.code || "暂无基金"}</span>
@@ -2272,10 +2285,11 @@ function FundBoard() {
               </div>
             )}
           </div>
-          <input value={tradeAmount} onChange={(event) => setTradeAmount(event.target.value)} type="number" min="0" step="0.01" placeholder={tradeMode === "sell" ? "卖出金额，可不填" : "定投金额（元）"} />
-          <input value={tradeShares} onChange={(event) => setTradeShares(event.target.value)} type="number" min="0" step="0.01" placeholder={tradeMode === "sell" ? "卖出份额，可不填" : "份额（可不填）"} />
+          <input value={tradeAmount} onChange={(event) => setTradeAmount(event.target.value)} type="number" min="0" step="0.01" placeholder={tradeMode === "sell" ? "卖出金额，可不填" : tradeMode === "import" ? "当前持有市值（元）" : "定投金额（元）"} />
+          <input value={tradeShares} onChange={(event) => setTradeShares(event.target.value)} type="number" min="0" step="0.01" placeholder={tradeMode === "sell" ? "卖出份额，可不填" : tradeMode === "import" ? "当前持有份额" : "份额（可不填）"} />
+          {tradeMode === "import" && <input value={tradeProfit} onChange={(event) => setTradeProfit(event.target.value)} type="number" step="0.01" placeholder="已有持有收益（元）" />}
           <input value={tradeNote} onChange={(event) => setTradeNote(event.target.value)} placeholder="备注，例如 加仓 / 止盈 / 补仓" />
-          <button className="chip-button" type="submit">{tradeMode === "sell" ? "记录卖出" : "记录定投"}</button>
+          <button className="chip-button" type="submit">{tradeMode === "sell" ? "记录卖出" : tradeMode === "import" ? "导入持仓" : "记录定投"}</button>
         </form>
       </section>
 

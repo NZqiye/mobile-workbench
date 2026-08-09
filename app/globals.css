@@ -251,10 +251,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .fund-summary .down, .fund-metrics .down { color: var(--green); }
 .fund-summary .flat, .fund-metrics .flat { color: var(--muted); }
 .fund-trade-panel { display: grid; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r); background: color-mix(in srgb, var(--panel) 92%, var(--theme-soft)); }
-.fund-mode-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0; min-width: 160px; max-width: 180px; padding: 3px; border: 1px solid var(--line); border-radius: 18px; background: color-mix(in srgb, var(--panel) 88%, var(--theme-soft)); }
+.fund-mode-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 0; min-width: 220px; max-width: 240px; padding: 3px; border: 1px solid var(--line); border-radius: 18px; background: color-mix(in srgb, var(--panel) 88%, var(--theme-soft)); }
 .fund-mode-tabs button { min-height: 32px; color: rgba(117, 25, 35, 0.66); background: transparent; }
 .fund-mode-tabs button.active { color: var(--theme-main); background: var(--panel); box-shadow: none; }
 .fund-trade-form { display: grid; grid-template-columns: minmax(150px, 1.2fr) minmax(110px, 0.85fr) minmax(110px, 0.85fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.fund-trade-form-import { grid-template-columns: minmax(150px, 1.2fr) repeat(3, minmax(105px, 0.8fr)) minmax(0, 1fr) auto; }
 .fund-trade-form input, .fund-trade-form select { min-height: 40px; }
 .mobile-shell .fund-trade-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .mobile-shell .fund-trade-form .fund-select-menu,
@@ -1126,9 +1127,9 @@ textarea { resize: vertical; }
 }
 
 .desktop-shell.page-market .fund-mode-tabs {
-  width: 180px;
-  max-width: 180px;
-  min-width: 160px;
+  width: 240px;
+  max-width: 240px;
+  min-width: 220px;
   margin: 0;
 }
 
