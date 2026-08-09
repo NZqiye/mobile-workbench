@@ -280,18 +280,59 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .mobile-shell .fund-mode-tabs button { min-height: 34px; font-size: 12px; }
+.mobile-shell .fund-select-menu { position: static; }
 .mobile-shell .fund-select-trigger { min-width: 0; }
-.mobile-shell .fund-select-list { max-width: min(100%, 340px); }
-.mobile-shell .fund-row { grid-template-columns: minmax(0, 1fr) auto; gap: 7px 8px; min-height: 0; padding: 9px 10px; }
-.mobile-shell .fund-row-top { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) auto; }
-.mobile-shell .fund-value { font-size: 16px; white-space: nowrap; }
-.mobile-shell .fund-metrics { grid-template-columns: repeat(4, minmax(54px, 1fr)); gap: 3px; justify-items: stretch; }
-.mobile-shell .fund-metrics div { padding-inline: 5px; }
+.mobile-shell .fund-select-list {
+  position: static;
+  width: 100%;
+  min-width: 0;
+  margin-top: 8px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+.mobile-shell .fund-row {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+  padding: 10px 10px 12px;
+}
+.mobile-shell .fund-row-top,
+.mobile-shell .fund-metrics,
+.mobile-shell .fund-row-bottom {
+  grid-column: 1 / -1;
+}
+.mobile-shell .fund-row-top {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+.mobile-shell .fund-value {
+  white-space: normal;
+  font-size: 16px;
+}
+.mobile-shell .fund-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.mobile-shell .fund-metrics div {
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
 .mobile-shell .fund-metrics span { font-size: 10px; }
-.mobile-shell .fund-metrics strong { font-size: 12px; }
-.mobile-shell .fund-row-bottom { grid-template-columns: auto; gap: 6px; justify-items: end; }
-.mobile-shell .fund-row-bottom small { display: none; }
-.mobile-shell .fund-actions { gap: 3px; }
+.mobile-shell .fund-metrics strong { font-size: 12px; white-space: normal; }
+.mobile-shell .fund-row-bottom {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  justify-items: start;
+}
+.mobile-shell .fund-row-bottom small {
+  display: block;
+  white-space: normal;
+}
+.mobile-shell .fund-actions {
+  flex-wrap: wrap;
+  gap: 6px;
+}
 .mobile-shell .quote-delete { min-height: 26px; padding: 0 6px; font-size: 11px; }
 .fund-row { grid-template-columns: minmax(190px, 1.25fr) minmax(300px, 1.8fr) minmax(230px, 1fr); gap: 10px; align-items: center; min-height: 62px; padding-block: 9px; }
 .fund-row-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; min-width: 0; }
