@@ -805,9 +805,13 @@ function normalizeSavedAssets(assets) {
     .join(",");
 }
 
-function normalizeStockSymbol(value) {
+function normalizeStockSymbol(value, market = "auto") {
   const symbol = String(value || "").trim().toLowerCase();
-  if (/^(sh|sz|bj)\d{6}$/.test(symbol) || /^hf_[a-z0-9]+$/i.test(symbol)) return symbol;
+  if (/^(sh|sz|bj)\d{6}$/.test(symbol) || /^hk\d{5}$/.test(symbol) || /^gb_[a-z0-9.-]+$/i.test(symbol) || /^hf_[a-z0-9]+$/i.test(symbol)) return symbol;
+  if (market === "hk" && /^\d{1,5}$/.test(symbol)) return `hk${symbol.padStart(5, "0")}`;
+  if (market === "us" && /^[a-z][a-z0-9.-]{0,9}$/i.test(symbol)) return `gb_${symbol}`;
+  if (market === "auto" && /^\d{1,5}$/.test(symbol)) return `hk${symbol.padStart(5, "0")}`;
+  if (market === "auto" && /^[a-z][a-z0-9.-]{0,9}$/i.test(symbol)) return `gb_${symbol}`;
   if (!/^\d{6}$/.test(symbol)) return "";
   if (/^(60|68|90)/.test(symbol)) return `sh${symbol}`;
   if (/^(00|30|20)/.test(symbol)) return `sz${symbol}`;
@@ -1538,6 +1542,7 @@ function MarketBoard({ compact = false }) {
   const [quotes, setQuotes] = useState([]);
   const [status, setStatus] = useState("正在读取行情...");
   const [stockInput, setStockInput] = useState("");
+  const [stockMarket, setStockMarket] = useState("a");
 
   async function loadQuotes(force = false) {
     const savedAssets = localStorage.getItem(key("assets"));
@@ -1578,9 +1583,9 @@ function MarketBoard({ compact = false }) {
 
   function addStock(event) {
     event.preventDefault();
-    const nextStock = normalizeStockSymbol(stockInput);
+    const nextStock = normalizeStockSymbol(stockInput, stockMarket);
     if (!nextStock) {
-      setStatus("请输入 6 位股票代码，例如 600584");
+      setStatus("请输入对应市场的股票代码，例如 A股 600584、港股 00700、美股 AAPL");
       return;
     }
 
@@ -1593,6 +1598,7 @@ function MarketBoard({ compact = false }) {
       localStorage.setItem(key("assets"), next);
       localStorage.removeItem(key("marketCache"));
       setStockInput("");
+      setStatus(`已添加 ${nextStock}`);
       loadQuotes(true);
     }
   }
@@ -1626,7 +1632,12 @@ function MarketBoard({ compact = false }) {
       </div>
       {!compact && (
         <form className="market-add-form" onSubmit={addStock}>
-          <input value={stockInput} onChange={(event) => setStockInput(event.target.value)} placeholder="添加股票代码，例如 600584" />
+          <select value={stockMarket} onChange={(event) => setStockMarket(event.target.value)} aria-label="股票类型">
+            <option value="a">A股</option>
+            <option value="hk">港股</option>
+            <option value="us">美股</option>
+          </select>
+          <input value={stockInput} onChange={(event) => setStockInput(event.target.value)} placeholder={stockMarket === "hk" ? "例如 00700" : stockMarket === "us" ? "例如 AAPL" : "例如 600584"} />
           <button className="chip-button" type="submit">添加</button>
         </form>
       )}
