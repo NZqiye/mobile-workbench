@@ -481,10 +481,10 @@ textarea { resize: vertical; }
 .tmdb-poster-card strong { font-size: 13px; }
 .tmdb-poster-card small { color: var(--muted); font-size: 11px; }
 .tmdb-feed { display: grid; gap: 20px; }
-.media-feed-card { display: grid; gap: 8px; width: 100%; padding: 0 0 18px; border: 0; border-bottom: 1px solid rgba(234, 215, 208, 0.82); color: var(--ink); background: transparent; text-align: left; }
+.media-feed-card { display: grid; gap: 8px; width: 100%; min-width: 0; overflow: hidden; padding: 0 0 18px; border: 0; border-bottom: 1px solid rgba(234, 215, 208, 0.82); color: var(--ink); background: transparent; text-align: left; }
 .media-feed-card:last-child { padding-bottom: 0; border-bottom: 0; }
-.media-gallery { display: grid; grid-template-columns: minmax(0, 1fr) 92px; gap: 10px; align-items: stretch; }
-.media-still, .media-poster-thumb { display: grid; place-items: center; overflow: hidden; border-radius: 8px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); box-shadow: 0 14px 26px rgba(117, 25, 35, 0.16); }
+.media-gallery { display: grid; grid-template-columns: minmax(0, 1fr) 92px; gap: 10px; align-items: stretch; min-width: 0; overflow: hidden; }
+.media-still, .media-poster-thumb { display: grid; place-items: center; width: 100%; min-width: 0; overflow: hidden; border-radius: 8px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); box-shadow: 0 14px 26px rgba(117, 25, 35, 0.16); }
 .media-still { aspect-ratio: 16 / 9; }
 .media-poster-thumb { aspect-ratio: 2 / 3; }
 .media-still img, .media-poster-thumb img { width: 100%; height: 100%; object-fit: cover; }
@@ -492,7 +492,7 @@ textarea { resize: vertical; }
 .media-feed-title { margin-top: 2px; font-size: 22px; line-height: 1.22; }
 .media-air { color: #2f73d8; font-size: 16px; font-weight: 900; }
 .media-meta { color: var(--muted); font-size: 14px; line-height: 1.45; }
-.media-summary { display: -webkit-box; overflow: hidden; margin: 0; color: #59616d; font-size: 15px; line-height: 1.62; -webkit-box-orient: vertical; -webkit-line-clamp: 5; }
+.media-summary { margin: 0; color: #59616d; font-size: 15px; line-height: 1.62; }
 .diet-shell { display: grid; gap: 16px; padding: 4px 0 12px; background:
     radial-gradient(circle at 88% 6%, rgba(255, 255, 255, 0.24), transparent 28%),
     linear-gradient(180deg, var(--theme-soft), rgba(255, 255, 255, 0)); }
