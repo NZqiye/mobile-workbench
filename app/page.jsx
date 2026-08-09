@@ -1915,6 +1915,12 @@ function normalizeFundTrade(trade) {
   };
 }
 
+function nullableNumber(value) {
+  if (value === "" || value === null || value === undefined) return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function normalizeFundPortfolio(items) {
   const list = Array.isArray(items) ? items : [];
   const merged = new Map();
@@ -1924,6 +1930,10 @@ function normalizeFundPortfolio(items) {
     const current = merged.get(code) || { code, name: String(item?.name || "").trim(), trades: [] };
     current.name = current.name || String(item?.name || "").trim();
     current.trades = [...(current.trades || []), ...(Array.isArray(item?.trades) ? item.trades.map(normalizeFundTrade) : [])];
+    current.alipayValue = nullableNumber(item?.alipayValue);
+    current.alipayProfit = nullableNumber(item?.alipayProfit);
+    current.alipayTodayProfit = nullableNumber(item?.alipayTodayProfit);
+    current.alipayCalibratedAt = item?.alipayCalibratedAt || "";
     merged.set(code, current);
   });
   return [...merged.values()];
@@ -1958,10 +1968,15 @@ function getFundTradingStats(fund, entry) {
   });
 
   const shares = Math.max(0, buyShares - sellShares);
-  const positionValue = shares * currentPrice;
+  const estimatedPositionValue = shares * currentPrice;
   const netInvested = Math.max(0, buyAmount - sellAmount);
-  const todayProfit = positionValue * changeRate / 100;
-  const totalProfit = positionValue + sellAmount - buyAmount;
+  const alipayValue = nullableNumber(entry?.alipayValue);
+  const alipayProfit = nullableNumber(entry?.alipayProfit);
+  const alipayTodayProfit = nullableNumber(entry?.alipayTodayProfit);
+  const hasAlipayCalibration = alipayValue !== null || alipayProfit !== null || alipayTodayProfit !== null;
+  const positionValue = alipayValue ?? estimatedPositionValue;
+  const todayProfit = alipayTodayProfit ?? (positionValue * changeRate / 100);
+  const totalProfit = alipayProfit ?? (positionValue + sellAmount - buyAmount);
   const totalProfitRate = netInvested ? totalProfit / netInvested * 100 : 0;
   const avgCost = shares > 0 ? netInvested / shares : 0;
   return {
@@ -1975,6 +1990,8 @@ function getFundTradingStats(fund, entry) {
     totalProfitRate,
     avgCost,
     currentPrice,
+    hasAlipayCalibration,
+    alipayCalibratedAt: entry?.alipayCalibratedAt || "",
   };
 }
 
@@ -2126,13 +2143,35 @@ function FundBoard() {
       return;
     }
     const price = Number(target.currentPrice || 0);
-    if (!price) {
+    if (!price && tradeMode !== "calibrate") {
       setStatus("当前基金没有可用净值");
       return;
     }
     const amountValue = Number(tradeAmount || 0);
     const sharesValue = Number(tradeShares || 0);
     const profitValue = Number(tradeProfit || 0);
+    if (tradeMode === "calibrate") {
+      if (!amountValue || !tradeProfit.trim() || !Number.isFinite(profitValue)) {
+        setStatus("请填写支付宝当前市值和持有收益");
+        return;
+      }
+      const nextPortfolio = portfolio.map((item) => item.code === target.code ? {
+        ...item,
+        name: item.name || target.name,
+        alipayValue: amountValue,
+        alipayProfit: profitValue,
+        alipayTodayProfit: tradeShares.trim() && Number.isFinite(sharesValue) ? sharesValue : null,
+        alipayCalibratedAt: nowText(),
+      } : item);
+      savePortfolio(nextPortfolio);
+      setTradeAmount("");
+      setTradeShares("");
+      setTradeProfit("");
+      setTradeNote("");
+      setStatus(`已按支付宝校准 · ${target.code}`);
+      loadFunds(true);
+      return;
+    }
     let shares = sharesValue > 0 ? sharesValue : (amountValue > 0 ? amountValue / price : 0);
     let amount = amountValue > 0 ? amountValue : shares * price;
     const currentHolding = Number(target.shares || 0);
@@ -2192,7 +2231,7 @@ function FundBoard() {
     setTradeCode(code);
     setTradeMode(mode);
     setFundMenuOpen(false);
-    setStatus(mode === "sell" ? "请输入卖出金额或份额" : mode === "import" ? "请输入已有持仓市值、份额和收益" : "请输入定投金额");
+    setStatus(mode === "sell" ? "请输入卖出金额或份额" : mode === "import" ? "请输入已有持仓市值、份额和收益" : mode === "calibrate" ? "请输入支付宝当前市值和持有收益" : "请输入定投金额");
   }
 
   useEffect(() => {
@@ -2256,10 +2295,11 @@ function FundBoard() {
           <div className="module-tabs market-tabs fund-mode-tabs" aria-label="基金交易模式">
             <button className={tradeMode === "buy" ? "active" : ""} type="button" onClick={() => setTradeMode("buy")}>定投</button>
             <button className={tradeMode === "import" ? "active" : ""} type="button" onClick={() => setTradeMode("import")}>导入</button>
+            <button className={tradeMode === "calibrate" ? "active" : ""} type="button" onClick={() => setTradeMode("calibrate")}>校准</button>
             <button className={tradeMode === "sell" ? "active" : ""} type="button" onClick={() => setTradeMode("sell")}>卖出</button>
           </div>
         </div>
-        <form className={`fund-trade-form ${tradeMode === "import" ? "fund-trade-form-import" : ""}`} onSubmit={recordTrade}>
+        <form className={`fund-trade-form ${tradeMode === "import" || tradeMode === "calibrate" ? "fund-trade-form-import" : ""}`} onSubmit={recordTrade}>
           <div className={`recommendation-menu fund-select-menu ${fundMenuOpen ? "open" : ""}`}>
             <button className="recommendation-menu-trigger fund-select-trigger" type="button" onClick={() => setFundMenuOpen(!fundMenuOpen)} aria-expanded={fundMenuOpen}>
               <span><i aria-hidden="true" />{selectedTradeOption?.name || selectedTradeOption?.code || "暂无基金"}</span>
@@ -2285,11 +2325,11 @@ function FundBoard() {
               </div>
             )}
           </div>
-          <input value={tradeAmount} onChange={(event) => setTradeAmount(event.target.value)} type="number" min="0" step="0.01" placeholder={tradeMode === "sell" ? "卖出金额，可不填" : tradeMode === "import" ? "当前持有市值（元）" : "定投金额（元）"} />
-          <input value={tradeShares} onChange={(event) => setTradeShares(event.target.value)} type="number" min="0" step="0.01" placeholder={tradeMode === "sell" ? "卖出份额，可不填" : tradeMode === "import" ? "当前持有份额" : "份额（可不填）"} />
-          {tradeMode === "import" && <input value={tradeProfit} onChange={(event) => setTradeProfit(event.target.value)} type="number" step="0.01" placeholder="已有持有收益（元）" />}
+          <input value={tradeAmount} onChange={(event) => setTradeAmount(event.target.value)} type="number" min="0" step="0.01" placeholder={tradeMode === "sell" ? "卖出金额，可不填" : tradeMode === "import" ? "当前持有市值（元）" : tradeMode === "calibrate" ? "支付宝当前市值" : "定投金额（元）"} />
+          <input value={tradeShares} onChange={(event) => setTradeShares(event.target.value)} type="number" step="0.01" placeholder={tradeMode === "sell" ? "卖出份额，可不填" : tradeMode === "import" ? "当前持有份额" : tradeMode === "calibrate" ? "支付宝今日收益（可不填）" : "份额（可不填）"} />
+          {(tradeMode === "import" || tradeMode === "calibrate") && <input value={tradeProfit} onChange={(event) => setTradeProfit(event.target.value)} type="number" step="0.01" placeholder={tradeMode === "calibrate" ? "支付宝持有收益" : "已有持有收益（元）"} />}
           <input value={tradeNote} onChange={(event) => setTradeNote(event.target.value)} placeholder="备注，例如 加仓 / 止盈 / 补仓" />
-          <button className="chip-button" type="submit">{tradeMode === "sell" ? "记录卖出" : tradeMode === "import" ? "导入持仓" : "记录定投"}</button>
+          <button className="chip-button" type="submit">{tradeMode === "sell" ? "记录卖出" : tradeMode === "import" ? "导入持仓" : tradeMode === "calibrate" ? "保存校准" : "记录定投"}</button>
         </form>
       </section>
 
@@ -2329,9 +2369,10 @@ function FundBoard() {
                 </div>
               </div>
               <div className="fund-row-bottom">
-                <small>持有 {Number(fund.shares || 0).toFixed(2)} 份 · 投入 {formatAmount(fund.netInvested)} · 最新 {Number(fund.currentPrice || 0).toFixed(4)}</small>
+                <small>持有 {Number(fund.shares || 0).toFixed(2)} 份 · 投入 {formatAmount(fund.netInvested)} · 最新 {Number(fund.currentPrice || 0).toFixed(4)}{fund.hasAlipayCalibration ? ` · 支付宝校准 ${fund.alipayCalibratedAt || ""}` : ""}</small>
                 <div className="fund-actions">
                   <button className="quote-delete" type="button" onClick={() => openTrade(fund.code, "buy")}>定投</button>
+                  <button className="quote-delete" type="button" onClick={() => openTrade(fund.code, "calibrate")}>校准</button>
                   <button className="quote-delete" type="button" onClick={() => openTrade(fund.code, "sell")}>卖出</button>
                   <button className="quote-delete" type="button" onClick={() => deleteFund(fund.code)}>删除</button>
                 </div>
