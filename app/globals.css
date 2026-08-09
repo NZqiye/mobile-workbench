@@ -266,6 +266,20 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .mobile-shell .fund-summary { grid-template-columns: minmax(0, 1fr); }
 .mobile-shell .fund-summary div { min-height: 0; padding: 12px; }
 .mobile-shell .fund-summary strong { overflow-wrap: anywhere; font-size: 20px; line-height: 1.15; }
+.mobile-shell .fund-trade-panel .panel-head {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.mobile-shell .fund-trade-panel .panel-head > div:last-child { width: 100%; }
+.mobile-shell .fund-mode-tabs {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.mobile-shell .fund-mode-tabs button { min-height: 34px; font-size: 12px; }
 .mobile-shell .fund-select-trigger { min-width: 0; }
 .mobile-shell .fund-select-list { max-width: min(100%, 340px); }
 .mobile-shell .fund-row { grid-template-columns: minmax(0, 1fr) auto; gap: 7px 8px; min-height: 0; padding: 9px 10px; }
