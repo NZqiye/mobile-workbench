@@ -797,7 +797,22 @@ function mergeCloudWithLocal(cloud) {
 }
 
 function normalizeSavedAssets(assets) {
-  return !assets || assets === legacyDefaultAssets || assets === stockDefaultAssets ? defaultAssets : assets;
+  if (assets === null || assets === undefined || assets === legacyDefaultAssets || assets === stockDefaultAssets) return defaultAssets;
+  return String(assets)
+    .split(",")
+    .map((item) => normalizeStockSymbol(item) || item.trim())
+    .filter(Boolean)
+    .join(",");
+}
+
+function normalizeStockSymbol(value) {
+  const symbol = String(value || "").trim().toLowerCase();
+  if (/^(sh|sz|bj)\d{6}$/.test(symbol) || /^hf_[a-z0-9]+$/i.test(symbol)) return symbol;
+  if (!/^\d{6}$/.test(symbol)) return "";
+  if (/^(60|68|90)/.test(symbol)) return `sh${symbol}`;
+  if (/^(00|30|20)/.test(symbol)) return `sz${symbol}`;
+  if (/^(43|83|87|88)/.test(symbol)) return `bj${symbol}`;
+  return symbol;
 }
 
 function migrateLegacyData() {
@@ -1531,6 +1546,11 @@ function MarketBoard({ compact = false }) {
       localStorage.setItem(key("assets"), assets);
       localStorage.removeItem(key("marketCache"));
     }
+    if (!assets) {
+      setQuotes([]);
+      setStatus("暂无自选股票，添加后会显示在这里");
+      return;
+    }
     const cache = readStorage("marketCache", null);
     if (!force && cache?.version === marketCacheVersion && Date.now() - cache.savedAt < 60000) {
       setQuotes((cache.quotes || []).map(normalizeMarketQuote));
@@ -1558,8 +1578,11 @@ function MarketBoard({ compact = false }) {
 
   function addStock(event) {
     event.preventDefault();
-    const nextStock = stockInput.trim();
-    if (!nextStock) return;
+    const nextStock = normalizeStockSymbol(stockInput);
+    if (!nextStock) {
+      setStatus("请输入 6 位股票代码，例如 600584");
+      return;
+    }
 
     const current = normalizeSavedAssets(localStorage.getItem(key("assets")))
       .split(",")
@@ -1572,6 +1595,18 @@ function MarketBoard({ compact = false }) {
       setStockInput("");
       loadQuotes(true);
     }
+  }
+
+  function deleteStock(symbol) {
+    const current = normalizeSavedAssets(localStorage.getItem(key("assets")))
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const next = current.filter((item) => item.toLowerCase() !== String(symbol || "").toLowerCase()).join(",");
+    localStorage.setItem(key("assets"), next);
+    localStorage.removeItem(key("marketCache"));
+    setStatus(`已删除 ${symbol}`);
+    loadQuotes(true);
   }
 
   useEffect(() => {
@@ -1604,6 +1639,7 @@ function MarketBoard({ compact = false }) {
             <div className={index === 0 ? "quote-row featured" : "quote-row"} key={quote.symbol}>
               <div><strong>{quote.name || quote.symbol}</strong><span>{quote.symbol} · {quote.source || "实时"}</span></div>
               <div className="quote-price"><strong>{quote.currency || ""}{Number(quote.price || 0).toFixed(2)}</strong><span className={changeClass}>{sign}{Number(quote.changePercent || 0).toFixed(2)}%</span></div>
+              {!compact && <button className="quote-delete market-delete" type="button" onClick={() => deleteStock(quote.symbol)}>删除</button>}
             </div>
           );
         })}

@@ -184,7 +184,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .market-add-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
 .market-add-form input { height: 38px; padding: 0 12px; }
 .quote-list, .record-list, .timeline, .check-list { display: grid; gap: 10px; }
-.quote-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; min-height: 68px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: color-mix(in srgb, var(--panel) 94%, var(--theme-soft)); }
+.quote-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; min-height: 68px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: color-mix(in srgb, var(--panel) 94%, var(--theme-soft)); }
 .quote-row.featured { min-height: 104px; padding: 16px; color: #fff; border: 0; background: linear-gradient(135deg, #751923, #b4232c 56%, #c98a2c); }
 .quote-row div:first-child, .quote-price { display: grid; gap: 4px; min-width: 0; }
 .quote-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
@@ -199,6 +199,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .quote-row.featured .up { color: #fecaca; }
 .quote-row.featured .down { color: #bbf7d0; }
 .quote-row.featured .flat { color: #e5e7eb; }
+.market-delete { justify-self: end; min-width: 48px; }
+.quote-row.featured .market-delete { border-color: rgba(255, 255, 255, 0.36); color: #fff8ea; background: rgba(255, 255, 255, 0.14); }
 .index-panel { gap: 12px; }
 .index-note { display: grid; gap: 5px; padding: 12px 13px; border: 1px solid color-mix(in srgb, var(--theme-main) 14%, var(--line)); border-radius: var(--r-sm); background: color-mix(in srgb, var(--theme-soft) 62%, var(--panel)); }
 .index-note strong { color: var(--theme-main); font-size: 13px; }
@@ -241,6 +243,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .mobile-shell .index-add-wide, .mobile-shell .index-add-form > .chip-button { grid-column: auto; }
 .mobile-shell .index-add-advanced { grid-column: auto; }
 .mobile-shell .index-add-advanced div { grid-template-columns: 1fr; }
+.mobile-shell .market-add-form, .mobile-shell .quote-row { grid-template-columns: minmax(0, 1fr); }
+.mobile-shell .quote-price { justify-items: start; }
+.mobile-shell .market-delete { justify-self: start; }
 .fund-panel { gap: 16px; }
 .fund-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .fund-summary div { display: grid; gap: 5px; min-height: 74px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r-sm); background: color-mix(in srgb, var(--theme-soft) 62%, var(--panel)); }
@@ -866,6 +871,8 @@ textarea { resize: vertical; }
   .nav-item small { max-width: 68px; }
   .content { padding-inline: 10px; }
   .quick-form, .filter-panel, .quote-row, .timeline-row { grid-template-columns: 1fr; }
+  .market-add-form { grid-template-columns: 1fr; }
+  .market-delete { justify-self: start; }
   .fund-summary { grid-template-columns: 1fr; }
   .fund-row { grid-template-columns: minmax(0, 1fr); }
   .fund-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); justify-items: stretch; }
