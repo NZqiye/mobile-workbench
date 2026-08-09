@@ -58,6 +58,74 @@ const defaultChineseHolidays2026 = [
 const legacyDefaultAssets = "SGE_AU9999,s_sh000001,s_sz399001,sh600519,sz300750";
 const stockDefaultAssets = "sh600584,sh603629,sh688507";
 const defaultAssets = "hf_GC,sh603629,sh688507";
+const defaultFundCodes = "161725,003096,110011";
+const indexTrackerItems = [
+  {
+    id: "gold",
+    name: "黄金",
+    tone: "gold",
+    marketSymbol: "hf_GC",
+    highAbove: 4300,
+    midAbove: 3900,
+    metrics: [
+      ["观察口径", "COMEX 黄金期货"],
+      ["原记录", "沪金主连 925 元/克附近"],
+    ],
+    highNote: "高位震荡，短期波动放大，适合观察而不是追高。",
+    midNote: "处在中位偏高区间，关注实际利率和美元指数变化。",
+    lowNote: "回到相对低位，可重新评估长期配置价值。",
+    source: "新浪财经、原手动记录",
+  },
+  {
+    id: "nasdaq100",
+    name: "纳斯达克100",
+    tone: "blue",
+    marketSymbol: "gb_ndx",
+    highAbove: 28500,
+    midAbove: 24500,
+    metrics: [
+      ["估值口径", "原记录 PE-TTM 约 30.1"],
+      ["历史分位", "原记录近 10 年约 64%"],
+    ],
+    highNote: "高估值区间波动放大，长期看科技方向，短期避免追涨。",
+    midNote: "估值进入中位区间，可结合盈利增速和回撤幅度分批观察。",
+    lowNote: "接近低位区间，适合重点观察科技资产配置机会。",
+    source: "新浪财经、原手动估值记录",
+  },
+  {
+    id: "dividend-low-vol",
+    name: "红利低波",
+    tone: "green",
+    fundCode: "515100",
+    highAbove: 1.55,
+    midAbove: 1.35,
+    metrics: [
+      ["跟踪代理", "红利低波100ETF"],
+      ["PE估值分位", "23%（近10年偏低）"],
+    ],
+    highNote: "代理基金价格偏高，但估值仍需结合股息率和利率环境判断。",
+    midNote: "处在可观察区间，适合按底仓思路分批，不宜一次性打满。",
+    lowNote: "估值偏低，股息率有吸引力，适合作为防御仓长期持有。",
+    source: "天天基金、原手动估值记录",
+  },
+  {
+    id: "sp500-qdii",
+    name: "标普500跟踪摩根",
+    tone: "purple",
+    marketSymbol: "gb_inx",
+    fundCode: "513500",
+    highAbove: 7700,
+    midAbove: 6900,
+    metrics: [
+      ["底层标的", "标普500"],
+      ["原记录", "场内溢价约 4%-7%"],
+    ],
+    highNote: "指数和溢价都偏高时暂缓追高，等溢价收窄或限购放松再考虑。",
+    midNote: "指数处在中位偏高，适合观察汇率、溢价和申购限制。",
+    lowNote: "回撤后更适合分批观察，但仍要检查 QDII 溢价和限购。",
+    source: "新浪财经、天天基金、原手动记录",
+  },
+];
 const marketSymbolNames = {
   hf_GC: "COMEX黄金",
   sh600584: "长电科技",
@@ -67,6 +135,8 @@ const marketSymbolNames = {
 const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
 const defaultChineseHolidaysSeedKey = "defaultChineseHolidays2026Seeded";
 const marketCacheVersion = 3;
+const fundCacheVersion = 2;
+const indexTrackerCacheVersion = 1;
 const defaultWaterTarget = 2000;
 const cupSize = 250;
 const foodCalories = [
@@ -691,6 +761,10 @@ function mergeById(localItems, cloudItems) {
   return Array.from(merged.values());
 }
 
+function uniqueIds(items) {
+  return Array.from(new Set((Array.isArray(items) ? items : []).filter(Boolean)));
+}
+
 function withDefaultChineseHolidays(items) {
   const existingIds = new Set(items.map((item) => item.id));
   const missing = defaultChineseHolidays2026.filter((item) => !existingIds.has(item.id));
@@ -699,6 +773,11 @@ function withDefaultChineseHolidays(items) {
 
 function mergeCloudWithLocal(cloud) {
   const localAssets = localStorage.getItem(key("assets"));
+  const deletedHabitIds = uniqueIds([
+    ...readStorage("deletedHabitIds", []),
+    ...(Array.isArray(cloud.deletedHabitIds) ? cloud.deletedHabitIds : []),
+  ]);
+  const deletedHabitIdSet = new Set(deletedHabitIds);
   return {
     notes: mergeById(readStorage("notes", []), cloud.notes),
     plans: mergeById(readStorage("plans", []), cloud.plans),
@@ -706,7 +785,9 @@ function mergeCloudWithLocal(cloud) {
     dietRecords: mergeById(readStorage("dietRecords", []), cloud.dietRecords),
     anniversaries: mergeById(readStorage("anniversaries", []), cloud.anniversaries),
     waterTarget: Number(cloud.waterTarget || readStorage("waterTarget", defaultWaterTarget)) || defaultWaterTarget,
-    habits: mergeById(readStorage("habits", readStorage("checkins", [])), cloud.habits || cloud.checkins),
+    habits: mergeById(readStorage("habits", readStorage("checkins", [])), cloud.habits || cloud.checkins)
+      .filter((item) => !deletedHabitIdSet.has(item.id)),
+    deletedHabitIds,
     [`done:${todayKey()}`]: {
       ...readStorage(`done:${todayKey()}`, {}),
       ...(cloud[`done:${todayKey()}`] || {}),
@@ -1523,6 +1604,724 @@ function MarketBoard({ compact = false }) {
             <div className={index === 0 ? "quote-row featured" : "quote-row"} key={quote.symbol}>
               <div><strong>{quote.name || quote.symbol}</strong><span>{quote.symbol} · {quote.source || "实时"}</span></div>
               <div className="quote-price"><strong>{quote.currency || ""}{Number(quote.price || 0).toFixed(2)}</strong><span className={changeClass}>{sign}{Number(quote.changePercent || 0).toFixed(2)}%</span></div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function indexLevelFromPrice(item, price) {
+  if (!Number.isFinite(price) || price <= 0) return { level: "待更新", levelTone: "flat", note: "暂时没有拿到可用行情，先保留原观察口径。" };
+  if (!item.highAbove && !item.midAbove) return { level: "观察", levelTone: "flat", note: item.lowNote };
+  if (price >= item.highAbove) return { level: "高位", levelTone: "high", note: item.highNote };
+  if (price >= item.midAbove) return { level: "中位", levelTone: "mid", note: item.midNote };
+  return { level: "低位", levelTone: "low", note: item.lowNote };
+}
+
+function formatIndexPrice(item, market, fund) {
+  if (fund) return `${Number(fund.estimate || fund.nav || 0).toFixed(4)}${Number.isFinite(Number(fund.estimateRate)) ? `（${Number(fund.estimateRate) > 0 ? "+" : ""}${Number(fund.estimateRate).toFixed(2)}%）` : ""}`;
+  if (!market) return "--";
+  const unit = item.id === "gold" ? "$" : "";
+  return `${unit}${Number(market.price || 0).toFixed(2)}${Number.isFinite(Number(market.changePercent)) ? `（${Number(market.changePercent) > 0 ? "+" : ""}${Number(market.changePercent).toFixed(2)}%）` : ""}`;
+}
+
+function buildIndexTrackerRows(items, trackerData) {
+  const markets = new Map((trackerData?.markets || []).map((item) => [item.symbol, item]));
+  const funds = new Map((trackerData?.funds || []).map((item) => [item.code, item]));
+  return items.map((item) => {
+    const market = markets.get(item.marketSymbol);
+    const fund = funds.get(item.fundCode);
+    const levelPrice = Number(market?.price || fund?.estimate || fund?.nav || 0);
+    const level = indexLevelFromPrice(item, levelPrice);
+    const dynamicMetrics = [
+      item.marketSymbol ? ["最新行情", formatIndexPrice(item, market, null)] : null,
+      item.fundCode ? ["代理基金", formatIndexPrice(item, null, fund)] : null,
+      ["更新时间", market?.updatedAt || fund?.estimateTime || fund?.navDate || "--"],
+    ].filter(Boolean);
+    return {
+      ...item,
+      ...level,
+      metrics: [...dynamicMetrics, ...item.metrics],
+    };
+  });
+}
+
+function normalizeIndexTrackerItems(items) {
+  const list = Array.isArray(items) && items.length ? items : indexTrackerItems;
+  return list.map((item, index) => ({
+    ...item,
+    id: item.id || `index-${index}-${Date.now()}`,
+    name: String(item.name || "\u81ea\u5b9a\u4e49\u6307\u6570").trim(),
+    tone: item.tone || ["gold", "blue", "green", "purple"][index % 4],
+    highAbove: Number(item.highAbove || 0),
+    midAbove: Number(item.midAbove || 0),
+    metrics: Array.isArray(item.metrics) ? item.metrics : [],
+    highNote: item.highNote || "\u8d85\u8fc7\u9ad8\u4f4d\u9608\u503c\uff0c\u5148\u89c2\u5bdf\u98ce\u9669\u548c\u56de\u64a4\u7a7a\u95f4\u3002",
+    midNote: item.midNote || "\u8fdb\u5165\u4e2d\u4f4d\u89c2\u5bdf\u533a\uff0c\u9002\u5408\u7ed3\u5408\u4f30\u503c\u3001\u8d8b\u52bf\u548c\u4ed3\u4f4d\u8282\u594f\u7ee7\u7eed\u8ddf\u8e2a\u3002",
+    lowNote: item.lowNote || "\u4f4e\u4e8e\u4e2d\u4f4d\u9608\u503c\uff0c\u9002\u5408\u91cd\u70b9\u89c2\u5bdf\u957f\u671f\u914d\u7f6e\u673a\u4f1a\u3002",
+    source: item.source || (item.fundCode ? "\u5929\u5929\u57fa\u91d1" : "\u65b0\u6d6a\u8d22\u7ecf"),
+  }));
+}
+
+function buildIndexTrackerUrl(items) {
+  const marketSymbols = [...new Set(items.map((item) => item.marketSymbol).filter(Boolean))].join(",");
+  const fundCodes = [...new Set(items.map((item) => item.fundCode).filter(Boolean))].join(",");
+  const params = new URLSearchParams();
+  if (marketSymbols) params.set("symbols", marketSymbols);
+  if (fundCodes) params.set("funds", fundCodes);
+  const query = params.toString();
+  return query ? `/api/index-tracker?${query}` : "/api/index-tracker";
+}
+
+const defaultIndexTrackerDraft = {
+  preset: "",
+  kind: "market",
+  name: "",
+  code: "",
+  midAbove: "",
+  highAbove: "",
+  note: "",
+};
+
+const indexTrackerPresets = [
+  { label: "手动输入", value: "" },
+  { label: "恒生科技", value: "hangseng-tech", kind: "fund", name: "恒生科技", code: "513180", midAbove: "0.62", highAbove: "0.78", note: "关注港股科技估值、汇率和场内溢价" },
+  { label: "中概互联", value: "china-internet", kind: "fund", name: "中概互联", code: "513050", midAbove: "1.05", highAbove: "1.28", note: "关注互联网平台政策、美元流动性和场内溢价" },
+  { label: "沪深300", value: "csi300", kind: "fund", name: "沪深300", code: "510300", midAbove: "4.2", highAbove: "4.8", note: "关注大盘核心资产估值和成交量变化" },
+  { label: "中证500", value: "csi500", kind: "fund", name: "中证500", code: "510500", midAbove: "6.2", highAbove: "7.2", note: "关注中盘成长估值和市场风险偏好" },
+  { label: "科创50", value: "star50", kind: "fund", name: "科创50", code: "588000", midAbove: "0.9", highAbove: "1.1", note: "关注半导体、硬科技景气度和估值分位" },
+  { label: "创业板", value: "chinext", kind: "fund", name: "创业板", code: "159915", midAbove: "2.2", highAbove: "2.65", note: "关注新能源、医药和成长风格强弱" },
+  { label: "道琼斯", value: "dow", kind: "market", name: "道琼斯", code: "gb_dji", midAbove: "39000", highAbove: "43000", note: "关注美股蓝筹、利率和美元指数变化" },
+];
+
+function IndexTrackerBoard() {
+  const [items, setItems] = useState(() => normalizeIndexTrackerItems(readStorage("indexTrackerItems", indexTrackerItems)));
+  const [trackerData, setTrackerData] = useState(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [draft, setDraft] = useState(defaultIndexTrackerDraft);
+  const [status, setStatus] = useState("正在读取指数追踪...");
+
+  async function loadTracker(force = false, targetItems = items) {
+    const requestUrl = buildIndexTrackerUrl(targetItems);
+    const cache = readStorage("indexTrackerCache", null);
+    if (!force && cache?.version === indexTrackerCacheVersion && cache?.requestUrl === requestUrl && Date.now() - cache.savedAt < 60000) {
+      setTrackerData(cache.data);
+      setStatus(`缓存追踪 · ${nowText(new Date(cache.savedAt))}`);
+      return;
+    }
+
+    setStatus(force ? "正在刷新指数追踪..." : "正在读取指数追踪...");
+    try {
+      const response = await fetch(requestUrl);
+      const data = await response.json();
+      setTrackerData(data);
+      writeStorage("indexTrackerCache", { version: indexTrackerCacheVersion, requestUrl, savedAt: Date.now(), data });
+      const hasError = Array.isArray(data.errors) && data.errors.length > 0;
+      setStatus(`${hasError ? "部分数据已更新" : "指数追踪已更新"} · ${nowText()}`);
+    } catch {
+      if (cache?.data) {
+        setTrackerData(cache.data);
+        setStatus(`追踪更新失败，显示上次数据 · ${nowText(new Date(cache.savedAt))}`);
+      } else {
+        setStatus("指数追踪暂时不可用");
+      }
+    }
+  }
+
+  useEffect(() => {
+    loadTracker();
+    const timer = setInterval(() => loadTracker(), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  function saveIndexItems(nextItems) {
+    const normalized = normalizeIndexTrackerItems(nextItems);
+    setItems(normalized);
+    writeStorage("indexTrackerItems", normalized);
+    localStorage.removeItem(key("indexTrackerCache"));
+    return normalized;
+  }
+
+  function updateDraft(name, value) {
+    setDraft((current) => ({ ...current, [name]: value }));
+  }
+
+  function chooseIndexPreset(value) {
+    const preset = indexTrackerPresets.find((item) => item.value === value);
+    if (!preset || !preset.value) {
+      setDraft({ ...defaultIndexTrackerDraft, preset: value });
+      return;
+    }
+    setDraft({
+      preset: preset.value,
+      kind: preset.kind,
+      name: preset.name,
+      code: preset.code,
+      midAbove: preset.midAbove,
+      highAbove: preset.highAbove,
+      note: preset.note,
+    });
+  }
+
+  function addIndexItem(event) {
+    event.preventDefault();
+    const name = draft.name.trim();
+    const code = draft.code.trim();
+    if (!name || !code) return;
+
+    const isFund = draft.kind === "fund";
+    const nextItem = {
+      id: crypto.randomUUID(),
+      name,
+      tone: ["gold", "blue", "green", "purple"][items.length % 4],
+      marketSymbol: isFund ? "" : code,
+      fundCode: isFund ? code : "",
+      midAbove: Number(draft.midAbove || 0),
+      highAbove: Number(draft.highAbove || 0),
+      metrics: draft.note.trim() ? [["\u89c2\u5bdf\u5907\u6ce8", draft.note.trim()]] : [],
+      highNote: "\u8d85\u8fc7\u9ad8\u4f4d\u9608\u503c\uff0c\u5148\u89c2\u5bdf\u98ce\u9669\u548c\u56de\u64a4\u7a7a\u95f4\u3002",
+      midNote: "\u8fdb\u5165\u4e2d\u4f4d\u89c2\u5bdf\u533a\uff0c\u9002\u5408\u7ed3\u5408\u4f30\u503c\u3001\u8d8b\u52bf\u548c\u4ed3\u4f4d\u8282\u594f\u7ee7\u7eed\u8ddf\u8e2a\u3002",
+      lowNote: "\u4f4e\u4e8e\u4e2d\u4f4d\u9608\u503c\uff0c\u9002\u5408\u91cd\u70b9\u89c2\u5bdf\u957f\u671f\u914d\u7f6e\u673a\u4f1a\u3002",
+      source: isFund ? "\u5929\u5929\u57fa\u91d1" : "\u65b0\u6d6a\u8d22\u7ecf",
+    };
+    const nextItems = saveIndexItems([...items, nextItem]);
+    setDraft(defaultIndexTrackerDraft);
+    setAddOpen(false);
+    loadTracker(true, nextItems);
+  }
+
+  function moveIndexItem(index, direction) {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= items.length) return;
+    const nextItems = [...items];
+    [nextItems[index], nextItems[targetIndex]] = [nextItems[targetIndex], nextItems[index]];
+    saveIndexItems(nextItems);
+  }
+
+  const rows = buildIndexTrackerRows(items, trackerData);
+
+  return (
+    <section className="market-panel index-panel">
+      <div className="panel-head">
+        <div>
+          <h2>指数追踪面板</h2>
+          <p>{status}</p>
+          <button className="chip-button index-inline-action" type="button" onClick={() => setAddOpen((value) => !value)}>{addOpen ? "\u6536\u8d77" : "\u6dfb\u52a0\u89c2\u5bdf"}</button>
+        </div>
+        <button className="chip-button" type="button" onClick={() => loadTracker(true)}>刷新</button>
+      </div>
+
+      {addOpen && (
+        <form className="index-add-form" onSubmit={addIndexItem}>
+          <label className="index-add-wide">
+            <span>常用指数</span>
+            <select value={draft.preset} onChange={(event) => chooseIndexPreset(event.target.value)}>
+              {indexTrackerPresets.map((preset) => (
+                <option value={preset.value} key={preset.value || "custom"}>{preset.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="index-add-kind">
+            <span>类型</span>
+            <select value={draft.kind} onChange={(event) => updateDraft("kind", event.target.value)}>
+              <option value="market">行情代码</option>
+              <option value="fund">基金代码</option>
+            </select>
+          </label>
+          <label>
+            <span>名称</span>
+            <input value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} placeholder="例如：恒生科技" />
+          </label>
+          <label>
+            <span>{draft.kind === "fund" ? "基金代码" : "行情代码"}</span>
+            <input value={draft.code} onChange={(event) => updateDraft("code", event.target.value)} placeholder={draft.kind === "fund" ? "例如：513180" : "例如：gb_dji"} />
+          </label>
+          <label className="index-add-wide">
+            <span>观察备注</span>
+            <input value={draft.note} onChange={(event) => updateDraft("note", event.target.value)} placeholder="例如：关注溢价、估值分位或仓位节奏" />
+          </label>
+          <details className="index-add-advanced">
+            <summary>高级判断</summary>
+            <div>
+              <label>
+                <span>中位阈值</span>
+                <input type="number" step="0.0001" value={draft.midAbove} onChange={(event) => updateDraft("midAbove", event.target.value)} placeholder="可不填" />
+              </label>
+              <label>
+                <span>高位阈值</span>
+                <input type="number" step="0.0001" value={draft.highAbove} onChange={(event) => updateDraft("highAbove", event.target.value)} placeholder="可不填" />
+              </label>
+            </div>
+          </details>
+          <button className="chip-button" type="submit">保存观察</button>
+        </form>
+      )}
+
+      <div className="index-note">
+        <strong>自动维护口径</strong>
+        <span>行情和代理基金自动更新；高位/中位/低位按预设阈值计算，PE 分位、股息率、溢价等仍作为手动判断口径保留。</span>
+      </div>
+
+      <div className="index-track-list">
+        {rows.map((item, index) => (
+          <article className={`index-track-card tone-${item.tone}`} key={item.id}>
+            <div className="index-track-head">
+              <div>
+                <h3><span aria-hidden="true" />{item.name}</h3>
+                <div className="index-track-metrics">
+                  {item.metrics.map(([label, value]) => (
+                    <p key={label}><b>{label}：</b>{value}</p>
+                  ))}
+                </div>
+              </div>
+              <div className="index-card-actions">
+                <span className={`index-level ${item.levelTone}`}>{item.level}</span>
+                <div className="index-move-actions" aria-label="\u8c03\u6574\u5361\u7247\u987a\u5e8f">
+                  <button type="button" onClick={() => moveIndexItem(index, -1)} disabled={index === 0} aria-label={`${item.name}\u4e0a\u79fb`}>{"\u2191"}</button>
+                  <button type="button" onClick={() => moveIndexItem(index, 1)} disabled={index === rows.length - 1} aria-label={`${item.name}\u4e0b\u79fb`}>{"\u2193"}</button>
+                </div>
+              </div>
+            </div>
+            <p className="index-track-note">{item.note}</p>
+            <small>数据来源：{item.source}</small>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function normalizeFundCodes(value) {
+  return String(value || defaultFundCodes)
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => /^\d{6}$/.test(item))
+    .join(",") || defaultFundCodes;
+}
+
+function normalizeFundTrade(trade) {
+  const amount = Number(trade?.amount || 0);
+  const shares = Number(trade?.shares || 0);
+  return {
+    id: trade?.id || crypto.randomUUID(),
+    type: trade?.type === "sell" ? "sell" : "buy",
+    amount: Number.isFinite(amount) ? amount : 0,
+    shares: Number.isFinite(shares) ? shares : 0,
+    price: Number(trade?.price || 0) || 0,
+    date: trade?.date || nowText(),
+    note: String(trade?.note || "").trim(),
+  };
+}
+
+function normalizeFundPortfolio(items) {
+  const list = Array.isArray(items) ? items : [];
+  const merged = new Map();
+  list.forEach((item) => {
+    const code = String(item?.code || "").trim();
+    if (!/^\d{6}$/.test(code)) return;
+    const current = merged.get(code) || { code, name: String(item?.name || "").trim(), trades: [] };
+    current.name = current.name || String(item?.name || "").trim();
+    current.trades = [...(current.trades || []), ...(Array.isArray(item?.trades) ? item.trades.map(normalizeFundTrade) : [])];
+    merged.set(code, current);
+  });
+  return [...merged.values()];
+}
+
+function buildFundPortfolioFromCodes(codes) {
+  return normalizeFundCodes(codes)
+    .split(",")
+    .filter(Boolean)
+    .map((code) => ({ code, name: "", trades: [] }));
+}
+
+function getFundTradingStats(fund, entry) {
+  const trades = Array.isArray(entry?.trades) ? entry.trades : [];
+  const currentPrice = Number(fund?.estimate || fund?.nav || 0);
+  const changeRate = Number(fund?.estimateRate || 0);
+  let buyAmount = 0;
+  let sellAmount = 0;
+  let buyShares = 0;
+  let sellShares = 0;
+
+  trades.forEach((trade) => {
+    const amount = Number(trade.amount || 0);
+    const shares = Number(trade.shares || 0);
+    if (trade.type === "sell") {
+      sellAmount += amount;
+      sellShares += shares;
+    } else {
+      buyAmount += amount;
+      buyShares += shares;
+    }
+  });
+
+  const shares = Math.max(0, buyShares - sellShares);
+  const positionValue = shares * currentPrice;
+  const netInvested = Math.max(0, buyAmount - sellAmount);
+  const todayProfit = positionValue * changeRate / 100;
+  const totalProfit = positionValue + sellAmount - buyAmount;
+  const totalProfitRate = netInvested ? totalProfit / netInvested * 100 : 0;
+  const avgCost = shares > 0 ? netInvested / shares : 0;
+  return {
+    shares,
+    buyAmount,
+    sellAmount,
+    netInvested,
+    positionValue,
+    todayProfit,
+    totalProfit,
+    totalProfitRate,
+    avgCost,
+    currentPrice,
+  };
+}
+
+function mergeFundBoardData(quotes, portfolio) {
+  const quoteMap = new Map((Array.isArray(quotes) ? quotes : []).map((quote) => [quote.code, quote]));
+  return normalizeFundPortfolio(portfolio).map((entry) => {
+    const fund = quoteMap.get(entry.code) || {
+      code: entry.code,
+      name: entry.name || entry.code,
+      navDate: "",
+      nav: 0,
+      estimate: 0,
+      estimateRate: 0,
+      estimateTime: "",
+      source: "天天基金",
+    };
+    return {
+      ...fund,
+      ...getFundTradingStats(fund, entry),
+      tradeCount: entry.trades.length,
+      code: entry.code,
+      name: fund.name || entry.name || entry.code,
+      trades: entry.trades,
+    };
+  });
+}
+
+function formatAmount(value) {
+  return `¥${Number(value || 0).toFixed(2)}`;
+}
+
+function FundBoard() {
+  const [funds, setFunds] = useState([]);
+  const [portfolio, setPortfolio] = useState([]);
+  const [status, setStatus] = useState("正在读取基金持仓...");
+  const [fundInput, setFundInput] = useState("");
+  const [tradeMode, setTradeMode] = useState("buy");
+  const [tradeCode, setTradeCode] = useState(defaultFundCodes.split(",")[0]);
+  const [tradeAmount, setTradeAmount] = useState("");
+  const [tradeShares, setTradeShares] = useState("");
+  const [tradeNote, setTradeNote] = useState("");
+  const [fundMenuOpen, setFundMenuOpen] = useState(false);
+
+  const summary = useMemo(() => funds.reduce((acc, fund) => ({
+    positionValue: acc.positionValue + Number(fund.positionValue || 0),
+    todayProfit: acc.todayProfit + Number(fund.todayProfit || 0),
+    totalProfit: acc.totalProfit + Number(fund.totalProfit || 0),
+    netInvested: acc.netInvested + Number(fund.netInvested || 0),
+    count: acc.count + 1,
+  }), { positionValue: 0, todayProfit: 0, totalProfit: 0, netInvested: 0, count: 0 }), [funds]);
+
+  const selectedFund = funds.find((item) => item.code === tradeCode) || funds[0] || null;
+
+  function savePortfolio(nextPortfolio) {
+    const normalized = normalizeFundPortfolio(nextPortfolio);
+    setPortfolio(normalized);
+    writeStorage("fundPortfolio", normalized);
+    const codes = normalized.map((item) => item.code).join(",");
+    if (codes) {
+      localStorage.setItem(key("fundCodes"), codes);
+    } else {
+      localStorage.removeItem(key("fundCodes"));
+    }
+    localStorage.removeItem(key("fundCache"));
+    return normalized;
+  }
+
+  async function loadFunds(force = false) {
+    const storedPortfolio = readStorage("fundPortfolio", null);
+    const savedPortfolio = Array.isArray(storedPortfolio)
+      ? normalizeFundPortfolio(storedPortfolio)
+      : buildFundPortfolioFromCodes(localStorage.getItem(key("fundCodes")));
+    if (!Array.isArray(storedPortfolio)) {
+      savePortfolio(savedPortfolio);
+    } else {
+      setPortfolio(savedPortfolio);
+    }
+
+    const codes = savedPortfolio.map((item) => item.code).filter(Boolean).join(",");
+    const cache = readStorage("fundCache", null);
+    if (!force && cache?.version === fundCacheVersion && Date.now() - cache.savedAt < 60000) {
+      const nextFunds = mergeFundBoardData(cache.quotes || [], savedPortfolio);
+      setFunds(nextFunds);
+      setStatus(`缓存持仓 · ${nowText(new Date(cache.savedAt))}`);
+      return;
+    }
+
+    setStatus(force ? "正在刷新基金持仓..." : "正在读取基金持仓...");
+    try {
+      if (!codes) {
+        setFunds([]);
+        setStatus("还没有基金持仓");
+        return;
+      }
+      const response = await fetch(`/api/fund-quotes?codes=${encodeURIComponent(codes)}`);
+      const data = await response.json();
+      const quotes = Array.isArray(data.quotes) ? data.quotes : [];
+      const nextFunds = mergeFundBoardData(quotes, savedPortfolio);
+      setFunds(nextFunds);
+      writeStorage("fundCache", { version: fundCacheVersion, savedAt: Date.now(), quotes });
+      setStatus(`${nextFunds.length ? "基金持仓已更新" : "还没有基金持仓"} · ${nowText()}`);
+    } catch {
+      if (cache?.quotes) {
+        setFunds(mergeFundBoardData(cache.quotes, savedPortfolio));
+        setStatus(`估值更新失败，显示上次数据 · ${nowText(new Date(cache.savedAt))}`);
+      } else {
+        setStatus("基金持仓暂时不可用");
+      }
+    }
+  }
+
+  function addFund(event) {
+    event.preventDefault();
+    const nextFund = fundInput.trim();
+    if (!/^\d{6}$/.test(nextFund)) {
+      setStatus("请输入 6 位基金代码");
+      return;
+    }
+    if (portfolio.some((item) => item.code === nextFund)) {
+      setFundInput("");
+      setTradeCode(nextFund);
+      setFundMenuOpen(false);
+      return;
+    }
+    const nextPortfolio = savePortfolio([...portfolio, { code: nextFund, name: "", trades: [] }]);
+    setTradeCode(nextFund);
+    setFundMenuOpen(false);
+    setFundInput("");
+    setStatus(`已添加 ${nextFund}`);
+    loadFunds(true);
+    return nextPortfolio;
+  }
+
+  function deleteFund(code) {
+    const nextPortfolio = savePortfolio(portfolio.filter((item) => item.code !== code));
+    if (tradeCode === code) {
+      setTradeCode(nextPortfolio[0]?.code || defaultFundCodes.split(",")[0]);
+    }
+    setFundMenuOpen(false);
+    loadFunds(true);
+  }
+
+  function recordTrade(event) {
+    event.preventDefault();
+    const target = selectedFund;
+    if (!target) {
+      setStatus("先添加一个基金代码");
+      return;
+    }
+    const price = Number(target.currentPrice || 0);
+    if (!price) {
+      setStatus("当前基金没有可用净值");
+      return;
+    }
+    const amountValue = Number(tradeAmount || 0);
+    const sharesValue = Number(tradeShares || 0);
+    let shares = sharesValue > 0 ? sharesValue : (amountValue > 0 ? amountValue / price : 0);
+    let amount = amountValue > 0 ? amountValue : shares * price;
+    const currentHolding = Number(target.shares || 0);
+    if (!shares && !amountValue) {
+      setStatus("请填写金额或份额");
+      return;
+    }
+    if (tradeMode === "sell") {
+      if (currentHolding <= 0) {
+        setStatus("当前没有可卖份额");
+        return;
+      }
+      shares = Math.min(shares, currentHolding);
+      amount = shares * price;
+    }
+    if (!shares || !amount) {
+      setStatus("请填写金额或份额");
+      return;
+    }
+    const nextPortfolio = portfolio.map((item) => {
+      if (item.code !== target.code) return item;
+      return {
+        ...item,
+        name: item.name || target.name,
+        trades: [
+          ...(item.trades || []),
+          normalizeFundTrade({
+            type: tradeMode,
+            amount,
+            shares,
+            price,
+            date: nowText(),
+            note: tradeNote,
+          }),
+        ],
+      };
+    });
+    savePortfolio(nextPortfolio);
+    setTradeAmount("");
+    setTradeShares("");
+    setTradeNote("");
+    setStatus(`${tradeMode === "sell" ? "已记录卖出" : "已记录定投"} · ${target.code}`);
+    loadFunds(true);
+  }
+
+  function openTrade(code, mode) {
+    setTradeCode(code);
+    setTradeMode(mode);
+    setFundMenuOpen(false);
+    setStatus(mode === "sell" ? "请输入卖出金额或份额" : "请输入定投金额");
+  }
+
+  useEffect(() => {
+    loadFunds();
+    const timer = setInterval(() => loadFunds(), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const tradeOptions = funds.length ? funds : portfolio.map((item) => ({
+    code: item.code,
+    name: item.name || item.code,
+    currentPrice: 0,
+  }));
+  const fundMenuOptions = tradeOptions.length ? tradeOptions : [{ code: "", name: "暂无基金" }];
+  const selectedTradeOption = fundMenuOptions.find((item) => item.code === tradeCode) || fundMenuOptions[0];
+
+  return (
+    <section className="market-panel fund-panel">
+      <div className="panel-head">
+        <div>
+          <h2>基金持仓</h2>
+          <p>{status}</p>
+        </div>
+        <button className="chip-button" type="button" onClick={() => loadFunds(true)}>刷新</button>
+      </div>
+
+      <div className="fund-summary fund-summary-wide">
+        <div>
+          <span>当前持仓</span>
+          <strong>{formatAmount(summary.positionValue)}</strong>
+          <small>{summary.count} 只基金</small>
+        </div>
+        <div>
+          <span>今日收益</span>
+          <strong className={summary.todayProfit > 0 ? "up" : summary.todayProfit < 0 ? "down" : "flat"}>{formatAmount(summary.todayProfit)}</strong>
+          <small>按当前估值与昨日涨跌计算</small>
+        </div>
+        <div>
+          <span>累计收益</span>
+          <strong className={summary.totalProfit > 0 ? "up" : summary.totalProfit < 0 ? "down" : "flat"}>{formatAmount(summary.totalProfit)}</strong>
+          <small>含卖出已实现收益</small>
+        </div>
+        <div>
+          <span>累计投入</span>
+          <strong>{formatAmount(summary.netInvested)}</strong>
+          <small>买入 - 卖出</small>
+        </div>
+      </div>
+
+      <form className="market-add-form fund-add-form" onSubmit={addFund}>
+        <input value={fundInput} onChange={(event) => setFundInput(event.target.value)} placeholder="输入 6 位基金代码，例如 161725" inputMode="numeric" />
+        <button className="chip-button" type="submit">添加自选</button>
+      </form>
+
+      <section className="fund-trade-panel">
+        <div className="panel-head">
+          <div>
+            <h2>记录交易</h2>
+            <p>定投加仓和卖出都记在这里，收益会自动回算。</p>
+          </div>
+          <div className="module-tabs market-tabs fund-mode-tabs" aria-label="基金交易模式">
+            <button className={tradeMode === "buy" ? "active" : ""} type="button" onClick={() => setTradeMode("buy")}>定投</button>
+            <button className={tradeMode === "sell" ? "active" : ""} type="button" onClick={() => setTradeMode("sell")}>卖出</button>
+          </div>
+        </div>
+        <form className="fund-trade-form" onSubmit={recordTrade}>
+          <div className={`recommendation-menu fund-select-menu ${fundMenuOpen ? "open" : ""}`}>
+            <button className="recommendation-menu-trigger fund-select-trigger" type="button" onClick={() => setFundMenuOpen(!fundMenuOpen)} aria-expanded={fundMenuOpen}>
+              <span><i aria-hidden="true" />{selectedTradeOption?.name || selectedTradeOption?.code || "暂无基金"}</span>
+              <b aria-hidden="true">⌄</b>
+            </button>
+            {fundMenuOpen && (
+              <div className="recommendation-menu-list fund-select-list">
+                {fundMenuOptions.map((item) => (
+                  <button
+                    className={item.code === tradeCode ? "active" : ""}
+                    type="button"
+                    key={item.code || "empty-fund"}
+                    onClick={() => {
+                      setTradeCode(item.code);
+                      setFundMenuOpen(false);
+                    }}
+                    disabled={!item.code}
+                  >
+                    <i aria-hidden="true" />
+                    <span>{item.name || item.code}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <input value={tradeAmount} onChange={(event) => setTradeAmount(event.target.value)} type="number" min="0" step="0.01" placeholder={tradeMode === "sell" ? "卖出金额，可不填" : "定投金额（元）"} />
+          <input value={tradeShares} onChange={(event) => setTradeShares(event.target.value)} type="number" min="0" step="0.01" placeholder={tradeMode === "sell" ? "卖出份额，可不填" : "份额（可不填）"} />
+          <input value={tradeNote} onChange={(event) => setTradeNote(event.target.value)} placeholder="备注，例如 加仓 / 止盈 / 补仓" />
+          <button className="chip-button" type="submit">{tradeMode === "sell" ? "记录卖出" : "记录定投"}</button>
+        </form>
+      </section>
+
+      <div className="quote-list fund-list">
+        {funds.length === 0 && <p className="empty">还没有基金持仓，先加一个基金代码，再记录定投或卖出。</p>}
+        {funds.map((fund) => {
+          const rate = Number(fund.estimateRate || 0);
+          const changeClass = rate > 0 ? "up" : rate < 0 ? "down" : "flat";
+          const todayClass = fund.todayProfit > 0 ? "up" : fund.todayProfit < 0 ? "down" : "flat";
+          const profitClass = fund.totalProfit > 0 ? "up" : fund.totalProfit < 0 ? "down" : "flat";
+          const shareRate = summary.positionValue ? (Number(fund.positionValue || 0) / summary.positionValue) * 100 : 0;
+          return (
+            <div className="quote-row fund-row" key={fund.code}>
+              <div className="fund-row-top">
+                <div>
+                  <strong>{fund.name || fund.code}</strong>
+                  <span>{fund.code} · 净值日 {fund.navDate || "--"} · {fund.tradeCount ? `${fund.tradeCount} 笔交易` : "未建仓"}</span>
+                </div>
+                <strong className="fund-value">{formatAmount(fund.positionValue)}</strong>
+              </div>
+              <div className="fund-metrics">
+                <div>
+                  <span>涨跌</span>
+                  <strong className={changeClass}>{rate > 0 ? "+" : ""}{rate.toFixed(2)}%</strong>
+                </div>
+                <div>
+                  <span>今日收益</span>
+                  <strong className={todayClass}>{formatAmount(fund.todayProfit)}</strong>
+                </div>
+                <div>
+                  <span>总收益</span>
+                  <strong className={profitClass}>{formatAmount(fund.totalProfit)}</strong>
+                </div>
+                <div>
+                  <span>占比</span>
+                  <strong>{shareRate.toFixed(1)}%</strong>
+                </div>
+              </div>
+              <div className="fund-row-bottom">
+                <small>持有 {Number(fund.shares || 0).toFixed(2)} 份 · 投入 {formatAmount(fund.netInvested)} · 最新 {Number(fund.currentPrice || 0).toFixed(4)}</small>
+                <div className="fund-actions">
+                  <button className="quote-delete" type="button" onClick={() => openTrade(fund.code, "buy")}>定投</button>
+                  <button className="quote-delete" type="button" onClick={() => openTrade(fund.code, "sell")}>卖出</button>
+                  <button className="quote-delete" type="button" onClick={() => deleteFund(fund.code)}>删除</button>
+                </div>
+              </div>
             </div>
           );
         })}
@@ -2435,6 +3234,7 @@ export default function Workbench() {
   const [tmdbSections, setTmdbSections] = useState([]);
   const [tmdbRecommendationStatus, setTmdbRecommendationStatus] = useState("正在准备电影和电视剧片单");
   const [consultationView, setConsultationView] = useState("today");
+  const [marketView, setMarketView] = useState("stocks");
 
   function persist(name, value) {
     writeStorage(name, value);
@@ -2476,6 +3276,9 @@ export default function Workbench() {
       setHabits(nextHabits);
       writeStorage("habits", nextHabits);
     }
+    if (Array.isArray(cloud.deletedHabitIds)) {
+      writeStorage("deletedHabitIds", cloud.deletedHabitIds);
+    }
     if (cloud[`done:${todayKey()}`]) {
       setDone(cloud[`done:${todayKey()}`]);
       writeStorage(`done:${todayKey()}`, cloud[`done:${todayKey()}`]);
@@ -2501,6 +3304,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "anniversaries", merged.anniversaries),
         saveCloudItem(nextSession, "waterTarget", merged.waterTarget),
         saveCloudItem(nextSession, "habits", merged.habits),
+        saveCloudItem(nextSession, "deletedHabitIds", merged.deletedHabitIds),
         saveCloudItem(nextSession, `done:${todayKey()}`, merged[`done:${todayKey()}`]),
         saveCloudItem(nextSession, "assets", merged.assets),
       ]);
@@ -2523,6 +3327,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "anniversaries", readStorage("anniversaries", [])),
         saveCloudItem(nextSession, "waterTarget", readStorage("waterTarget", defaultWaterTarget)),
         saveCloudItem(nextSession, "habits", readStorage("habits", [])),
+        saveCloudItem(nextSession, "deletedHabitIds", readStorage("deletedHabitIds", [])),
         saveCloudItem(nextSession, `done:${todayKey()}`, readStorage(`done:${todayKey()}`, {})),
         saveCloudItem(nextSession, "assets", localStorage.getItem(key("assets")) || defaultAssets),
       ]);
@@ -2824,10 +3629,14 @@ export default function Workbench() {
   function deleteHabit(id) {
     const nextHabits = habits.filter((item) => item.id !== id);
     const nextDone = { ...done };
+    const nextDeletedHabitIds = uniqueIds([...readStorage("deletedHabitIds", []), id]);
+    const nextLegacyCheckins = readStorage("checkins", []).filter((item) => item.id !== id);
     delete nextDone[id];
     setHabits(nextHabits);
     setDone(nextDone);
     persist("habits", nextHabits);
+    persist("deletedHabitIds", nextDeletedHabitIds);
+    writeStorage("checkins", nextLegacyCheckins);
     persist(`done:${todayKey()}`, nextDone);
   }
 
@@ -2974,6 +3783,7 @@ export default function Workbench() {
       anniversaries,
       waterTarget,
       habits,
+      deletedHabitIds: readStorage("deletedHabitIds", []),
       done,
       assets: assetInput,
       weatherCache: readStorage("weatherCache", null),
@@ -3023,6 +3833,9 @@ export default function Workbench() {
       if (Array.isArray(payload.habits)) {
         setHabits(payload.habits);
         persist("habits", payload.habits);
+      }
+      if (Array.isArray(payload.deletedHabitIds)) {
+        persist("deletedHabitIds", payload.deletedHabitIds);
       }
       if (payload.done && typeof payload.done === "object") {
         setDone(payload.done);
@@ -3134,6 +3947,12 @@ export default function Workbench() {
                     <button className={consultationView === "movies" ? "active" : ""} type="button" onClick={() => setConsultationView("movies")}>电影</button>
                     <button className={consultationView === "tv" ? "active" : ""} type="button" onClick={() => setConsultationView("tv")}>电视剧</button>
                   </div>
+                ) : activePage === "market" ? (
+                  <div className="module-tabs market-tabs" aria-label="行情内容切换">
+                    <button className={marketView === "stocks" ? "active" : ""} type="button" onClick={() => setMarketView("stocks")}>股市</button>
+                    <button className={marketView === "funds" ? "active" : ""} type="button" onClick={() => setMarketView("funds")}>基金</button>
+                    <button className={marketView === "indexes" ? "active" : ""} type="button" onClick={() => setMarketView("indexes")}>指数追踪</button>
+                  </div>
                 ) : (
                   <div className="module-tabs" aria-label="内容切换">
                     <button className="active" type="button">今日内容</button>
@@ -3243,7 +4062,9 @@ export default function Workbench() {
             </>
           )}
 
-          {activePage === "market" && <MarketBoard />}
+          {activePage === "market" && (
+            marketView === "indexes" ? <IndexTrackerBoard /> : marketView === "funds" ? <FundBoard /> : <MarketBoard />
+          )}
 
           {activePage === "diet" && (
             <DietTracker records={dietRecords} waterTarget={waterTarget} onAddWater={addWater} onAddMeal={addMeal} onDelete={deleteDietRecord} onSaveTarget={saveWaterTarget} />
