@@ -134,6 +134,7 @@ const marketSymbolNames = {
 };
 const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
 const defaultChineseHolidaysSeedKey = "defaultChineseHolidays2026Seeded";
+const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems"];
 const marketCacheVersion = 3;
 const fundCacheVersion = 2;
 const indexTrackerCacheVersion = 1;
@@ -747,15 +748,46 @@ function mapItemsById(items, id, updater) {
   return items.map((item) => (item.id === id ? updater(item) : item));
 }
 
+function syncDeletedKey(name) {
+  return `deletedIds:${name}`;
+}
+
+function itemUpdatedAt(item) {
+  const value = Number(item?.updatedAt || 0);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function stampItem(item, updatedAt = Date.now()) {
+  return { ...item, updatedAt };
+}
+
+function stampItems(items, updatedAt = Date.now()) {
+  return (Array.isArray(items) ? items : []).map((item) => (
+    item && typeof item === "object" ? { ...item, updatedAt: item.updatedAt || updatedAt } : item
+  ));
+}
+
+function touchItems(items, updatedAt = Date.now()) {
+  return (Array.isArray(items) ? items : []).map((item) => (
+    item && typeof item === "object" ? { ...item, updatedAt } : item
+  ));
+}
+
 function mergeById(localItems, cloudItems) {
   const merged = new Map();
   if (Array.isArray(cloudItems)) {
-    cloudItems.forEach((item) => merged.set(item.id || crypto.randomUUID(), item));
+    cloudItems.forEach((item) => {
+      const id = item.id || crypto.randomUUID();
+      merged.set(id, { ...item, id });
+    });
   }
   if (Array.isArray(localItems)) {
     localItems.forEach((item) => {
       const id = item.id || crypto.randomUUID();
-      if (!merged.has(id)) merged.set(id, { ...item, id });
+      const current = merged.get(id);
+      if (!current || itemUpdatedAt(item) >= itemUpdatedAt(current)) {
+        merged.set(id, { ...item, id });
+      }
     });
   }
   return Array.from(merged.values());
@@ -763,6 +795,28 @@ function mergeById(localItems, cloudItems) {
 
 function uniqueIds(items) {
   return Array.from(new Set((Array.isArray(items) ? items : []).filter(Boolean)));
+}
+
+function readDeletedIds(name) {
+  return uniqueIds(readStorage(syncDeletedKey(name), []));
+}
+
+function writeDeletedIds(name, ids) {
+  writeStorage(syncDeletedKey(name), uniqueIds(ids));
+}
+
+function mergeDeletedIds(name, cloud) {
+  return uniqueIds([
+    ...readDeletedIds(name),
+    ...(Array.isArray(cloud?.[syncDeletedKey(name)]) ? cloud[syncDeletedKey(name)] : []),
+  ]);
+}
+
+function mergeSyncedItems(name, localItems, cloudItems, cloud) {
+  const deletedIds = new Set(mergeDeletedIds(name, cloud));
+  return mergeById(localItems, cloudItems)
+    .filter((item) => !deletedIds.has(item.id))
+    .map((item) => ({ ...item, updatedAt: itemUpdatedAt(item) }));
 }
 
 function withDefaultChineseHolidays(items) {
@@ -773,18 +827,43 @@ function withDefaultChineseHolidays(items) {
 
 function mergeCloudWithLocal(cloud) {
   const localAssets = localStorage.getItem(key("assets"));
+  const localFundPortfolio = readStorage("fundPortfolio", null);
+  const localFundCodes = localStorage.getItem(key("fundCodes"));
+  const cloudFundPortfolio = Array.isArray(cloud.fundPortfolio)
+    ? cloud.fundPortfolio
+    : buildFundPortfolioFromCodes(cloud.fundCodes);
   const deletedHabitIds = uniqueIds([
+    ...readDeletedIds("habits"),
     ...readStorage("deletedHabitIds", []),
     ...(Array.isArray(cloud.deletedHabitIds) ? cloud.deletedHabitIds : []),
+    ...(Array.isArray(cloud[syncDeletedKey("habits")]) ? cloud[syncDeletedKey("habits")] : []),
   ]);
   const deletedHabitIdSet = new Set(deletedHabitIds);
+  const deletedIdEntries = Object.fromEntries(syncedCollections.map((name) => [
+    syncDeletedKey(name),
+    name === "habits" ? deletedHabitIds : mergeDeletedIds(name, cloud),
+  ]));
+  const fundPortfolio = normalizeFundPortfolio(mergeSyncedItems(
+    "fundPortfolio",
+    Array.isArray(localFundPortfolio) ? localFundPortfolio : buildFundPortfolioFromCodes(localFundCodes),
+    cloudFundPortfolio,
+    cloud,
+  ));
+  const indexItems = normalizeIndexTrackerItems(mergeSyncedItems(
+    "indexTrackerItems",
+    normalizeIndexTrackerItems(readStorage("indexTrackerItems", indexTrackerItems)),
+    cloud.indexTrackerItems,
+    cloud,
+  ));
   return {
-    notes: mergeById(readStorage("notes", []), cloud.notes),
-    plans: mergeById(readStorage("plans", []), cloud.plans),
-    consultations: dedupeConsultations(mergeById(readStorage("consultations", []), cloud.consultations)),
-    dietRecords: mergeById(readStorage("dietRecords", []), cloud.dietRecords),
-    anniversaries: mergeById(readStorage("anniversaries", []), cloud.anniversaries),
-    waterTarget: Number(cloud.waterTarget || readStorage("waterTarget", defaultWaterTarget)) || defaultWaterTarget,
+    notes: mergeSyncedItems("notes", readStorage("notes", []), cloud.notes, cloud),
+    plans: mergeSyncedItems("plans", readStorage("plans", []), cloud.plans, cloud),
+    consultations: dedupeConsultations(mergeSyncedItems("consultations", readStorage("consultations", []), cloud.consultations, cloud)),
+    dietRecords: mergeSyncedItems("dietRecords", readStorage("dietRecords", []), cloud.dietRecords, cloud),
+    anniversaries: mergeSyncedItems("anniversaries", readStorage("anniversaries", []), cloud.anniversaries, cloud),
+    waterTarget: cloud.waterTarget != null && Number.isFinite(Number(cloud.waterTarget))
+      ? Number(cloud.waterTarget)
+      : Number(readStorage("waterTarget", defaultWaterTarget)) || defaultWaterTarget,
     habits: mergeById(readStorage("habits", readStorage("checkins", [])), cloud.habits || cloud.checkins)
       .filter((item) => !deletedHabitIdSet.has(item.id)),
     deletedHabitIds,
@@ -793,6 +872,10 @@ function mergeCloudWithLocal(cloud) {
       ...(cloud[`done:${todayKey()}`] || {}),
     },
     assets: typeof cloud.assets === "string" ? cloud.assets : normalizeSavedAssets(localAssets),
+    fundPortfolio,
+    fundCodes: fundPortfolio.map((item) => item.code).join(","),
+    indexTrackerItems: indexItems,
+    ...deletedIdEntries,
   };
 }
 
@@ -899,17 +982,32 @@ async function loadCloudItems(session) {
   }));
 }
 
+let cloudWriteQueue = Promise.resolve();
+
 async function saveCloudItem(session, name, value) {
   if (!supabase || !session) return;
   const title = userKey(session, name);
-  await supabase.from("workbench_records").delete().eq("page", statePage).eq("title", title);
-  const { error } = await supabase.from("workbench_records").insert({
-    page: statePage,
-    title,
-    meta: nowText(),
-    note: JSON.stringify(value),
+  const task = cloudWriteQueue.then(async () => {
+    const { data, error: insertError } = await supabase.from("workbench_records").insert({
+      page: statePage,
+      title,
+      meta: nowText(),
+      note: JSON.stringify(value),
+    }).select("id");
+    if (insertError) throw insertError;
+    const newId = data?.[0]?.id;
+    if (newId) {
+      const { error: deleteError } = await supabase
+        .from("workbench_records")
+        .delete()
+        .eq("page", statePage)
+        .eq("title", title)
+        .neq("id", newId);
+      if (deleteError) throw deleteError;
+    }
   });
-  if (error) throw error;
+  cloudWriteQueue = task.catch(() => {});
+  return task;
 }
 
 function StatButton({ label, value, onClick }) {
@@ -1538,7 +1636,7 @@ function mergeTmdbFields(item, fresh) {
   };
 }
 
-function MarketBoard({ compact = false }) {
+function MarketBoard({ compact = false, onAssetsChange }) {
   const [quotes, setQuotes] = useState([]);
   const [status, setStatus] = useState("正在读取行情...");
   const [stockInput, setStockInput] = useState("");
@@ -1597,6 +1695,7 @@ function MarketBoard({ compact = false }) {
       const next = [...current, nextStock].join(",");
       localStorage.setItem(key("assets"), next);
       localStorage.removeItem(key("marketCache"));
+      onAssetsChange?.(next);
       setStockInput("");
       setStatus(`已添加 ${nextStock}`);
       loadQuotes(true);
@@ -1611,6 +1710,7 @@ function MarketBoard({ compact = false }) {
     const next = current.filter((item) => item.toLowerCase() !== String(symbol || "").toLowerCase()).join(",");
     localStorage.setItem(key("assets"), next);
     localStorage.removeItem(key("marketCache"));
+    onAssetsChange?.(next);
     setStatus(`已删除 ${symbol}`);
     loadQuotes(true);
   }
@@ -1709,6 +1809,7 @@ function normalizeIndexTrackerItems(items) {
     midNote: item.midNote || "\u8fdb\u5165\u4e2d\u4f4d\u89c2\u5bdf\u533a\uff0c\u9002\u5408\u7ed3\u5408\u4f30\u503c\u3001\u8d8b\u52bf\u548c\u4ed3\u4f4d\u8282\u594f\u7ee7\u7eed\u8ddf\u8e2a\u3002",
     lowNote: item.lowNote || "\u4f4e\u4e8e\u4e2d\u4f4d\u9608\u503c\uff0c\u9002\u5408\u91cd\u70b9\u89c2\u5bdf\u957f\u671f\u914d\u7f6e\u673a\u4f1a\u3002",
     source: item.source || (item.fundCode ? "\u5929\u5929\u57fa\u91d1" : "\u65b0\u6d6a\u8d22\u7ecf"),
+    updatedAt: itemUpdatedAt(item),
   }));
 }
 
@@ -1743,7 +1844,7 @@ const indexTrackerPresets = [
   { label: "道琼斯", value: "dow", kind: "market", name: "道琼斯", code: "gb_dji", midAbove: "39000", highAbove: "43000", note: "关注美股蓝筹、利率和美元指数变化" },
 ];
 
-function IndexTrackerBoard() {
+function IndexTrackerBoard({ onItemsChange }) {
   const [items, setItems] = useState(() => normalizeIndexTrackerItems(readStorage("indexTrackerItems", indexTrackerItems)));
   const [trackerData, setTrackerData] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -1784,10 +1885,11 @@ function IndexTrackerBoard() {
   }, []);
 
   function saveIndexItems(nextItems) {
-    const normalized = normalizeIndexTrackerItems(nextItems);
+    const normalized = normalizeIndexTrackerItems(touchItems(nextItems));
     setItems(normalized);
     writeStorage("indexTrackerItems", normalized);
     localStorage.removeItem(key("indexTrackerCache"));
+    onItemsChange?.(normalized);
     return normalized;
   }
 
@@ -1974,23 +2076,24 @@ function normalizeFundPortfolio(items) {
   list.forEach((item) => {
     const code = String(item?.code || "").trim();
     if (!/^\d{6}$/.test(code)) return;
-    const current = merged.get(code) || { code, name: String(item?.name || "").trim(), trades: [] };
+    const current = merged.get(code) || { id: item?.id || code, code, name: String(item?.name || "").trim(), trades: [] };
     current.name = current.name || String(item?.name || "").trim();
     current.trades = [...(current.trades || []), ...(Array.isArray(item?.trades) ? item.trades.map(normalizeFundTrade) : [])];
     current.alipayValue = nullableNumber(item?.alipayValue);
     current.alipayProfit = nullableNumber(item?.alipayProfit);
     current.alipayTodayProfit = nullableNumber(item?.alipayTodayProfit);
     current.alipayCalibratedAt = item?.alipayCalibratedAt || "";
+    current.updatedAt = Math.max(itemUpdatedAt(current), itemUpdatedAt(item));
     merged.set(code, current);
   });
-  return [...merged.values()];
+  return [...merged.values()].map((item) => ({ ...item, id: item.id || item.code }));
 }
 
 function buildFundPortfolioFromCodes(codes) {
   return normalizeFundCodes(codes)
     .split(",")
     .filter(Boolean)
-    .map((code) => ({ code, name: "", trades: [] }));
+    .map((code) => ({ id: code, code, name: "", trades: [], updatedAt: Date.now() }));
 }
 
 function getFundTradingStats(fund, entry) {
@@ -2070,7 +2173,7 @@ function formatAmount(value) {
   return `¥${Number(value || 0).toFixed(2)}`;
 }
 
-function FundBoard() {
+function FundBoard({ onPortfolioChange }) {
   const [funds, setFunds] = useState([]);
   const [portfolio, setPortfolio] = useState([]);
   const [status, setStatus] = useState("正在读取基金持仓...");
@@ -2094,7 +2197,7 @@ function FundBoard() {
   const selectedFund = funds.find((item) => item.code === tradeCode) || funds[0] || null;
 
   function savePortfolio(nextPortfolio) {
-    const normalized = normalizeFundPortfolio(nextPortfolio);
+    const normalized = normalizeFundPortfolio(touchItems(nextPortfolio));
     setPortfolio(normalized);
     writeStorage("fundPortfolio", normalized);
     const codes = normalized.map((item) => item.code).join(",");
@@ -2104,6 +2207,7 @@ function FundBoard() {
       localStorage.removeItem(key("fundCodes"));
     }
     localStorage.removeItem(key("fundCache"));
+    onPortfolioChange?.(normalized);
     return normalized;
   }
 
@@ -2174,6 +2278,7 @@ function FundBoard() {
   }
 
   function deleteFund(code) {
+    markDeleted("fundPortfolio", code);
     const nextPortfolio = savePortfolio(portfolio.filter((item) => item.code !== code));
     if (tradeCode === code) {
       setTradeCode(nextPortfolio[0]?.code || defaultFundCodes.split(",")[0]);
@@ -3339,11 +3444,66 @@ export default function Workbench() {
   const [marketView, setMarketView] = useState("stocks");
 
   function persist(name, value) {
-    writeStorage(name, value);
+    const nextValue = syncedCollections.includes(name) && Array.isArray(value) ? stampItems(value) : value;
+    writeStorage(name, nextValue);
     if (session) {
-      saveCloudItem(session, name, value)
+      saveCloudItem(session, name, nextValue)
         .then(() => setSyncStatus(`已同步 · ${nowText()}`))
         .catch((error) => setSyncStatus(`同步失败：${error.message}`));
+    }
+  }
+
+  function persistDeletedIds(name, ids) {
+    const next = uniqueIds(ids);
+    writeDeletedIds(name, next);
+    if (session) {
+      saveCloudItem(session, syncDeletedKey(name), next)
+        .then(() => setSyncStatus(`已删除 · ${nowText()}`))
+        .catch((error) => setSyncStatus(`同步失败：${error.message}`));
+    }
+    return next;
+  }
+
+  function markDeleted(name, id) {
+    return persistDeletedIds(name, [...readDeletedIds(name), id]);
+  }
+
+  async function syncFundPortfolioToCloud(nextPortfolio) {
+    if (!session) return;
+    try {
+      const normalized = normalizeFundPortfolio(nextPortfolio);
+      const codes = normalized.map((item) => item.code).join(",");
+      await Promise.all([
+        saveCloudItem(session, "fundPortfolio", normalized),
+        saveCloudItem(session, "fundCodes", codes),
+      ]);
+      setSyncStatus(`基金持仓已同步 · ${nowText()}`);
+    } catch (error) {
+      setSyncStatus(`基金同步失败：${error.message || "请稍后再试"}`);
+    }
+  }
+
+  async function syncIndexItemsToCloud(nextItems) {
+    if (!session) return;
+    try {
+      const normalized = normalizeIndexTrackerItems(nextItems);
+      await saveCloudItem(session, "indexTrackerItems", normalized);
+      setSyncStatus(`指数追踪已同步 · ${nowText()}`);
+    } catch (error) {
+      setSyncStatus(`指数追踪同步失败：${error.message || "请稍后再试"}`);
+    }
+  }
+
+  async function syncAssetsToCloud(nextAssets) {
+    if (!session) return;
+    try {
+      const normalized = normalizeSavedAssets(nextAssets);
+      localStorage.setItem(key("assets"), normalized);
+      localStorage.removeItem(key("marketCache"));
+      await saveCloudItem(session, "assets", normalized);
+      setSyncStatus(`自选资产已同步 · ${nowText()}`);
+    } catch (error) {
+      setSyncStatus(`自选资产同步失败：${error.message || "请稍后再试"}`);
     }
   }
 
@@ -3369,7 +3529,7 @@ export default function Workbench() {
       setAnniversaries(cloud.anniversaries);
       writeStorage("anniversaries", cloud.anniversaries);
     }
-    if (Number(cloud.waterTarget)) {
+    if (cloud.waterTarget != null && Number.isFinite(Number(cloud.waterTarget))) {
       setWaterTarget(Number(cloud.waterTarget));
       writeStorage("waterTarget", Number(cloud.waterTarget));
     }
@@ -3381,6 +3541,10 @@ export default function Workbench() {
     if (Array.isArray(cloud.deletedHabitIds)) {
       writeStorage("deletedHabitIds", cloud.deletedHabitIds);
     }
+    syncedCollections.forEach((name) => {
+      const deletedIds = cloud[syncDeletedKey(name)];
+      if (Array.isArray(deletedIds)) writeDeletedIds(name, deletedIds);
+    });
     if (cloud[`done:${todayKey()}`]) {
       setDone(cloud[`done:${todayKey()}`]);
       writeStorage(`done:${todayKey()}`, cloud[`done:${todayKey()}`]);
@@ -3389,6 +3553,21 @@ export default function Workbench() {
       const nextAssets = normalizeSavedAssets(cloud.assets);
       setAssetInput(nextAssets);
       localStorage.setItem(key("assets"), nextAssets);
+    }
+    if (Array.isArray(cloud.fundPortfolio)) {
+      const nextFundPortfolio = normalizeFundPortfolio(cloud.fundPortfolio);
+      writeStorage("fundPortfolio", nextFundPortfolio);
+      const nextFundCodes = cloud.fundCodes || nextFundPortfolio.map((item) => item.code).join(",");
+      if (nextFundCodes) {
+        localStorage.setItem(key("fundCodes"), nextFundCodes);
+      } else {
+        localStorage.removeItem(key("fundCodes"));
+      }
+      localStorage.removeItem(key("fundCache"));
+    }
+    if (Array.isArray(cloud.indexTrackerItems)) {
+      writeStorage("indexTrackerItems", normalizeIndexTrackerItems(cloud.indexTrackerItems));
+      localStorage.removeItem(key("indexTrackerCache"));
     }
   }
 
@@ -3409,6 +3588,9 @@ export default function Workbench() {
         saveCloudItem(nextSession, "deletedHabitIds", merged.deletedHabitIds),
         saveCloudItem(nextSession, `done:${todayKey()}`, merged[`done:${todayKey()}`]),
         saveCloudItem(nextSession, "assets", merged.assets),
+        saveCloudItem(nextSession, "fundPortfolio", merged.fundPortfolio),
+        saveCloudItem(nextSession, "fundCodes", merged.fundCodes),
+        saveCloudItem(nextSession, "indexTrackerItems", merged.indexTrackerItems),
       ]);
       setSyncStatus(`云同步已连接 · ${nowText()}`);
       loadTmdbRecommendations();
@@ -3419,19 +3601,24 @@ export default function Workbench() {
 
   async function syncAll(nextSession = session) {
     if (!nextSession) return;
-    setSyncStatus("正在上传本地数据...");
+    setSyncStatus("正在同步（合并云端与本机）...");
     try {
+      const merged = mergeCloudWithLocal(await loadCloudItems(nextSession));
+      applyCloud(merged);
       await Promise.all([
-        saveCloudItem(nextSession, "notes", readStorage("notes", [])),
-        saveCloudItem(nextSession, "plans", readStorage("plans", [])),
-        saveCloudItem(nextSession, "consultations", readStorage("consultations", [])),
-        saveCloudItem(nextSession, "dietRecords", readStorage("dietRecords", [])),
-        saveCloudItem(nextSession, "anniversaries", readStorage("anniversaries", [])),
-        saveCloudItem(nextSession, "waterTarget", readStorage("waterTarget", defaultWaterTarget)),
-        saveCloudItem(nextSession, "habits", readStorage("habits", [])),
-        saveCloudItem(nextSession, "deletedHabitIds", readStorage("deletedHabitIds", [])),
-        saveCloudItem(nextSession, `done:${todayKey()}`, readStorage(`done:${todayKey()}`, {})),
-        saveCloudItem(nextSession, "assets", localStorage.getItem(key("assets")) || defaultAssets),
+        saveCloudItem(nextSession, "notes", merged.notes),
+        saveCloudItem(nextSession, "plans", merged.plans),
+        saveCloudItem(nextSession, "consultations", merged.consultations),
+        saveCloudItem(nextSession, "dietRecords", merged.dietRecords),
+        saveCloudItem(nextSession, "anniversaries", merged.anniversaries),
+        saveCloudItem(nextSession, "waterTarget", merged.waterTarget),
+        saveCloudItem(nextSession, "habits", merged.habits),
+        saveCloudItem(nextSession, "deletedHabitIds", merged.deletedHabitIds),
+        saveCloudItem(nextSession, `done:${todayKey()}`, merged[`done:${todayKey()}`]),
+        saveCloudItem(nextSession, "assets", merged.assets),
+        saveCloudItem(nextSession, "fundPortfolio", merged.fundPortfolio),
+        saveCloudItem(nextSession, "fundCodes", merged.fundCodes),
+        saveCloudItem(nextSession, "indexTrackerItems", merged.indexTrackerItems),
       ]);
       setSyncStatus(`同步完成 · ${nowText()}`);
     } catch (error) {
@@ -3709,6 +3896,7 @@ export default function Workbench() {
   }
 
   function deleteDietRecord(id) {
+    markDeleted("dietRecords", id);
     saveDietRecords(dietRecords.filter((item) => item.id !== id));
   }
 
@@ -3733,6 +3921,7 @@ export default function Workbench() {
     const nextDone = { ...done };
     const nextDeletedHabitIds = uniqueIds([...readStorage("deletedHabitIds", []), id]);
     const nextLegacyCheckins = readStorage("checkins", []).filter((item) => item.id !== id);
+    markDeleted("habits", id);
     delete nextDone[id];
     setHabits(nextHabits);
     setDone(nextDone);
@@ -3776,6 +3965,7 @@ export default function Workbench() {
   }
 
   function deleteAnniversary(id) {
+    markDeleted("anniversaries", id);
     const next = anniversaries.filter((item) => item.id !== id);
     setAnniversaries(next);
     persist("anniversaries", next);
@@ -3788,6 +3978,7 @@ export default function Workbench() {
   }
 
   function deletePlan(id) {
+    markDeleted("plans", id);
     const next = plans.filter((plan) => plan.id !== id);
     setPlans(next);
     persist("plans", next);
@@ -3802,6 +3993,7 @@ export default function Workbench() {
   }
 
   function deleteNote(id) {
+    markDeleted("notes", id);
     const next = notes.filter((note) => note.id !== id);
     setNotes(next);
     persist("notes", next);
@@ -3821,6 +4013,7 @@ export default function Workbench() {
   }
 
   function deleteConsultation(id) {
+    markDeleted("consultations", id);
     const next = consultations.filter((item) => item.id !== id);
     setConsultations(next);
     persist("consultations", next);
@@ -3888,6 +4081,9 @@ export default function Workbench() {
       deletedHabitIds: readStorage("deletedHabitIds", []),
       done,
       assets: assetInput,
+      fundPortfolio: normalizeFundPortfolio(readStorage("fundPortfolio", [])),
+      fundCodes: localStorage.getItem(key("fundCodes")) || "",
+      indexTrackerItems: normalizeIndexTrackerItems(readStorage("indexTrackerItems", indexTrackerItems)),
       weatherCache: readStorage("weatherCache", null),
       marketCache: readStorage("marketCache", null),
     };
@@ -3947,6 +4143,21 @@ export default function Workbench() {
         setAssetInput(payload.assets);
         localStorage.setItem(key("assets"), payload.assets);
         persist("assets", payload.assets);
+      }
+      if (Array.isArray(payload.fundPortfolio)) {
+        const nextFundPortfolio = normalizeFundPortfolio(payload.fundPortfolio);
+        writeStorage("fundPortfolio", nextFundPortfolio);
+        const nextFundCodes = payload.fundCodes || nextFundPortfolio.map((item) => item.code).join(",");
+        if (nextFundCodes) {
+          localStorage.setItem(key("fundCodes"), nextFundCodes);
+        } else {
+          localStorage.removeItem(key("fundCodes"));
+        }
+        localStorage.removeItem(key("fundCache"));
+      }
+      if (Array.isArray(payload.indexTrackerItems)) {
+        writeStorage("indexTrackerItems", normalizeIndexTrackerItems(payload.indexTrackerItems));
+        localStorage.removeItem(key("indexTrackerCache"));
       }
       if (payload.weatherCache) writeStorage("weatherCache", payload.weatherCache);
       if (payload.marketCache) writeStorage("marketCache", payload.marketCache);
@@ -4113,7 +4324,7 @@ export default function Workbench() {
                   ))}
                 </div>
               </section>
-              <MarketBoard compact />
+              <MarketBoard compact onAssetsChange={syncAssetsToCloud} />
               <section className="panel">
                 <div className="panel-head"><h2>最近整理</h2><span className="tag">最新</span></div>
                 <div className="timeline">
@@ -4165,7 +4376,7 @@ export default function Workbench() {
           )}
 
           {activePage === "market" && (
-            marketView === "indexes" ? <IndexTrackerBoard /> : marketView === "funds" ? <FundBoard /> : <MarketBoard />
+            marketView === "indexes" ? <IndexTrackerBoard onItemsChange={syncIndexItemsToCloud} /> : marketView === "funds" ? <FundBoard onPortfolioChange={syncFundPortfolioToCloud} /> : <MarketBoard onAssetsChange={syncAssetsToCloud} />
           )}
 
           {activePage === "diet" && (
