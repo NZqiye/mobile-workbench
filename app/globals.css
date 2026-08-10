@@ -1454,3 +1454,27 @@ textarea { resize: vertical; }
     transform: none !important;
   }
 }
+
+/* 闪念笔记入口 */
+.quick-note-bar { display: flex; gap: 8px; align-items: center; padding: 4px 4px 4px 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255, 255, 255, 0.9); box-shadow: var(--shadow); }
+.quick-note-bar input { flex: 1; min-width: 0; height: 40px; border: 0; background: transparent; color: var(--ink); font-size: 14px; outline: none; }
+.quick-note-bar input::placeholder { color: var(--muted); }
+.quick-note-bar button { width: 34px; height: 34px; flex: 0 0 auto; border: 0; border-radius: 10px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 15px; font-weight: 900; cursor: pointer; }
+
+/* 番茄钟 */
+.pomodoro-panel { display: grid; gap: 12px; }
+.pomodoro-body { display: grid; justify-items: center; gap: 12px; }
+.pomodoro-ring-svg { width: 168px; height: 168px; color: var(--ink); }
+.pomodoro-controls { display: flex; gap: 10px; align-items: center; }
+.pomodoro-modes { display: flex; gap: 8px; }
+.mini-chip { padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255, 255, 255, 0.8); color: var(--muted); font-size: 12px; font-weight: 800; cursor: pointer; }
+.mini-chip.active { color: #fff; border-color: transparent; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); }
+.chip-button-ghost { background: rgba(255, 255, 255, 0.7) !important; color: var(--ink) !important; border: 1px solid var(--line) !important; }
+
+/* 天气穿搭提示 */
+.weather-outfit-tip { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; padding: 9px 12px; border-radius: 12px; background: color-mix(in srgb, var(--theme-soft) 60%, #fff); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7); }
+.weather-outfit-tip span { color: var(--theme-main); font-size: 13px; font-weight: 900; white-space: nowrap; }
+.weather-outfit-tip small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+@media (max-width: 520px) {
+  .weather-outfit-tip { align-items: flex-start; flex-direction: column; }
+}

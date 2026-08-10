@@ -1282,6 +1282,12 @@ function WeatherCard({ compact = false, clock = "--:--" }) {
           </div>
         ))}
       </div>
+      {compact && weather && (
+        <div className="weather-outfit-tip">
+          <span>{outfitAdvice(weather).title}</span>
+          <small>{outfitAdvice(weather).items.slice(0, 2).join(" · ")}</small>
+        </div>
+      )}
     </section>
   );
 }
@@ -1438,6 +1444,97 @@ function ClothingAssistant() {
     </section>
   );
 }
+
+function PomodoroTimer() {
+  const FOCUS_MINUTES = 25;
+  const BREAK_MINUTES = 5;
+
+  const [mode, setMode] = useState("focus");
+  const [secondsLeft, setSecondsLeft] = useState(FOCUS_MINUTES * 60);
+  const [running, setRunning] = useState(false);
+  const [todaySessions, setTodaySessions] = useState(0);
+  const [status, setStatus] = useState("点击开始专注");
+
+  useEffect(() => {
+    setTodaySessions(Number(readStorage(`pomodoroSessions:${todayKey()}`, 0)));
+  }, []);
+
+  useEffect(() => {
+    if (!running) return;
+    const timer = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          if (mode === "focus") {
+            const next = todaySessions + 1;
+            setTodaySessions(next);
+            writeStorage(`pomodoroSessions:${todayKey()}`, next);
+            setMode("break");
+            setStatus(`第 ${next} 轮完成 · 休息一下`);
+            return BREAK_MINUTES * 60;
+          }
+          setMode("focus");
+          setStatus("休息结束 · 开始新一轮");
+          return FOCUS_MINUTES * 60;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [running, mode, todaySessions]);
+
+  const minutes = Math.floor(secondsLeft / 60);
+  const secs = secondsLeft % 60;
+  const totalSeconds = mode === "focus" ? FOCUS_MINUTES * 60 : BREAK_MINUTES * 60;
+  const progress = ((totalSeconds - secondsLeft) / totalSeconds) * 100;
+
+  function toggle() {
+    if (!running) setStatus(mode === "focus" ? "专注中..." : "休息中...");
+    setRunning(!running);
+  }
+
+  function reset() {
+    setRunning(false);
+    setMode("focus");
+    setSecondsLeft(FOCUS_MINUTES * 60);
+    setStatus("已重置");
+  }
+
+  function switchMode(nextMode) {
+    setRunning(false);
+    setMode(nextMode);
+    setSecondsLeft(nextMode === "focus" ? FOCUS_MINUTES * 60 : BREAK_MINUTES * 60);
+    setStatus(nextMode === "focus" ? "准备专注" : "准备休息");
+  }
+
+  return (
+    <section className="panel pomodoro-panel">
+      <div className="panel-head">
+        <div>
+          <h2>{mode === "focus" ? "番茄钟" : "休息"}</h2>
+          <p>{status}</p>
+        </div>
+        <span className="tag">今日 {todaySessions} 轮</span>
+      </div>
+      <div className="pomodoro-body">
+        <svg className="pomodoro-ring-svg" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border-color, #e5e7eb)" strokeWidth="6" />
+          <circle cx="60" cy="60" r="52" fill="none" stroke={mode === "focus" ? "var(--theme-main, #b4232c)" : "var(--theme-accent, #c98a2c)"} strokeWidth="6" strokeDasharray={327 * progress / 100 + " 327"} strokeLinecap="round" transform="rotate(-90 60 60)" />
+          <text x="60" y="56" textAnchor="middle" dominantBaseline="middle" fontSize="24" fontWeight="800" fill="currentColor">{String(minutes).padStart(2, "0")}:{String(secs).padStart(2, "0")}</text>
+          <text x="60" y="78" textAnchor="middle" dominantBaseline="middle" fontSize="9" fill="var(--muted-color, #888)">{mode === "focus" ? "专注" : "放松"}</text>
+        </svg>
+        <div className="pomodoro-controls">
+          <button className="chip-button" type="button" onClick={toggle}>{running ? "暂停" : "开始"}</button>
+          <button className="chip-button chip-button-ghost" type="button" onClick={reset}>重置</button>
+        </div>
+        <div className="pomodoro-modes">
+          <button className={"mini-chip" + (mode === "focus" ? " active" : "")} type="button" onClick={() => switchMode("focus")}>专注 25</button>
+          <button className={"mini-chip" + (mode === "break" ? " active" : "")} type="button" onClick={() => switchMode("break")}>休息 5</button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 
 const newsTabs = [
   { id: "weibo", label: "微博热搜", icon: "flame" },
@@ -3992,6 +4089,25 @@ export default function Workbench() {
     persist("notes", next);
   }
 
+  function addQuickNote(event) {
+    event.preventDefault();
+    const input = event.currentTarget.elements.note;
+    const title = String(input.value || "").trim();
+    if (!title) return;
+    const note = {
+      id: crypto.randomUUID(),
+      type: "life",
+      title,
+      date: todayKey(),
+      time: nowText(),
+      tags: ["闪念"],
+    };
+    const next = [note, ...notes];
+    setNotes(next);
+    persist("notes", next);
+    input.value = "";
+  }
+
   function deleteNote(id) {
     markDeleted("notes", id);
     const next = notes.filter((note) => note.id !== id);
@@ -4281,6 +4397,10 @@ export default function Workbench() {
               <TodayTimePanel clock={clock} />
               <WeatherCard compact clock={clock} />
               <DailyQuoteCard />
+              <form className="quick-note-bar" onSubmit={addQuickNote}>
+                <input name="note" type="text" placeholder="有什么想法？回车即存..." autoComplete="off" />
+                <button type="submit" aria-label="保存闪念笔记">✓</button>
+              </form>
               <section className="dashboard-strip" aria-label="今日概览">
                 <div className="dashboard-tile dashboard-tile-primary">
                   <span>今日任务</span>
@@ -4308,6 +4428,7 @@ export default function Workbench() {
                   <QuickAction icon="news" label="热榜时讯" onClick={() => switchPage("news")} />
                 </div>
               </section>
+              <PomodoroTimer />
               <section className="stats-grid">
                 <StatButton label="今日任务" value={stats.plans} onClick={() => switchPage("plans")} />
                 <StatButton label="今日饮食" value={`${stats.dietToday} 条`} onClick={() => switchPage("diet")} />
