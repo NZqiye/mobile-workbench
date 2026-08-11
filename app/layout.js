@@ -2,8 +2,8 @@ import "./globals.css";
 import RegisterServiceWorker from "./register-service-worker";
 
 export const metadata = {
-  title: "涓冨online",
-  description: "绉诲姩浼樺厛鐨勪釜浜虹敓娲讳笌琛屾儏宸ヤ綔鍙?",
+  title: "七夜online",
+  description: "移动优先的个人生活与行情工作台",
   manifest: "/manifest.webmanifest",
   icons: {
     icon: "/icon.png",
@@ -11,7 +11,7 @@ export const metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "涓冨online",
+    title: "七夜online",
     statusBarStyle: "default",
   },
 };
