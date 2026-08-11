@@ -41,8 +41,8 @@ const noteTypes = [
 ];
 const consultationStatuses = ["想看的剧", "正在看", "看过的剧", "暂停/弃剧"];
 const anniversaryTypes = [
-  { id: "countdown", label: "倒数日", note: "未来值得期待的日子" },
-  { id: "memory", label: "纪念日", note: "过去值得纪念的日子" },
+  { id: "countdown", label: "倒数纪念日", note: "未来值得期待的日子" },
+  { id: "memory", label: "正数纪念日", note: "已经发生、按天数往上数的日子" },
   { id: "birthday", label: "生日", note: "重要的人的生日" },
   { id: "festival", label: "节日", note: "仪式感的节日" },
 ];
@@ -669,6 +669,25 @@ function anniversaryMeta(item) {
     nextDays: Math.ceil((next - today) / (24 * 60 * 60 * 1000)),
     nextDate: todayKey(next),
   };
+}
+
+function formatAnniversaryProgress(item) {
+  const meta = anniversaryMeta(item);
+  const type = item.type || "memory";
+  if (meta.elapsed === null || meta.nextDays === null) {
+    return { meta, primary: "--", secondary: "--" };
+  }
+  if (type === "countdown") {
+    if (meta.elapsed < 0) {
+      return { meta, primary: `还有 ${meta.nextDays} 天`, secondary: `到期后已过 ${Math.abs(meta.elapsed)} 天` };
+    }
+    return { meta, primary: `已过 ${meta.elapsed} 天`, secondary: `下次还有 ${meta.nextDays} 天` };
+  }
+  const positiveDays = Math.max(1, meta.elapsed + 1);
+  if (meta.elapsed < 0) {
+    return { meta, primary: `还有 ${meta.nextDays} 天`, secondary: `到日后会变成第 1 天` };
+  }
+  return { meta, primary: `第 ${positiveDays} 天`, secondary: `下次纪念还有 ${meta.nextDays} 天` };
 }
 
 function parseFoodCount(value) {
@@ -2308,12 +2327,14 @@ function FundBoard({ onPortfolioChange }) {
     return normalized;
   }
 
-  async function loadFunds(force = false) {
-    const storedPortfolio = readStorage("fundPortfolio", null);
+  async function loadFunds(force = false, portfolioOverride = null) {
+    const storedPortfolio = portfolioOverride || readStorage("fundPortfolio", null);
     const savedPortfolio = Array.isArray(storedPortfolio)
       ? normalizeFundPortfolio(storedPortfolio)
       : buildFundPortfolioFromCodes(localStorage.getItem(key("fundCodes")));
-    if (!Array.isArray(storedPortfolio)) {
+    if (portfolioOverride) {
+      setPortfolio(savedPortfolio);
+    } else if (!Array.isArray(storedPortfolio)) {
       savePortfolio(savedPortfolio);
     } else {
       setPortfolio(savedPortfolio);
@@ -2370,18 +2391,20 @@ function FundBoard({ onPortfolioChange }) {
     setFundMenuOpen(false);
     setFundInput("");
     setStatus(`已添加 ${nextFund}`);
-    loadFunds(true);
+    loadFunds(true, nextPortfolio);
     return nextPortfolio;
   }
 
   function deleteFund(code) {
     markDeleted("fundPortfolio", code);
     const nextPortfolio = savePortfolio(portfolio.filter((item) => item.code !== code));
+    setFunds((items) => items.filter((item) => item.code !== code));
     if (tradeCode === code) {
       setTradeCode(nextPortfolio[0]?.code || defaultFundCodes.split(",")[0]);
     }
     setFundMenuOpen(false);
-    loadFunds(true);
+    setStatus(`\u5df2\u5220\u9664 ${code}`);
+    loadFunds(true, nextPortfolio);
   }
 
   function recordTrade(event) {
@@ -2418,7 +2441,7 @@ function FundBoard({ onPortfolioChange }) {
       setTradeProfit("");
       setTradeNote("");
       setStatus(`已按支付宝校准 · ${target.code}`);
-      loadFunds(true);
+      loadFunds(true, nextPortfolio);
       return;
     }
     let shares = sharesValue > 0 ? sharesValue : (amountValue > 0 ? amountValue / price : 0);
@@ -2473,7 +2496,7 @@ function FundBoard({ onPortfolioChange }) {
     setTradeProfit("");
     setTradeNote("");
     setStatus(`${tradeMode === "sell" ? "已记录卖出" : tradeMode === "import" ? "已导入持仓" : "已记录定投"} · ${target.code}`);
-    loadFunds(true);
+    loadFunds(true, nextPortfolio);
   }
 
   function openTrade(code, mode) {
@@ -2646,7 +2669,39 @@ function itemMatchesQuery(item, query, fields) {
     .some((value) => String(value).toLowerCase().includes(keyword));
 }
 
+function FormMenuSelect({ name, value, options, open, onToggle, onSelect, className = "", ariaLabel }) {
+  const selected = options.find((option) => option.value === value) || options[0];
+
+  return (
+    <div className={`recommendation-menu anniversary-menu ${className} ${open ? "open" : ""}`.trim()}>
+      <input type="hidden" name={name} value={value} />
+      <button className="recommendation-menu-trigger anniversary-menu-trigger" type="button" onClick={onToggle} aria-label={ariaLabel} aria-expanded={open}>
+        <span>{selected?.label || value}</span>
+        <i aria-hidden="true" className="menu-caret" />
+      </button>
+      {open && (
+        <div className="recommendation-menu-list anniversary-menu-list">
+          {options.map((option) => (
+            <button
+              className={option.value === value ? "active" : ""}
+              type="button"
+              key={option.value}
+              onClick={() => onSelect(option.value)}
+            >
+              <span>{option.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onToggleHabit, onDeleteHabit, onAddTask, onToggleTask, onDeleteTask, onAddAnniversary, onDeleteAnniversary }) {
+  const [anniversaryType, setAnniversaryType] = useState("countdown");
+  const [anniversaryCalendarType, setAnniversaryCalendarType] = useState("solar");
+  const [anniversaryTypeOpen, setAnniversaryTypeOpen] = useState(false);
+  const [anniversaryCalendarOpen, setAnniversaryCalendarOpen] = useState(false);
   const unfinishedTasks = tasks.filter((task) => task.status !== "已完成").slice(0, 8);
   const sortedAnniversaries = [...anniversaries].sort((a, b) => (anniversaryMeta(a).nextDays ?? 99999) - (anniversaryMeta(b).nextDays ?? 99999));
   const isElapsedThisYear = (item) => {
@@ -2657,16 +2712,15 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
   const renderAnniversaryCards = (items, type) => (
     <div className="anniversary-grid">
       {items.map((item) => {
-        const meta = anniversaryMeta(item);
+        const progress = formatAnniversaryProgress(item);
         const calendarLabel = item.calendarType === "lunar" ? "农历" : "公历";
-        const highlightElapsed = type.id === "memory";
         return (
           <div className={`anniversary-card ${type.id}`} key={item.id}>
             <span>{item.date} · {calendarLabel}</span>
             <strong>{item.title}</strong>
             <div className="anniversary-days">
-              <b>{highlightElapsed ? "已过" : "还有"} {highlightElapsed ? (meta.elapsed === null ? "--" : Math.max(0, meta.elapsed)) : (meta.nextDays === null ? "--" : meta.nextDays)} 天</b>
-              <small>{highlightElapsed ? "下次还有" : "已过"} {highlightElapsed ? (meta.nextDays === null ? "--" : meta.nextDays) : (meta.elapsed === null ? "--" : Math.max(0, meta.elapsed))} 天</small>
+              <b>{progress.primary}</b>
+              <small>{progress.secondary}</small>
             </div>
             <button type="button" onClick={() => onDeleteAnniversary(item.id)}>删除</button>
           </div>
@@ -2685,10 +2739,18 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
             <summary>已过日期 {elapsedItems.length} 个</summary>
             {renderAnniversaryCards(elapsedItems, type)}
           </details>
-        )}
-      </>
-    );
+      )}
+    </>
+  );
   };
+
+  function submitAnniversary(event) {
+    onAddAnniversary(event);
+    setAnniversaryType("countdown");
+    setAnniversaryCalendarType("solar");
+    setAnniversaryTypeOpen(false);
+    setAnniversaryCalendarOpen(false);
+  }
 
   return (
     <section className="arrange-shell">
@@ -2750,18 +2812,45 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
             <p>倒数重要日子还有多久到。</p>
           </div>
         </div>
-        <form className="anniversary-form" onSubmit={onAddAnniversary}>
+        <form className="anniversary-form" onSubmit={submitAnniversary}>
           <input name="title" placeholder="纪念日名称，例如 生日、考试、旅行" required />
           <div className="anniversary-fields">
             <input name="date" type="date" required />
-            <select name="type" defaultValue="countdown">
-              {anniversaryTypes.map((type) => <option value={type.id} key={type.id}>{type.label}</option>)}
-            </select>
-            <select name="calendarType" defaultValue="solar">
-              <option value="solar">公历</option>
-              <option value="lunar">农历</option>
-            </select>
-          </div>
+            <FormMenuSelect
+              name="type"
+              value={anniversaryType}
+              options={anniversaryTypes.map((type) => ({ value: type.id, label: type.label }))}
+              open={anniversaryTypeOpen}
+              onToggle={() => {
+                setAnniversaryTypeOpen((current) => !current);
+                setAnniversaryCalendarOpen(false);
+              }}
+              onSelect={(value) => {
+                setAnniversaryType(value);
+                setAnniversaryTypeOpen(false);
+              }}
+              className="anniversary-type-menu"
+              ariaLabel="选择纪念日类型"
+            />
+            <FormMenuSelect
+              name="calendarType"
+              value={anniversaryCalendarType}
+              options={[
+                { value: "solar", label: "公历" },
+                { value: "lunar", label: "农历" },
+              ]}
+              open={anniversaryCalendarOpen}
+              onToggle={() => {
+                setAnniversaryCalendarOpen((current) => !current);
+                setAnniversaryTypeOpen(false);
+              }}
+              onSelect={(value) => {
+                setAnniversaryCalendarType(value);
+                setAnniversaryCalendarOpen(false);
+              }}
+              className="anniversary-calendar-menu"
+              ariaLabel="选择日历类型"
+            />          </div>
           <button type="submit">添加纪念日</button>
         </form>
         <div className="anniversary-sections">
@@ -4160,9 +4249,9 @@ export default function Workbench() {
       "",
       "## 纪念日",
       ...anniversaries.map((item) => {
-        const meta = anniversaryMeta(item);
+        const progress = formatAnniversaryProgress(item);
         const typeLabel = anniversaryTypes.find((type) => type.id === (item.type || "memory"))?.label || "纪念日";
-        return `- [${typeLabel}] ${item.date} ${item.calendarType === "lunar" ? "阴历" : "阳历"} ${item.title}：已过 ${meta.elapsed ?? "--"} 天，下次还有 ${meta.nextDays ?? "--"} 天`;
+        return `- [${typeLabel}] ${item.date} ${item.calendarType === "lunar" ? "阴历" : "阳历"} ${item.title}：${progress.primary}，${progress.secondary}`;
       }),
       "",
       "## 记录",

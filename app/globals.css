@@ -358,12 +358,40 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .quick-form { grid-template-columns: 1fr 76px; }
 .filter-panel { display: grid; grid-template-columns: minmax(0, 1fr) 112px; gap: 10px; }
 input, textarea, select { width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 12px; color: var(--ink); background: var(--panel); }
-select { appearance: none; min-height: 46px; padding-right: 34px; border-color: color-mix(in srgb, var(--theme-main) 18%, var(--line)); color: var(--ink); background:
-    linear-gradient(45deg, transparent 50%, var(--theme-main) 50%) right 17px center / 6px 6px no-repeat,
-    linear-gradient(135deg, rgba(255, 255, 255, 0.96), color-mix(in srgb, var(--theme-soft) 72%, #fff)); font-weight: 850; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82); }
-select:hover { border-color: color-mix(in srgb, var(--theme-main) 42%, var(--line)); background:
-    linear-gradient(45deg, transparent 50%, var(--theme-main) 50%) right 17px center / 6px 6px no-repeat,
-    linear-gradient(135deg, #fff, color-mix(in srgb, var(--theme-soft) 86%, #fff)); }
+select,
+.recommendation-menu-trigger,
+.fund-select-trigger {
+  min-height: 42px;
+  border-radius: 16px;
+  border-color: color-mix(in srgb, var(--theme-main) 22%, var(--line));
+  color: var(--theme-main);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--panel) 96%, var(--theme-soft)), color-mix(in srgb, var(--theme-soft) 84%, #fff));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-main) 8%, transparent), 0 8px 18px rgba(117, 25, 35, 0.08);
+  font-size: 14px;
+  font-weight: 900;
+}
+select {
+  appearance: none;
+  padding: 0 42px 0 14px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--panel) 96%, var(--theme-soft)), color-mix(in srgb, var(--theme-soft) 84%, #fff)),
+    linear-gradient(45deg, transparent 50%, var(--theme-main) 50%) right 18px center / 6px 6px no-repeat,
+    linear-gradient(135deg, var(--theme-main) 50%, transparent 50%) right 13px center / 6px 6px no-repeat;
+}
+select:hover {
+  border-color: color-mix(in srgb, var(--theme-main) 40%, var(--line));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--panel) 98%, var(--theme-soft)), color-mix(in srgb, var(--theme-soft) 90%, #fff)),
+    linear-gradient(45deg, transparent 50%, var(--theme-main) 50%) right 18px center / 6px 6px no-repeat,
+    linear-gradient(135deg, var(--theme-main) 50%, transparent 50%) right 13px center / 6px 6px no-repeat;
+}
+.recommendation-menu-trigger:hover,
+.fund-select-trigger:hover {
+  border-color: color-mix(in srgb, var(--theme-main) 40%, var(--line));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--panel) 98%, var(--theme-soft)), color-mix(in srgb, var(--theme-soft) 90%, #fff));
+}
 select option { color: var(--ink); background: #fff8f4; font-weight: 800; }
 select option:checked { color: #fff; background: var(--theme-main); }
 textarea { resize: vertical; }
@@ -395,7 +423,56 @@ textarea { resize: vertical; }
 .habit-row button, .task-row button, .anniversary-card button { border: 0; color: var(--theme-main); background: transparent; font-size: 12px; font-weight: 900; }
 .task-form, .anniversary-form { display: grid; gap: 9px; }
 .task-form button, .anniversary-form button { min-height: 42px; border: 0; border-radius: 12px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-weight: 900; }
-.anniversary-fields { display: grid; grid-template-columns: minmax(0, 1fr) 96px 96px; gap: 8px; }
+.anniversary-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 0.92fr);
+  gap: 8px;
+}
+.anniversary-fields > * {
+  min-width: 0;
+}
+.anniversary-fields input[name="date"] {
+  grid-column: 1 / -1;
+}
+.anniversary-fields .anniversary-type-menu {
+  grid-column: span 2;
+}
+.anniversary-fields .anniversary-calendar-menu {
+  grid-column: span 1;
+}
+.anniversary-fields .anniversary-menu {
+  position: relative;
+  z-index: 4;
+}
+.anniversary-fields .anniversary-menu-trigger {
+  width: 100%;
+  justify-content: space-between;
+  gap: 10px;
+}
+.anniversary-fields .anniversary-menu-trigger .menu-caret {
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--theme-main);
+  transform: translateY(1px);
+}
+.anniversary-fields .anniversary-menu-list {
+  left: 0;
+  right: auto;
+  width: 100%;
+  min-width: 100%;
+}
+.anniversary-fields .anniversary-menu-list button {
+  width: 100%;
+}
+.anniversary-fields .anniversary-menu-list button span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .anniversary-sections { display: grid; gap: 12px; }
 .anniversary-section { display: grid; gap: 10px; padding: 12px; border: 1px solid color-mix(in srgb, var(--theme-main) 16%, var(--line)); border-radius: 14px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), color-mix(in srgb, var(--theme-soft) 52%, #fff)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72); }
 .anniversary-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -515,26 +592,50 @@ textarea { resize: vertical; }
 .tmdb-recommendations .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
 .recommendation-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
 .recommendation-menu { position: relative; z-index: 5; }
-.recommendation-menu-trigger { display: inline-flex; gap: 7px; align-items: center; justify-content: center; min-height: 34px; padding: 0 12px; border: 1px solid rgba(234, 215, 208, 0.92); border-radius: 17px; color: var(--theme-main); background: rgba(255, 255, 255, 0.94); font-size: 13px; font-weight: 900; box-shadow: 0 8px 18px rgba(117, 25, 35, 0.08); }
+.recommendation-menu-trigger {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  padding: 0 14px;
+}
 .recommendation-menu-trigger span, .recommendation-menu-list button { display: inline-flex; gap: 7px; align-items: center; }
 .recommendation-menu-trigger .motion-icon, .recommendation-menu-list .motion-icon { width: 18px; height: 18px; }
 .recommendation-menu-trigger i { color: var(--muted); font-style: normal; transform: translateY(-1px); }
-.recommendation-menu.open .recommendation-menu-trigger { border-color: color-mix(in srgb, var(--theme-main) 32%, rgba(234, 215, 208, 0.92)); background: color-mix(in srgb, var(--theme-soft) 68%, #fff); }
-.recommendation-menu-list { position: absolute; right: 0; top: calc(100% + 8px); display: grid; min-width: 132px; overflow: hidden; border: 1px solid rgba(234, 215, 208, 0.9); border-radius: 8px; background: rgba(255, 252, 250, 0.98); box-shadow: 0 18px 38px rgba(88, 30, 36, 0.18); }
-.recommendation-menu-list button { min-height: 38px; padding: 0 14px; border: 0; border-bottom: 1px solid rgba(234, 215, 208, 0.68); color: var(--ink); background: transparent; text-align: left; font-size: 13px; font-weight: 900; }
+.recommendation-menu.open .recommendation-menu-trigger,
+.fund-select-menu.open .fund-select-trigger { border-color: color-mix(in srgb, var(--theme-main) 32%, rgba(234, 215, 208, 0.92)); }
+.recommendation-menu-list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  display: grid;
+  min-width: 152px;
+  padding: 6px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--theme-main) 16%, var(--line));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--panel) 98%, var(--theme-soft));
+  box-shadow: 0 20px 40px rgba(88, 30, 36, 0.18);
+}
+.recommendation-menu-list button { position: relative; min-height: 42px; padding: 0 14px; padding-right: 36px; border: 0; border-radius: 12px; color: var(--ink); background: transparent; text-align: left; font-size: 14px; font-weight: 900; }
 .recommendation-menu-list button:last-child { border-bottom: 0; }
-.recommendation-menu-list button.active { color: #fff; background: var(--theme-main); }
+.recommendation-menu-list button.active { color: var(--theme-main); background: color-mix(in srgb, var(--theme-main) 10%, var(--panel)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-main) 18%, transparent); }
+.recommendation-menu-list button.active::after { content: "✓"; position: absolute; right: 12px; color: var(--theme-main); font-size: 13px; font-weight: 900; }
 .recommendation-count { min-height: 30px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 15px; color: var(--muted); background: rgba(255, 255, 255, 0.72); font-size: 12px; font-weight: 900; }
-.fund-select-menu { z-index: 8; min-width: 0; }
-.fund-select-trigger { width: 100%; min-height: 40px; justify-content: space-between; padding: 0 12px; border-color: color-mix(in srgb, var(--theme-main) 24%, var(--line)); border-radius: 18px; }
-.fund-select-trigger span { min-width: 0; overflow: hidden; color: var(--theme-main); text-overflow: ellipsis; white-space: nowrap; }
+.fund-select-menu { z-index: 2; min-width: 0; }
+.fund-select-trigger { width: 100%; justify-content: space-between; gap: 10px; padding: 0 14px; border-radius: 16px; }
+.fund-select-trigger span { min-width: 0; overflow: hidden; color: var(--theme-main); text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 900; }
 .fund-select-trigger i, .fund-select-list i { flex: 0 0 auto; width: 13px; height: 13px; border-radius: 4px; background: currentColor; }
-.fund-select-trigger b { color: var(--theme-main); font-size: 12px; font-style: normal; }
-.fund-select-list { left: 0; right: auto; min-width: 100%; border-radius: 8px; }
-.fund-select-list button { display: flex; gap: 9px; width: 100%; min-height: 40px; padding: 0 14px; }
+.fund-select-trigger b { color: var(--theme-main); font-size: 12px; font-style: normal; transition: transform 0.18s ease; }
+.fund-select-menu.open .fund-select-trigger b { transform: rotate(180deg); }
+.fund-select-list { left: 0; right: auto; min-width: 100%; padding: 6px; border: 1px solid color-mix(in srgb, var(--theme-main) 16%, var(--line)); border-radius: 16px; background: color-mix(in srgb, var(--panel) 98%, var(--theme-soft)); box-shadow: 0 20px 40px rgba(88, 30, 36, 0.18); max-height: 240px; overflow: auto; scrollbar-width: thin; }
+.fund-select-list button { position: relative; display: flex; gap: 9px; width: 100%; min-height: 42px; padding: 0 14px; padding-right: 36px; border: 0; border-radius: 12px; }
 .fund-select-list button span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fund-select-list button:not(.active) { color: #241918; background: rgba(255, 252, 250, 0.98); }
+.fund-select-list button:not(.active) { color: #241918; background: transparent; }
 .fund-select-list button:disabled { color: var(--muted); opacity: 0.72; cursor: not-allowed; }
+.fund-select-list button.active { color: var(--theme-main); background: color-mix(in srgb, var(--theme-main) 10%, var(--panel)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-main) 18%, transparent); }
+.fund-select-list button.active::after { content: "✓"; position: absolute; right: 12px; color: var(--theme-main); font-size: 13px; font-weight: 900; }
 .tmdb-section { display: grid; gap: 9px; }
 .tmdb-section h3 { margin: 0; color: var(--ink); font-size: 15px; }
 .tmdb-poster-row { display: grid; grid-auto-flow: column; grid-auto-columns: 112px; gap: 10px; overflow-x: auto; padding: 2px 0 5px; scrollbar-width: thin; }
@@ -887,7 +988,12 @@ textarea { resize: vertical; }
   .meal-form button { grid-column: auto; }
   .wear-weather-card, .outfit-main { grid-template-columns: 1fr; text-align: center; justify-items: center; }
   .wear-forecast { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .anniversary-fields { grid-template-columns: 1fr; }
+  .anniversary-fields { grid-template-columns: 1fr 1fr; }
+  .anniversary-fields input[name="date"],
+  .anniversary-fields select[name="type"],
+  .anniversary-fields select[name="calendarType"] {
+    grid-column: 1 / -1;
+  }
   .anniversary-grid { grid-template-columns: 1fr; }
   .calendar-grid { grid-template-columns: repeat(4, 1fr); }
   .quick-grid { grid-template-columns: 1fr; }
@@ -1413,6 +1519,82 @@ textarea { resize: vertical; }
 
   .desktop-shell.page-consultations .watch-list {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .desktop-shell.page-market .fund-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .desktop-shell.page-market .fund-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .desktop-shell.page-market .fund-row-top,
+  .desktop-shell.page-market .fund-metrics,
+  .desktop-shell.page-market .fund-row-bottom {
+    grid-column: 1 / -1;
+  }
+
+  .desktop-shell.page-market .fund-row-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .desktop-shell.page-market .fund-value {
+    white-space: normal;
+  }
+
+  .desktop-shell.page-market .fund-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .desktop-shell.page-market .fund-row-bottom {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+  }
+
+  .desktop-shell.page-market .fund-row-bottom small {
+    display: block;
+    white-space: normal;
+  }
+
+  .desktop-shell.page-market .fund-actions {
+    flex-wrap: wrap;
+  }
+
+  .desktop-shell.page-market .fund-mode-tabs {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .desktop-shell.page-market .fund-trade-panel .panel-head {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .desktop-shell.page-market .fund-select-menu {
+    position: static;
+    z-index: auto;
+  }
+
+  .desktop-shell.page-market .fund-select-list {
+    position: static;
+    width: 100%;
+    min-width: 0;
+    margin-top: 8px;
+  }
+
+  .desktop-shell.page-market .fund-trade-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .desktop-shell.page-market .fund-trade-form .fund-select-menu,
+  .desktop-shell.page-market .fund-trade-form select,
+  .desktop-shell.page-market .fund-trade-form input,
+  .desktop-shell.page-market .fund-trade-form button {
+    grid-column: 1 / -1;
   }
 
   .desktop-shell .content > *,
