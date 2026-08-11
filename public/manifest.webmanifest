@@ -1,13 +1,13 @@
 {
-  "name": "七夜online",
-  "short_name": "七夜online",
-  "description": "移动优先的个人生活与行情工作台",
+  "name": "涓冨online",
+  "short_name": "涓冨online",
+  "description": "绉诲姩浼樺厛鐨勪釜浜虹敓娲讳笌琛屾儏宸ヤ綔鍙?",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#eef3f8",
-  "theme_color": "#2563eb",
+  "background_color": "#d13a45",
+  "theme_color": "#d13a45",
   "icons": [
     {
       "src": "/icons/icon-192.png",
