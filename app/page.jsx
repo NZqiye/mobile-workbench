@@ -683,6 +683,18 @@ function formatAnniversaryProgress(item) {
     }
     return { meta, primary: `已过 ${meta.elapsed} 天`, secondary: `下次还有 ${meta.nextDays} 天` };
   }
+  if (type === "birthday") {
+    const original = new Date(item.date);
+    const next = new Date(meta.nextDate);
+    const nextAge = next.getFullYear() - original.getFullYear();
+    if (meta.elapsed < 0) {
+      return { meta, primary: `还有 ${meta.nextDays} 天`, secondary: "出生日期未到" };
+    }
+    if (meta.nextDays === 0) {
+      return { meta, primary: "今天生日", secondary: `今年 ${nextAge} 岁` };
+    }
+    return { meta, primary: `还有 ${meta.nextDays} 天`, secondary: `下次 ${nextAge} 岁` };
+  }
   const positiveDays = Math.max(1, meta.elapsed + 1);
   if (meta.elapsed < 0) {
     return { meta, primary: `还有 ${meta.nextDays} 天`, secondary: `到日后会变成第 1 天` };
@@ -2729,14 +2741,18 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
     </div>
   );
   const renderAnniversaryGroup = (items, type, emptyText) => {
+    if (type.id === "memory") {
+      return renderAnniversaryCards(sortByNextDays(items), type);
+    }
     const activeItems = sortByNextDays(items.filter((item) => !isElapsedThisYear(item)));
     const elapsedItems = sortByNextDays(items.filter(isElapsedThisYear));
+    const archiveTitle = type.id === "birthday" ? "今年已过生日" : "已过日期";
     return (
       <>
         {activeItems.length === 0 ? <p className="anniversary-empty">{emptyText}</p> : renderAnniversaryCards(activeItems, type)}
         {elapsedItems.length > 0 && (
           <details className="anniversary-archive">
-            <summary>已过日期 {elapsedItems.length} 个</summary>
+            <summary>{archiveTitle} {elapsedItems.length} 个</summary>
             {renderAnniversaryCards(elapsedItems, type)}
           </details>
       )}
