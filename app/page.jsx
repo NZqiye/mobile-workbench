@@ -2408,7 +2408,6 @@ function FundBoard({ onPortfolioChange }) {
   }
 
   function deleteFund(code) {
-    markDeleted("fundPortfolio", code);
     const nextPortfolio = savePortfolio(portfolio.filter((item) => item.code !== code));
     setFunds((items) => items.filter((item) => item.code !== code));
     if (tradeCode === code) {
