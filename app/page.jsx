@@ -1803,6 +1803,28 @@ function mergeTmdbFields(item, fresh) {
   };
 }
 
+function getDeletedTmdbIds() {
+  const saved = readStorage("deletedTmdbWatchlist", []);
+  return new Set((Array.isArray(saved) ? saved : []).map((entry) => String(entry.tmdbId ?? entry)));
+}
+
+function rememberDeletedTmdbId(item) {
+  if (!item || !item.tmdbId) return;
+  const id = String(item.tmdbId);
+  const mediaType = item.tmdbMediaType || (item.type === "电影" ? "movie" : "tv");
+  const saved = readStorage("deletedTmdbWatchlist", []);
+  const next = (Array.isArray(saved) ? saved : []).filter((entry) => String(entry.tmdbId ?? entry) !== id);
+  next.push({ tmdbId: item.tmdbId, mediaType });
+  writeStorage("deletedTmdbWatchlist", next);
+}
+
+function clearDeletedTmdbId(item) {
+  if (!item || !item.tmdbId) return;
+  const id = String(item.tmdbId);
+  const saved = readStorage("deletedTmdbWatchlist", []);
+  writeStorage("deletedTmdbWatchlist", (Array.isArray(saved) ? saved : []).filter((entry) => String(entry.tmdbId ?? entry) !== id));
+}
+
 function MarketBoard({ compact = false, onAssetsChange }) {
   const [quotes, setQuotes] = useState([]);
   const [status, setStatus] = useState("正在读取行情...");
@@ -3997,6 +4019,7 @@ export default function Workbench() {
       setTmdbStatus(`详情读取失败，已按搜索结果加入：${error.message || "请稍后重试"}`);
     }
     if (item.tmdbId) {
+      clearDeletedTmdbId(item);
       try {
         const response = await fetch("/api/tmdb/watchlist", {
           method: "POST",
@@ -4038,14 +4061,16 @@ export default function Workbench() {
       const data = text ? JSON.parse(text) : {};
       if (!response.ok) throw new Error(data.error || "TMDB 片单同步失败");
       const incoming = Array.isArray(data.items) ? data.items : [];
+      const deletedTmdbIds = getDeletedTmdbIds();
       const incomingByKey = new Map(incoming.map((item) => [consultationKey(item), item]));
-      const existingKeys = new Set(consultations.map(consultationKey));
       const refreshedItems = consultations.map((item) => {
-        const fresh = incomingByKey.get(consultationKey(item));
+        const fresh = incomingByKey.get(consultationKey(item))
+          || incomingByKey.get(`title:${String(item.title || "").trim().toLowerCase()}`);
         return fresh ? mergeTmdbFields(item, fresh) : item;
       });
+      const refreshedKeys = new Set(refreshedItems.map(consultationKey));
       const nextItems = incoming
-        .filter((item) => !existingKeys.has(consultationKey(item)))
+        .filter((item) => !deletedTmdbIds.has(String(item.tmdbId)) && !refreshedKeys.has(consultationKey(item)))
         .map((item) => ({
           id: crypto.randomUUID(),
           ...item,
@@ -4058,6 +4083,14 @@ export default function Workbench() {
           totalEpisodes: item.totalEpisodes || "",
           time: nowText(),
         }));
+      const removed = incoming.filter((item) => deletedTmdbIds.has(String(item.tmdbId)));
+      if (removed.length) {
+        await Promise.all(removed.map((item) => fetch("/api/tmdb/watchlist", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mediaId: item.tmdbId, mediaType: item.tmdbMediaType || (item.media_type === "movie" ? "movie" : "tv") }),
+        }).catch(() => {})));
+      }
       const refreshedCount = incoming.length - nextItems.length;
       const next = dedupeConsultations([...nextItems, ...refreshedItems]);
       setConsultations(next);
@@ -4271,11 +4304,20 @@ export default function Workbench() {
     persist("consultations", next);
   }
 
-  function deleteConsultation(id) {
+  function deleteConsultation(idOrItem) {
+    const item = typeof idOrItem === "object" && idOrItem ? idOrItem : consultations.find((record) => record.id === idOrItem);
+    const id = item?.id || idOrItem;
     markDeleted("consultations", id);
-    const next = consultations.filter((item) => item.id !== id);
+    const next = consultations.filter((record) => record.id !== id);
     setConsultations(next);
     persist("consultations", next);
+    if (!item?.tmdbId) return;
+    rememberDeletedTmdbId(item);
+    fetch("/api/tmdb/watchlist", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mediaId: item.tmdbId, mediaType: item.tmdbMediaType || (item.type === "电影" ? "movie" : "tv") }),
+    }).catch(() => {});
   }
 
   function editConsultation(item) {
