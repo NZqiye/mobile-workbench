@@ -105,11 +105,21 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .day-line { display: flex; align-items: center; gap: 8px; padding: 10px 16px 8px; color: #9e8090; font-size: 14px; }
 .content { display: grid; gap: 16px; align-content: start; padding: 14px 14px 24px; }
 .hero-card, .panel, .stat-card, .market-panel, .dashboard-tile { border-radius: var(--r); background: var(--panel); box-shadow: var(--shadow); }
-.today-time-panel { display: grid; justify-items: center; gap: 8px; padding: 14px 12px 22px; border-radius: 0 0 18px 18px; background:
-    radial-gradient(circle at 15% 18%, rgba(255, 255, 255, 0.22), transparent 32%),
+.today-time-panel { position: relative; display: flex; align-items: center; justify-content: center; gap: 18px; padding: 18px 20px; border-radius: 0 0 18px 18px; overflow: hidden; background:
+    radial-gradient(circle at 15% 18%, rgba(255, 255, 255, 0.18), transparent 32%),
+    radial-gradient(circle at 85% 70%, color-mix(in srgb, var(--theme-accent) 24%, transparent), transparent 48%),
     linear-gradient(135deg, var(--theme-deep) 0, var(--theme-main) 54%, var(--theme-warm) 78%, var(--theme-accent) 100%); color: #fff; text-align: center; box-shadow: var(--shadow-strong); }
-.today-time-panel strong { font-size: 42px; font-weight: 300; line-height: 1; letter-spacing: 2px; }
-.today-time-panel span { color: rgba(255, 255, 255, 0.82); font-size: 13px; font-weight: 700; }
+.clock-dial { flex: 0 0 auto; width: 84px; height: 84px; overflow: visible; filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.28)); }
+.clock-dial-ring { fill: color-mix(in srgb, #fff 8%, transparent); stroke: color-mix(in srgb, var(--theme-accent) 64%, #fff); stroke-width: 2; }
+.clock-tick { stroke: color-mix(in srgb, #fff 58%, transparent); stroke-width: 1.6; stroke-linecap: round; }
+.clock-tick-major { stroke: color-mix(in srgb, var(--theme-accent) 88%, #fff); stroke-width: 2.4; }
+.clock-hour-hand { stroke: color-mix(in srgb, #fff 94%, var(--theme-accent)); stroke-width: 4.5; stroke-linecap: round; }
+.clock-minute-hand { stroke: color-mix(in srgb, #fff 82%, var(--theme-accent)); stroke-width: 3; stroke-linecap: round; }
+.clock-second-hand { stroke: color-mix(in srgb, var(--theme-accent) 92%, #fff); stroke-width: 1.8; stroke-linecap: round; }
+.clock-center { fill: color-mix(in srgb, var(--theme-accent) 92%, #fff); }
+.clock-copy { display: grid; gap: 6px; min-width: 0; text-align: left; }
+.today-time-panel strong { font-size: 32px; font-weight: 300; line-height: 1; letter-spacing: 1px; }
+.today-time-panel span { color: rgba(255, 255, 255, 0.88); font-size: 13px; font-weight: 700; }
 .today-time-panel small { color: rgba(255, 255, 255, 0.72); font-size: 12px; }
 .daily-quote-card { display: grid; gap: 12px; padding: 17px 15px; border: 1px solid var(--line); border-radius: var(--r); background: color-mix(in srgb, var(--panel) 94%, var(--theme-soft)); box-shadow: var(--shadow); }
 .daily-quote-card h2 { margin: 0; font-size: 18px; }
@@ -943,7 +953,7 @@ textarea { resize: vertical; }
   .desktop-shell .content { overflow: auto; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 18px; align-content: start; padding: 22px 28px 34px; }
   .desktop-shell .content > * { grid-column: span 6; }
   .desktop-shell.page-today .content { grid-template-rows: auto; }
-  .desktop-shell.page-today .today-time-panel { grid-column: span 5; min-height: 210px; align-content: center; border-radius: var(--r); }
+  .desktop-shell.page-today .today-time-panel { grid-column: span 5; min-height: 180px; justify-content: center; border-radius: var(--r); }
   .desktop-shell.page-today .weather-panel { grid-column: span 7; }
   .desktop-shell.page-today .daily-quote-card { grid-column: span 5; align-content: center; }
   .desktop-shell.page-today .dashboard-strip { grid-column: span 7; grid-template-columns: 1.2fr 0.8fr; }
@@ -1029,26 +1039,22 @@ textarea { resize: vertical; }
 .file-row span { color: var(--muted); font-size: 12px; font-weight: 700; }
 .file-row input { padding: 0; border: 0; background: transparent; }
 .pony-theme-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.pony-theme-card { --pony-primary: #b4232c; --pony-accent: #c98a2c; display: grid; grid-template-columns: 42px 1fr auto; gap: 4px 10px; align-items: center; min-height: 78px; padding: 11px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: linear-gradient(180deg, #fff, #fff8f4); text-align: left; }
+.pony-theme-card { --pony-primary: #b4232c; display: grid; grid-template-columns: 42px 1fr auto; gap: 4px 10px; align-items: center; min-height: 78px; padding: 11px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: linear-gradient(180deg, #fff, #fff8f4); text-align: left; }
 .pony-theme-card.active { border-color: var(--theme-accent); background: linear-gradient(180deg, #fff8ee, #fff); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 55%, transparent), var(--shadow); }
 .pony-theme-card strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
 .pony-theme-card small { grid-column: 2 / 4; color: var(--muted); font-size: 12px; }
 .pony-theme-card > span:last-child { display: flex; gap: 4px; justify-self: end; align-self: start; }
 .pony-theme-card i { width: 10px; height: 10px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08); }
-.theme-rmb { --pony-primary: #b4232c; --pony-accent: #c98a2c; }
-.theme-gold { --pony-primary: #a45f16; --pony-accent: #d6a23a; }
-.theme-ink { --pony-primary: #3a2024; --pony-accent: #b7791f; }
-.theme-jade { --pony-primary: #16645a; --pony-accent: #c99a3a; }
-.theme-blue { --pony-primary: #285980; --pony-accent: #b88a37; }
-.theme-pine { --pony-primary: #255f3e; --pony-accent: #c98a2c; }
+.theme-rmb { --pony-primary: #b4232c; }
+.theme-gold { --pony-primary: #a45f16; }
+.theme-ink { --pony-primary: #3a2024; }
+.theme-jade { --pony-primary: #16645a; }
+.theme-blue { --pony-primary: #285980; }
+.theme-pine { --pony-primary: #255f3e; }
 .pony-mark { width: 40px; height: 40px; color: var(--pony-primary, var(--theme-main)); overflow: visible; }
 .pony-mark.compact { width: 38px; height: 38px; }
 .avatar-mark .pony-mark { width: 42px; height: 42px; }
-.pony-body, .pony-face, .pony-neck { fill: currentColor; }
-.pony-mane { fill: var(--pony-accent, var(--theme-accent)); opacity: 0.92; }
-.pony-ear { fill: var(--pony-accent, var(--theme-accent)); }
-.pony-eye { fill: #211719; }
-.pony-nose, .pony-shine { fill: none; stroke: #fff7e8; stroke-width: 2.8; stroke-linecap: round; opacity: 0.9; }
+.pony-body { fill: currentColor; }
 .cultivation-avatar { display: block; width: 48px; height: 48px; border-radius: 50%; object-fit: cover; object-position: 50% 50%; box-shadow: 0 0 0 1px rgba(255, 244, 222, 0.55), 0 0 14px rgba(111, 243, 201, 0.28); }
 
 .ui-icon { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
@@ -1260,8 +1266,8 @@ textarea { resize: vertical; }
 
 .desktop-shell.page-today .today-time-panel {
   grid-column: span 5;
-  min-height: 210px;
-  align-content: center;
+  min-height: 180px;
+  justify-content: center;
   border-radius: var(--r);
 }
 
@@ -1680,4 +1686,822 @@ textarea { resize: vertical; }
 .weather-outfit-tip small { color: var(--muted); font-size: 12px; line-height: 1.4; }
 @media (max-width: 520px) {
   .weather-outfit-tip { align-items: flex-start; flex-direction: column; }
+}
+
+/* 七夜online native-app layer */
+:root {
+  color-scheme: dark;
+  --page: #0f1c1a;
+  --surface: #0f1f1c;
+  --panel: rgba(255, 255, 255, 0.07);
+  --panel-2: #0b1816;
+  --ink: #eaf4ef;
+  --muted: #a8c1bc;
+  --line: rgba(255, 255, 255, 0.1);
+  --soft: #16352f;
+  --blue: #e0bd71;
+  --cyan: #e6c87a;
+  --green: #58d6a6;
+  --red: #ff8f86;
+  --amber: #e5b96b;
+  --shadow: 0 2px 12px rgba(0, 24, 12, 0.14), 0 18px 34px -28px rgba(0, 24, 12, 0.42);
+  --shadow-strong: 0 26px 60px -36px rgba(0, 20, 12, 0.55);
+}
+
+html {
+  background: #081311;
+}
+
+body {
+  min-height: 100dvh;
+  overscroll-behavior-y: contain;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  touch-action: manipulation;
+  background:
+    radial-gradient(760px 420px at 50% -10%, rgba(224, 189, 113, 0.1), transparent 62%),
+    linear-gradient(180deg, #0f211d, #081311 78%);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, a, .panel, .hero-card, .stat-card, .market-panel, .dashboard-tile, .daily-quote-card, .quick-action, .today-time-panel, .side-nav, .module-head, .empty, .tag, .chip-button, .mini-chip, .calendar-day, .week-day {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input, textarea, select {
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
+}
+
+.phone-shell {
+  border-inline-color: rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(560px 320px at 85% -10%, rgba(224, 189, 113, 0.13), transparent 62%),
+    linear-gradient(180deg, color-mix(in srgb, var(--theme-deep) 86%, #040606), color-mix(in srgb, var(--theme-main) 70%, #040606) 68%);
+  box-shadow: 0 40px 90px -58px rgba(0, 0, 0, 0.62);
+}
+
+.phone-shell.mobile-shell {
+  grid-template-rows: auto 1fr;
+}
+
+.phone-shell.mobile-shell .phone-status {
+  min-height: calc(58px + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+}
+
+.phone-status {
+  border-bottom-color: rgba(224, 184, 90, 0.16);
+  color: color-mix(in srgb, #fff 90%, var(--theme-main));
+  background: rgba(8, 19, 17, 0.78);
+}
+
+.phone-status strong,
+.phone-status span {
+  color: color-mix(in srgb, #fff 80%, var(--theme-main));
+}
+
+.menu-toggle {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: color-mix(in srgb, var(--theme-accent) 84%, #fff);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 22px -14px rgba(0, 12, 8, 0.8);
+}
+
+.work-area {
+  padding-bottom: calc(18px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(420px 220px at 82% -8%, rgba(224, 189, 113, 0.12), transparent 62%),
+    linear-gradient(180deg, color-mix(in srgb, var(--theme-deep) 84%, #040606), color-mix(in srgb, var(--theme-main) 60%, #040606));
+}
+
+.content {
+  gap: 16px;
+  padding: 16px 16px calc(28px + env(safe-area-inset-bottom));
+}
+
+.module-head {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 24px 50px -34px rgba(0, 14, 10, 0.8);
+}
+
+.module-head h1 {
+  color: color-mix(in srgb, var(--theme-accent) 76%, #fff);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+}
+
+.module-head p {
+  color: rgba(235, 243, 238, 0.78);
+}
+
+.module-icon,
+.date-pill {
+  border-color: rgba(255, 247, 224, 0.94);
+  color: color-mix(in srgb, var(--theme-accent) 82%, #fff);
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.95), transparent 24%),
+    linear-gradient(145deg, color-mix(in srgb, var(--theme-accent) 86%, #fff), color-mix(in srgb, var(--theme-accent) 62%, #3a2a12));
+}
+
+.module-tabs button {
+  color: color-mix(in srgb, #fff 82%, var(--theme-main));
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.module-tabs button.active {
+  color: color-mix(in srgb, var(--theme-deep) 72%, #000);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 86%, #fff), color-mix(in srgb, var(--theme-accent) 62%, #3a2a12));
+  box-shadow: 0 10px 18px rgba(0, 16, 10, 0.28);
+}
+
+.hero-card, .panel, .stat-card, .market-panel, .dashboard-tile, .daily-quote-card {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    radial-gradient(120% 100px at 0 0, rgba(224, 189, 113, 0.08), transparent 46%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.055));
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 12px rgba(0, 24, 12, 0.12), 0 18px 34px -28px rgba(0, 18, 12, 0.5);
+}
+
+.panel {
+  padding: 16px;
+}
+
+.panel, .market-panel, .stat-card, .dashboard-tile, .daily-quote-card, .hero-card {
+  color: var(--ink);
+}
+
+.panel h2, .market-panel h2, .hero-card h2, .daily-quote-card h2, .news-card h2, .diet-card h2, .wear-card h2, .tmdb-recommendations .panel-head h2 {
+  color: color-mix(in srgb, var(--theme-accent) 82%, #fff);
+}
+
+.panel-head {
+  border-bottom: 1px solid rgba(224, 184, 90, 0.14);
+  padding-bottom: 12px;
+}
+
+.daily-quote-card strong {
+  color: color-mix(in srgb, var(--theme-accent) 76%, #fff);
+  font-size: 20px;
+  line-height: 1.5;
+}
+
+.today-time-panel {
+  position: relative;
+  isolation: isolate;
+  min-height: 148px;
+  overflow: hidden;
+  border: 1px solid rgba(224, 184, 90, 0.18);
+  border-radius: 0 0 24px 24px;
+  padding: 14px 18px;
+  background:
+    radial-gradient(130px 90px at 84% 10%, rgba(255, 224, 139, 0.2), transparent 62%),
+    linear-gradient(180deg, color-mix(in srgb, var(--theme-deep) 86%, #040606), color-mix(in srgb, var(--theme-main) 70%, #040606) 58%, color-mix(in srgb, var(--theme-deep) 80%, #040606));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 28px 56px -34px rgba(0, 18, 11, 0.75);
+}
+
+.today-time-panel > * { position: relative; z-index: 2; }
+.today-time-panel strong {
+  color: #fff;
+  font-size: 34px;
+  font-weight: 300;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.3);
+}
+.today-time-panel span {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 13px;
+  font-weight: 700;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.2);
+}
+
+.today-time-panel small {
+  color: rgba(235, 243, 238, 0.72);
+  text-shadow: 0 1px 8px rgba(0, 8, 6, 0.5);
+}
+
+.quick-grid {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.quick-grid::-webkit-scrollbar {
+  display: none;
+}
+
+.quick-action {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 146px;
+  min-height: 48px;
+  padding: 0 44px 0 10px;
+  border: 1px solid rgba(224, 184, 90, 0.24);
+  border-radius: 16px;
+  background:
+    radial-gradient(84px 54px at 12% 0, rgba(224, 189, 113, 0.2), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.055));
+  color: color-mix(in srgb, #fff 88%, var(--theme-main));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 10px 22px -18px rgba(0, 18, 10, 0.7);
+}
+
+.quick-action:hover {
+  background:
+    radial-gradient(84px 54px at 12% 0, rgba(224, 189, 113, 0.28), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.07));
+}
+
+.quick-action > span:not(.quick-action-icon) {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.quick-action-icon {
+  width: 34px;
+  height: 34px;
+  border-color: rgba(255, 247, 224, 0.94);
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.95), transparent 26%),
+    linear-gradient(145deg, color-mix(in srgb, var(--theme-accent) 88%, #fff), color-mix(in srgb, var(--theme-accent) 60%, #3a2a12));
+  box-shadow: 0 6px 0 rgba(20, 32, 24, 0.16), 0 10px 18px rgba(0, 16, 10, 0.2);
+}
+
+.quote-row, .record, .timeline-row, .habit-row, .task-row, .check-row, .anniversary-section, .anniversary-card, .calendar-day, .weather-forecast div, .watch-list-row, .tmdb-result, .file-row, .account-box {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.quote-row span, .record-head span, .record-meta, .timeline-row small, .task-row small, .anniversary-section-head span, .anniversary-empty, .week-day span, .weather-forecast span, .weather-forecast small, .watch-list-row small, .tmdb-result small, .file-row span, .account-box small {
+  color: color-mix(in srgb, #fff 64%, var(--theme-main));
+}
+
+.empty, .anniversary-empty {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  margin: 0;
+  padding: 18px 12px;
+  border: 1px dashed rgba(224, 184, 90, 0.22);
+  border-radius: 14px;
+  color: color-mix(in srgb, #fff 64%, var(--theme-main));
+  background: rgba(255, 255, 255, 0.035);
+  font-size: 13px;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.empty::before, .anniversary-empty::before {
+  content: "";
+  width: 52px;
+  height: 34px;
+  opacity: 0.7;
+  background:
+    radial-gradient(circle at 50% 84%, rgba(224, 184, 90, 0.7) 0 3px, transparent 4px),
+    linear-gradient(135deg, transparent 42%, rgba(224, 184, 90, 0.62) 43% 54%, transparent 55%),
+    linear-gradient(45deg, transparent 36%, rgba(137, 190, 167, 0.62) 37% 50%, transparent 51%);
+}
+
+.weather-panel, .weather-forecast div, .weather-main {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.weather-panel .weather-main strong {
+  color: color-mix(in srgb, var(--theme-accent) 76%, #fff);
+}
+
+.pomodoro-ring-svg {
+  color: color-mix(in srgb, var(--theme-accent) 80%, #fff);
+  filter: drop-shadow(0 0 16px rgba(224, 184, 90, 0.2));
+}
+
+.pomodoro-ring-svg text {
+  fill: color-mix(in srgb, var(--theme-accent) 82%, #fff);
+}
+
+.mini-chip {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: color-mix(in srgb, #fff 64%, var(--theme-main));
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.mini-chip.active {
+  border-color: rgba(255, 247, 224, 0.9);
+  color: color-mix(in srgb, var(--theme-deep) 72%, #000);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 88%, #fff), color-mix(in srgb, var(--theme-main) 72%, #000));
+  box-shadow: 0 8px 16px -8px rgba(224, 184, 90, 0.5);
+}
+
+.diet-shell, .news-shell, .wear-shell, .tmdb-feed {
+  background: transparent;
+}
+
+.diet-card, .news-card, .wear-card, .arrange-card, .watch-calendar, .tmdb-panel, .tmdb-recommendations, .watch-list-panel, .overview-panel {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: color-mix(in srgb, #fff 90%, var(--theme-main));
+  background:
+    radial-gradient(120% 100px at 0 0, rgba(224, 189, 113, 0.08), transparent 46%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 12px rgba(0, 24, 12, 0.12), 0 18px 34px -28px rgba(0, 18, 12, 0.5);
+}
+
+.watch-calendar .panel-head h2,
+.watch-title-row strong,
+.watch-time,
+.media-feed-title {
+  color: color-mix(in srgb, var(--theme-accent) 78%, #fff);
+}
+
+.watch-info p,
+.episode-line,
+.media-meta {
+  color: color-mix(in srgb, #fff 72%, var(--theme-main));
+}
+
+.watch-timeline::before {
+  border-left-color: rgba(224, 184, 90, 0.28);
+}
+
+.timeline-dot {
+  border-color: color-mix(in srgb, var(--theme-deep) 86%, #040606);
+  background: color-mix(in srgb, var(--theme-accent) 74%, #fff);
+  box-shadow: 0 0 0 2px rgba(224, 184, 90, 0.28);
+}
+
+.tmdb-poster, .poster-box, .watch-list-poster, .media-still, .media-poster-thumb {
+  background: linear-gradient(135deg, var(--theme-deep), var(--theme-main) 55%, var(--theme-accent));
+}
+
+.water-copy p, .diet-log-row span, .meal-form small, .outfit-tags span {
+  color: color-mix(in srgb, #fff 84%, var(--theme-main));
+}
+
+.water-actions button, .meal-tabs button, .meal-form, .water-target-form, .weather-outfit-tip, .outfit-tags span, .week-day, .calendar-day {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+input, textarea, select, .quick-note-bar {
+  border-color: rgba(255, 255, 255, 0.12);
+  color: color-mix(in srgb, #fff 90%, var(--theme-main));
+  background: rgba(255, 255, 255, 0.06);
+}
+
+input::placeholder, textarea::placeholder {
+  color: rgba(168, 193, 188, 0.62);
+}
+
+select option {
+  color: color-mix(in srgb, #fff 90%, var(--theme-main));
+  background: color-mix(in srgb, var(--theme-deep) 86%, #040606);
+}
+
+.side-nav {
+  border-right: 1px solid rgba(224, 184, 90, 0.18);
+  box-shadow: inset -1px 0 0 rgba(224, 184, 90, 0.14), 10px 0 24px rgba(0, 8, 6, 0.4);
+}
+
+.nav-item.active {
+  background: linear-gradient(145deg, #fff5df, #f3d792);
+  box-shadow: 0 12px 26px rgba(0, 14, 8, 0.34);
+}
+
+.nav-item.active small {
+  color: color-mix(in srgb, var(--theme-deep) 82%, #000);
+}
+
+@media (max-width: 860px) {
+  .phone-shell.desktop-shell {
+    grid-template-rows: auto 1fr;
+  }
+
+  .phone-shell.desktop-shell .phone-status {
+    min-height: calc(58px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* readability + market first-row tonal fixes */
+.weather-panel {
+  background:
+    radial-gradient(120% 100px at 0 0, color-mix(in srgb, var(--theme-accent) 12%, transparent), transparent 46%),
+    linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 92%, #050806), color-mix(in srgb, var(--theme-main) 90%, #040606));
+  border-color: color-mix(in srgb, var(--theme-main) 16%, transparent);
+}
+
+.weather-panel .weather-main {
+  border-color: color-mix(in srgb, var(--theme-main) 16%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, #fff 15%, transparent), color-mix(in srgb, #fff 8%, transparent));
+}
+
+.weather-panel .weather-main strong {
+  color: color-mix(in srgb, var(--theme-accent) 76%, #fff);
+}
+
+.weather-panel .weather-main span,
+.weather-panel .weather-main small,
+.weather-panel .panel-head p {
+  color: color-mix(in srgb, #fff 78%, var(--theme-main));
+}
+
+.weather-forecast div {
+  border-color: color-mix(in srgb, var(--theme-main) 14%, transparent);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+
+.weather-outfit-tip {
+  border-color: color-mix(in srgb, var(--theme-main) 14%, transparent);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+
+.quote-row.featured {
+  min-height: 104px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--ink);
+  background:
+    radial-gradient(120% 100px at 0 0, rgba(224, 189, 113, 0.1), transparent 46%),
+    linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 82%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+  box-shadow: 0 10px 24px -18px rgba(0, 20, 12, 0.6);
+}
+
+.quote-row.featured span {
+  color: color-mix(in srgb, #fff 64%, var(--theme-main));
+}
+
+.quote-row.featured strong,
+.quote-row.featured .quote-price strong {
+  color: color-mix(in srgb, #fff 90%, var(--theme-main));
+}
+
+.quote-row.featured .quote-price strong {
+  font-size: 18px;
+}
+
+.quote-row.featured .up,
+.quote-row.featured .down,
+.quote-row.featured .flat {
+  color: inherit;
+}
+
+.quote-row.featured .up {
+  color: var(--red);
+}
+
+.quote-row.featured .down {
+  color: var(--green);
+}
+
+.quote-row.featured .flat {
+  color: var(--muted);
+}
+
+/* fix: reduce transparency, increase text contrast across all pages */
+.fund-summary div {
+  border-color: rgba(255, 255, 255, 0.18);
+  background:
+    radial-gradient(120% 100px at 0 0, rgba(224, 189, 113, 0.1), transparent 46%),
+    linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+  backdrop-filter: blur(12px);
+}
+.fund-summary span { color: color-mix(in srgb, #fff 64%, var(--theme-main)); }
+.fund-summary strong { color: color-mix(in srgb, #fff 90%, var(--theme-main)); }
+.fund-summary small { color: color-mix(in srgb, #fff 56%, var(--theme-main)); }
+
+.fund-row {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+.fund-metrics div {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+}
+.fund-metrics span, .fund-metrics small { color: color-mix(in srgb, #fff 56%, var(--theme-main)); }
+.fund-metrics strong { color: color-mix(in srgb, #fff 90%, var(--theme-main)); }
+
+.fund-trade-panel {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 70%, #040606));
+}
+.fund-mode-tabs {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: color-mix(in srgb, var(--theme-deep) 82%, #050806);
+}
+.fund-mode-tabs button { color: color-mix(in srgb, #fff 64%, var(--theme-main)); }
+.fund-mode-tabs button.active {
+  color: color-mix(in srgb, var(--theme-deep) 72%, #000);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 88%, #fff), color-mix(in srgb, var(--theme-main) 72%, #000));
+}
+
+.index-track-card {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+.index-track-card h3 { color: color-mix(in srgb, #fff 90%, var(--theme-main)); }
+.index-track-metrics p { color: color-mix(in srgb, #fff 78%, var(--theme-main)); }
+.index-track-metrics b { color: color-mix(in srgb, #fff 90%, var(--theme-main)); }
+.index-note {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: color-mix(in srgb, var(--theme-deep) 82%, #050806);
+}
+.index-note strong { color: color-mix(in srgb, var(--theme-accent) 82%, #fff); }
+.index-note span { color: color-mix(in srgb, #fff 64%, var(--theme-main)); }
+
+.quote-row {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+.quote-row strong { color: color-mix(in srgb, #fff 90%, var(--theme-main)); }
+.quote-row span { color: color-mix(in srgb, #fff 64%, var(--theme-main)); }
+.quote-price strong { color: color-mix(in srgb, #fff 90%, var(--theme-main)); }
+
+.record, .timeline-row, .check-row {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+.record p, .record .record-head span, .record .record-meta { color: color-mix(in srgb, #fff 78%, var(--theme-main)); }
+.timeline-row strong { color: color-mix(in srgb, #fff 90%, var(--theme-main)); }
+.timeline-row span { color: var(--theme-main); }
+
+.dashboard-tile {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+.dashboard-tile span { color: color-mix(in srgb, #fff 64%, var(--theme-main)); }
+.dashboard-tile strong { color: color-mix(in srgb, #fff 90%, var(--theme-main)); }
+.dashboard-tile small { color: color-mix(in srgb, #fff 56%, var(--theme-main)); }
+.dashboard-tile-primary {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 72%, #040606));
+}
+.dashboard-tile-primary strong { color: color-mix(in srgb, var(--theme-accent) 82%, #fff); }
+
+.stat-card {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+.stat-card span { color: color-mix(in srgb, #fff 64%, var(--theme-main)); }
+
+.weather-panel .weather-main {
+  border-color: color-mix(in srgb, var(--theme-main) 16%, transparent);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+.weather-panel .weather-main span,
+.weather-panel .weather-main small { color: color-mix(in srgb, #fff 78%, var(--theme-main)); }
+.weather-forecast div {
+  border-color: color-mix(in srgb, var(--theme-main) 14%, transparent);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+.weather-forecast span, .weather-forecast small { color: color-mix(in srgb, #fff 78%, var(--theme-main)); }
+.weather-forecast strong { color: color-mix(in srgb, #fff 90%, var(--theme-main)); }
+
+.mini-chip {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: color-mix(in srgb, var(--theme-deep) 78%, #050806);
+  color: color-mix(in srgb, #fff 78%, var(--theme-main));
+}
+.mini-chip.active {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 88%, #fff), color-mix(in srgb, var(--theme-main) 72%, #000));
+  color: color-mix(in srgb, var(--theme-deep) 72%, #000);
+  border-color: rgba(255, 247, 224, 0.9);
+}
+
+.habit-row, .task-row {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+.habit-row span, .task-row span { color: color-mix(in srgb, #fff 90%, var(--theme-main)); }
+.habit-row small, .task-row small { color: color-mix(in srgb, #fff 64%, var(--theme-main)); }
+
+.anniversary-section {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+.anniversary-card {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+.anniversary-card strong { color: color-mix(in srgb, #fff 90%, var(--theme-main)); }
+.anniversary-card span, .anniversary-card small { color: color-mix(in srgb, #fff 64%, var(--theme-main)); }
+
+.calendar-day strong { color: color-mix(in srgb, #fff 90%, var(--theme-main)); }
+.calendar-day span { color: color-mix(in srgb, #fff 64%, var(--theme-main)); }
+
+.meal-tabs button {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: color-mix(in srgb, var(--theme-deep) 78%, #050806);
+  color: color-mix(in srgb, #fff 64%, var(--theme-main));
+}
+.meal-tabs button.active {
+  background: linear-gradient(135deg, var(--theme-main), var(--theme-accent));
+  color: #fff;
+}
+
+.habit-row, .task-row {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.check-row {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.calendar-day {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.quote-row {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.record {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.timeline-row {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.anniversary-card {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.watch-list-row {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.tmdb-result {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.fund-row {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.fund-trade-panel {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.index-track-card {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.dashboard-tile {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.dashboard-tile-primary {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.stat-card {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.weather-panel .weather-main {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.weather-forecast div {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.skill-card {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.news-row {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: transparent !important;
+}
+
+.wear-forecast div {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.water-actions button {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+  color: color-mix(in srgb, #fff 90%, var(--theme-main));
+}
+.meal-tabs button {
+  background: color-mix(in srgb, var(--theme-deep) 82%, #050806) !important;
+  color: color-mix(in srgb, #fff 64%, var(--theme-main));
+}
+.meal-tabs button.active {
+  background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)) !important;
+  color: #fff;
+}
+.outfit-main {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.outfit-tags span {
+  background: rgba(224, 189, 113, 0.1) !important;
+  color: color-mix(in srgb, var(--theme-accent) 82%, #fff) !important;
+  border-color: rgba(224, 189, 113, 0.2) !important;
+}
+.watch-calendar {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.tmdb-recommendations {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.anniversary-section {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.arrange-card {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.wear-card {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.news-card {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.diet-card {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)) !important;
+}
+.fund-select-list {
+  background: color-mix(in srgb, var(--theme-deep) 86%, #050806) !important;
+}
+.fund-select-list button:not(.active) {
+  background: transparent !important;
+  color: color-mix(in srgb, #fff 90%, var(--theme-main)) !important;
+}
+.fund-select-list button.active {
+  background: rgba(224, 189, 113, 0.12) !important;
+  color: var(--theme-main) !important;
+}
+.recommendation-menu-list {
+  background: color-mix(in srgb, var(--theme-deep) 86%, #050806) !important;
+}
+.recommendation-menu-list button {
+  color: color-mix(in srgb, #fff 90%, var(--theme-main)) !important;
+}
+.recommendation-menu-list button.active {
+  background: rgba(224, 189, 113, 0.12) !important;
+}
+
+.water-actions button {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 82%, #050806), color-mix(in srgb, var(--theme-main) 66%, #040606));
+  color: color-mix(in srgb, #fff 90%, var(--theme-main));
+}
+
+.news-row strong { color: color-mix(in srgb, #fff 90%, var(--theme-main)); }
+.news-row small { color: color-mix(in srgb, #fff 64%, var(--theme-main)); }
+
+.skill-card {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+  color: color-mix(in srgb, #fff 90%, var(--theme-main));
+}
+.skill-card small { color: color-mix(in srgb, #fff 64%, var(--theme-main)); }
+.skill-card.active {
+  border-color: rgba(224, 189, 113, 0.3);
+  background: linear-gradient(145deg, rgba(30, 56, 48, 0.92), color-mix(in srgb, var(--theme-main) 72%, #040606));
+}
+
+.watch-list-row {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+.watch-list-row strong { color: color-mix(in srgb, #fff 90%, var(--theme-main)); }
+.watch-list-row small { color: color-mix(in srgb, #fff 64%, var(--theme-main)); }
+.watch-list-row button {
+  color: color-mix(in srgb, var(--theme-accent) 82%, #fff);
+  background: rgba(224, 189, 113, 0.1);
+  border-color: rgba(224, 189, 113, 0.2);
+}
+
+.tmdb-result {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+.tmdb-result strong { color: color-mix(in srgb, #fff 90%, var(--theme-main)); }
+.tmdb-result small { color: color-mix(in srgb, #fff 64%, var(--theme-main)); }
+
+.tmdb-panel {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+
+/* override original hardcoded light backgrounds */
+.habit-row, .task-row, .check-row, .calendar-day,
+.quote-row, .record, .timeline-row, .fund-summary div,
+.fund-row, .fund-trade-panel, .index-track-card, .index-note,
+.dashboard-tile, .dashboard-tile-primary, .stat-card,
+.weather-panel .weather-main, .weather-forecast div,
+.pomodoro-panel, .news-row, .skill-card, .watch-list-row,
+.tmdb-result, .tmdb-panel, .tmdb-recommendations,
+.anniversary-section, .anniversary-card,
+.weather-outfit-tip, .outfit-main, .outfit-tags span,
+.water-actions button, .meal-tabs button,
+.wear-forecast div, .wear-card, .news-card, .diet-card,
+.arrange-card, .watch-calendar,
+.fund-select-list button:not(.active),
+.recommendation-menu-list button {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+
+.water-actions button, .meal-tabs button,
+.wear-forecast div {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 82%, #050806), color-mix(in srgb, var(--theme-main) 66%, #040606));
+  color: color-mix(in srgb, #fff 90%, var(--theme-main));
 }

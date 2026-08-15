@@ -563,22 +563,15 @@ function AnimeNavIcon({ name }) {
 
 function PonyMark({ theme = "rmb", compact = false }) {
   return (
-    <svg className={compact ? "pony-mark compact" : "pony-mark"} viewBox="0 0 64 64" aria-hidden="true">
-      <path className="pony-mane" d="M16 22c2-9 10-15 21-15 7 0 13 2 18 7-5 0-8 2-10 5 6 2 9 8 8 15-1 12-12 22-26 22-8 0-15-3-19-8 8 1 14-1 17-5-7-2-11-7-11-14 0-3 1-5 2-7z" />
-      <path className="pony-body" d="M15 35c0-11 8-20 20-20 11 0 19 8 19 19 0 12-9 22-22 22-11 0-17-6-17-21z" />
-      <path className="pony-neck" d="M17 37c-5 4-7 10-6 17h8c0-5 2-9 5-12z" />
-      <path className="pony-ear" d="M31 14 36 4l5 11z" />
-      <path className="pony-face" d="M38 24c6 0 12 5 12 12 0 8-6 14-14 14-7 0-13-5-13-13 0-7 6-13 15-13z" />
-      <circle className="pony-eye" cx="42" cy="34" r="2.4" />
-      <path className="pony-nose" d="M47 41c-2 2-5 2-7 0" />
-      <path className="pony-shine" d="M24 22c3-5 8-8 14-8" />
+    <svg className={compact ? "pony-mark compact" : "pony-mark"} viewBox="0 0 24 24" aria-hidden="true">
+      <path className="pony-body" d="M22 6v3.5l-1.5.5l-1.54-2.46c-.13-.21-.46-.12-.46.13v3.58c0 .98-.39 1.86-1 2.53V21H15v-6h-.25c-.21 0-.42-.03-.62-.06l-4.44-.74l-1.12 2.01l.96 4.79H7l-1-4.75c-.03-.3 0-.6.16-.86l1.02-1.81a3.27 3.27 0 0 1-1.68-2.77c-.04.15-.06.37-.03.69c.03.44.14 1.09.07 1.81c-.04.72-.37 1.46-.79 1.95c-.43.49-.9.83-1.4 1.09l-.7-.7c.19-.47.38-.89.42-1.28c.06-.37-.01-.67-.12-.94l-.53-1.13c-.21-.51-.47-1.25-.42-2.12c.03-.85.5-1.96 1.39-2.57c.9-.61 1.87-.69 2.66-.53c.5.1 1.01.34 1.45.68c.37-.17.8-.26 1.25-.26h5.75V7c0-2.21 1.79-4 4-4H22l-.89 1.34c.54.36.89.97.89 1.66" />
     </svg>
   );
 }
 
 function CultivationAvatar() {
   return (
-    <img className="cultivation-avatar" src="/avatar-cultivation.png" alt="" />
+    <img className="cultivation-avatar" src="/avatar-cultivation.webp" alt="" loading="lazy" />
   );
 }
 
@@ -1662,11 +1655,57 @@ function NewsBoard() {
 }
 
 function TodayTimePanel({ clock = "--:--:--" }) {
+  const [hour, minute, second] = String(clock || "").split(":").map(Number);
+  const safeHour = Number.isFinite(hour) ? hour % 12 : 0;
+  const safeMinute = Number.isFinite(minute) ? minute : 0;
+  const safeSecond = Number.isFinite(second) ? second : 0;
+
   return (
     <section className="today-time-panel" aria-label="今日时间">
-      <strong>{clock}</strong>
-      <span>{visibleTodayDisplay(clock)}</span>
-      <small>七夜online · 今日速递</small>
+      <svg className="clock-dial" viewBox="0 0 100 100" aria-hidden="true">
+        <circle className="clock-dial-ring" cx="50" cy="50" r="45" />
+        {Array.from({ length: 12 }, (_, index) => (
+          <line
+            key={index}
+            className={index % 3 === 0 ? "clock-tick clock-tick-major" : "clock-tick"}
+            x1="50"
+            y1="9"
+            x2="50"
+            y2="15"
+            transform={`rotate(${index * 30} 50 50)`}
+          />
+        ))}
+        <line
+          className="clock-hour-hand"
+          x1="50"
+          y1="50"
+          x2="50"
+          y2="31"
+          transform={`rotate(${safeHour * 30 + safeMinute * 0.5} 50 50)`}
+        />
+        <line
+          className="clock-minute-hand"
+          x1="50"
+          y1="50"
+          x2="50"
+          y2="22"
+          transform={`rotate(${safeMinute * 6 + safeSecond * 0.1} 50 50)`}
+        />
+        <line
+          className="clock-second-hand"
+          x1="52"
+          y1="58"
+          x2="50"
+          y2="18"
+          transform={`rotate(${safeSecond * 6} 50 50)`}
+        />
+        <circle className="clock-center" cx="50" cy="50" r="3.2" />
+      </svg>
+      <div className="clock-copy">
+        <strong>{clock}</strong>
+        <span>{visibleTodayDisplay(clock)}</span>
+        <small>七夜online · 今日速递</small>
+      </div>
     </section>
   );
 }
@@ -3636,7 +3675,7 @@ export default function Workbench() {
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [displayMode, setDisplayMode] = useState("mobile");
-  const [ponyTheme, setPonyTheme] = useState("rmb");
+  const [ponyTheme, setPonyTheme] = useState("jade");
   const [tmdbResults, setTmdbResults] = useState([]);
   const [tmdbStatus, setTmdbStatus] = useState("输入剧名搜索，点击结果即可加入观影列表");
   const [tmdbSections, setTmdbSections] = useState([]);
@@ -3853,7 +3892,7 @@ export default function Workbench() {
     const forcedWebMode = searchParams.has("web") || searchParams.get("mode") === "web";
     setDisplayMode(forcedWebMode || savedDisplayMode === "desktop" || (!savedDisplayMode && window.innerWidth >= 960) ? "desktop" : "mobile");
     if (forcedWebMode) localStorage.setItem(key("displayMode"), "desktop");
-    setPonyTheme(ponyThemes.some((theme) => theme.id === localStorage.getItem(key("ponyTheme"))) ? localStorage.getItem(key("ponyTheme")) : "rmb");
+    setPonyTheme(ponyThemes.some((theme) => theme.id === localStorage.getItem(key("ponyTheme"))) ? localStorage.getItem(key("ponyTheme")) : "jade");
     setClock(clockText());
     loadTmdbRecommendations();
     const timer = setInterval(() => setClock(clockText()), 1000);
