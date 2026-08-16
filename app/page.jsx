@@ -24,6 +24,13 @@ const pageDescriptions = {
   consultations: "观影清单、想法和资料整理",
   settings: "账号同步、备份恢复和自选配置",
 };
+const defaultPetSupplies = { bone: 0, water: 0, toy: 0, stick: 0 };
+const petSupplyItems = [
+  { id: "bone", label: "小蛋糕", icon: "🍰", action: "胖咕嘎收到了小蛋糕，开心地蹦了一下。" },
+  { id: "water", label: "奶茶", icon: "🧋", action: "胖咕嘎喝了奶茶，精神更好了。" },
+  { id: "toy", label: "摸摸头", icon: "🤲", action: "胖咕嘎被摸摸头，乖乖地晃了晃。" },
+  { id: "stick", label: "电影票", icon: "🎟️", action: "胖咕嘎收下电影票，开心地挥手。" },
+];
 const ponyThemes = [
   { id: "rmb", name: "赤焰", note: "100元红金", primary: "#b4232c", accent: "#c98a2c" },
   { id: "gold", name: "鎏金", note: "金色暖调", primary: "#a45f16", accent: "#d6a23a" },
@@ -1043,12 +1050,35 @@ function StatButton({ label, value, onClick }) {
   );
 }
 
-function QuickAction({ label, icon, onClick }) {
+function PetCompanionCard({ supplies, action, onUse }) {
   return (
-    <button className="quick-action" type="button" onClick={onClick}>
-      <span className="quick-action-icon"><AnimeNavIcon name={icon} /></span>
-      <span>{label}</span>
-    </button>
+    <section className={`dashboard-tile dashboard-tile-primary pet-card pet-action-${action.type}`} aria-label="宠物陪伴">
+      <div className="pet-card-head">
+        <div>
+          <span>宠物陪伴</span>
+          <strong>胖咕嘎</strong>
+        </div>
+        <small>{action.text}</small>
+      </div>
+      <div className="pet-stage" aria-hidden="true">
+        <div className="codex-pet-stage">
+          <i className="codex-pet-sprite" />
+          <i className="codex-pet-prop bone" />
+          <i className="codex-pet-prop water" />
+          <i className="codex-pet-prop toy" />
+          <i className="codex-pet-prop stick" />
+        </div>
+      </div>
+      <div className="pet-supplies">
+        {petSupplyItems.map((item) => (
+          <button type="button" key={item.id} onClick={() => onUse(item.id)} disabled={!supplies[item.id]}>
+            <span>{item.icon}</span>
+            <strong>{supplies[item.id] || 0}</strong>
+            <small>{item.label}</small>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -2855,6 +2885,8 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
         </div>
       </section>
 
+      <PomodoroTimer />
+
       <section className="arrange-card">
         <div className="panel-head">
           <div>
@@ -3704,6 +3736,8 @@ export default function Workbench() {
   const [tmdbRecommendationStatus, setTmdbRecommendationStatus] = useState("正在准备电影和电视剧片单");
   const [consultationView, setConsultationView] = useState("today");
   const [marketView, setMarketView] = useState("stocks");
+  const [petSupplies, setPetSupplies] = useState(defaultPetSupplies);
+  const [petAction, setPetAction] = useState({ type: "idle", text: "摸着肚子等你投喂。" });
 
   function persist(name, value) {
     const nextValue = syncedCollections.includes(name) && Array.isArray(value) ? stampItems(value) : value;
@@ -3908,6 +3942,7 @@ export default function Workbench() {
     setWaterTarget(readStorage("waterTarget", defaultWaterTarget));
     setHabits(readStorage("habits", readStorage("checkins", [])));
     setDone(readStorage(`done:${todayKey()}`, {}));
+    setPetSupplies({ ...defaultPetSupplies, ...readStorage("petSupplies", defaultPetSupplies) });
     setAssetInput(normalizeSavedAssets(localStorage.getItem(key("assets"))));
     const savedDisplayMode = localStorage.getItem(key("displayMode"));
     const searchParams = new URLSearchParams(window.location.search);
@@ -3939,6 +3974,14 @@ export default function Workbench() {
     refreshTmdbTrackedItems({ automatic: true });
   }, [activePage, consultations.length]);
 
+  useEffect(() => {
+    if (petAction.type === "idle") return;
+    const timer = setTimeout(() => {
+      setPetAction({ type: "idle", text: "摸着肚子等你投喂。" });
+    }, 2400);
+    return () => clearTimeout(timer);
+  }, [petAction.type, petAction.text]);
+
   const stats = useMemo(() => {
     const finishedHabits = habits.filter((item) => done[item.id]).length;
     const todayPlans = plans.filter((plan) => plan.date === todayKey());
@@ -3946,6 +3989,7 @@ export default function Workbench() {
     return {
       checkin: `${finishedHabits}/${habits.length}`,
       plans: `${finishedPlans}/${todayPlans.length}`,
+      pendingTasks: plans.filter((plan) => plan.status !== "已完成").length,
       notes: `${notes.length} 条`,
       dietToday: dietRecords.filter((item) => item.date === todayKey()).length,
       consultations: consultations.filter((item) => item.status !== "已归档").length,
@@ -3972,6 +4016,36 @@ export default function Workbench() {
   function changePonyTheme(theme) {
     setPonyTheme(theme);
     localStorage.setItem(key("ponyTheme"), theme);
+  }
+
+  function changePetSupply(type, amount, actionText, actionType = type) {
+    setPetSupplies((current) => {
+      const next = {
+        ...defaultPetSupplies,
+        ...current,
+        [type]: Math.max(0, Number(current[type] || 0) + amount),
+      };
+      writeStorage("petSupplies", next);
+      return next;
+    });
+    setPetAction({ type: actionType, text: actionText });
+  }
+
+  function rewardPetOnce(rewardId, type, amount, actionText) {
+    const history = readStorage("petRewardHistory", {});
+    if (history[rewardId]) return;
+    writeStorage("petRewardHistory", { ...history, [rewardId]: nowText() });
+    changePetSupply(type, amount, actionText, "reward");
+  }
+
+  function usePetSupply(type) {
+    const item = petSupplyItems.find((entry) => entry.id === type);
+    if (!item) return;
+    if (!petSupplies[type]) {
+      setPetAction({ type: "idle", text: `${item.label}还没有库存，先完成对应日常吧。` });
+      return;
+    }
+    changePetSupply(type, -1, item.action, type);
   }
 
   async function loadTmdbRecommendations() {
@@ -4141,6 +4215,7 @@ export default function Workbench() {
 
   function addWater(cups) {
     const amount = cups * cupSize;
+    const cupCount = Math.max(1, Math.round(Number(cups) || 1));
     const next = [{
       id: crypto.randomUUID(),
       type: "water",
@@ -4150,6 +4225,7 @@ export default function Workbench() {
       time: clock.slice(0, 5),
     }, ...dietRecords];
     saveDietRecords(next);
+    changePetSupply("water", cupCount, `奶茶 +${cupCount}，胖咕嘎跟你互动了一下。`, "water");
   }
 
   function saveWaterTarget(value) {
@@ -4184,9 +4260,11 @@ export default function Workbench() {
   }
 
   function toggleHabit(id) {
+    const completed = !done[id];
     const next = { ...done, [id]: !done[id] };
     setDone(next);
     persist(`done:${todayKey()}`, next);
+    if (completed) rewardPetOnce(`habit:${todayKey()}:${id}`, "bone", 1, "打卡完成，小蛋糕 +1。");
   }
 
   function deleteHabit(id) {
@@ -4245,9 +4323,12 @@ export default function Workbench() {
   }
 
   function togglePlan(id) {
+    const target = plans.find((plan) => plan.id === id);
+    const completed = target?.status !== "已完成";
     const next = plans.map((plan) => plan.id === id ? { ...plan, status: plan.status === "已完成" ? "未完成" : "已完成" } : plan);
     setPlans(next);
     persist("plans", next);
+    if (completed) rewardPetOnce(`task:${id}`, "toy", 1, "完成一个任务，摸摸头 +1。");
   }
 
   function deletePlan(id) {
@@ -4297,11 +4378,15 @@ export default function Workbench() {
   }
 
   function saveConsultation(item) {
+    const oldItem = consultations.find((record) => record.id === item.id);
     const next = dedupeConsultations(consultations.some((record) => record.id === item.id)
       ? mapItemsById(consultations, item.id, () => item)
       : [item, ...consultations]);
     setConsultations(next);
     persist("consultations", next);
+    if (item.status === "看过的剧" && oldItem?.status !== "看过的剧") {
+      rewardPetOnce(`watch:${item.id}`, "stick", 1, "看完一部内容，电影票 +1。");
+    }
   }
 
   function deleteConsultation(idOrItem) {
@@ -4501,7 +4586,7 @@ export default function Workbench() {
   const sortedRecent = [...recent].sort((a, b) => String(b.time || "").localeCompare(String(a.time || "")));
   const dateKey = visibleTodayKey(clock);
   const skillSummaries = [
-    { id: "today", name: "今日速看", icon: "home", badge: "首页", summary: `任务 ${stats.plans} · 签到 ${stats.checkin}` },
+    { id: "today", name: "今日速看", icon: "home", badge: "首页", summary: `打卡 ${stats.checkin}` },
     { id: "consultations", name: "观影记录", icon: "chat", badge: "观影", summary: `${stats.consultations} 条` },
     { id: "market", name: "股市行情", icon: "trend", badge: "行情", summary: "金价、指数、自选股" },
     { id: "diet", name: "饮食记录", icon: "food", badge: "饮食", summary: `${dietRecords.filter((item) => item.date === todayKey()).length} 条` },
@@ -4587,11 +4672,7 @@ export default function Workbench() {
                 <button type="submit" aria-label="保存闪念笔记">✓</button>
               </form>
               <section className="dashboard-strip" aria-label="今日概览">
-                <div className="dashboard-tile dashboard-tile-primary">
-                  <span>今日任务</span>
-                  <strong>{stats.plans}</strong>
-                  <small>完成 / 总数</small>
-                </div>
+                <PetCompanionCard supplies={petSupplies} action={petAction} onUse={usePetSupply} />
                 <div className="dashboard-tile">
                   <span>待整理</span>
                   <strong>{stats.consultations}</strong>
@@ -4603,21 +4684,10 @@ export default function Workbench() {
                   <small>饮食与饮水记录</small>
                 </div>
               </section>
-              <section className="panel quick-panel">
-                <div className="panel-head"><h2>快速入口</h2><span className="tag">一步到位</span></div>
-                <div className="quick-grid">
-                  <QuickAction icon="checklist" label="任务安排" onClick={() => switchPage("plans")} />
-                  <QuickAction icon="chat" label="观影记录" onClick={() => switchPage("consultations")} />
-                  <QuickAction icon="trend" label="股市行情" onClick={() => switchPage("market")} />
-                  <QuickAction icon="food" label="饮食记录" onClick={() => switchPage("diet")} />
-                  <QuickAction icon="news" label="热榜时讯" onClick={() => switchPage("news")} />
-                </div>
-              </section>
-              <PomodoroTimer />
               <section className="stats-grid">
-                <StatButton label="今日任务" value={stats.plans} onClick={() => switchPage("plans")} />
-                <StatButton label="今日饮食" value={`${stats.dietToday} 条`} onClick={() => switchPage("diet")} />
-                <StatButton label="追剧清单" value={`${stats.consultations} 部`} onClick={() => switchPage("consultations")} />
+                <StatButton label="任务安排" value={`${stats.pendingTasks} 条`} onClick={() => switchPage("plans")} />
+                <StatButton label="饮食记录" value={`${stats.dietToday} 条`} onClick={() => switchPage("diet")} />
+                <StatButton label="观影记录" value={`${stats.consultations} 条`} onClick={() => switchPage("consultations")} />
               </section>
               <section className="panel">
                 <div className="panel-head"><h2>今日任务</h2><span className="tag">{dateKey}</span></div>
