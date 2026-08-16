@@ -1,4 +1,4 @@
-const CACHE_NAME = "qiyeworkbench-v3";
+const CACHE_NAME = "qiyeworkbench-v4";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/avatar-cultivation.webp"];
 
 self.addEventListener("install", (event) => {
@@ -20,6 +20,19 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname.startsWith("/api/")) {
     event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
+    return;
+  }
+
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request).then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(event.request))
+    );
     return;
   }
 
