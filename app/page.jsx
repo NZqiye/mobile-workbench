@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { hasSupabaseConfig, supabase } from "../lib/supabase";
+import { asset3dIconKeys, asset3dIconByKey } from "../lib/asset-3d-icons";
 
 const storagePrefix = "qiyeworkbench:";
 const statePage = "app_state";
@@ -12,6 +13,7 @@ const pages = [
   { id: "diet", name: "饮食记录", icon: "food" },
   { id: "news", name: "热榜时讯", icon: "news" },
   { id: "plans", name: "每日安排", icon: "checklist" },
+  { id: "assets", name: "资产记录", icon: "diamond" },
   { id: "settings", name: "设置", icon: "settings" },
 ];
 const pageNames = Object.fromEntries(pages.map((page) => [page.id, page.name]));
@@ -141,7 +143,7 @@ const marketSymbolNames = {
 };
 const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
 const defaultChineseHolidaysSeedKey = "defaultChineseHolidays2026Seeded";
-const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins"];
+const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins", "assets"];
 const marketCacheVersion = 3;
 const fundCacheVersion = 2;
 const indexTrackerCacheVersion = 1;
@@ -210,6 +212,15 @@ function WorkbenchIcon({ name, className = "ui-icon" }) {
         <path d="M5 5h14v10H9l-4 4z" />
         <path d="M9 9h6" />
         <path d="M9 12h4" />
+      </>
+    ),
+    diamond: (
+      <>
+        <path d="M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41l-7.59-7.59a2.41 2.41 0 0 0-3.41 0z" />
+        <path d="M12 2v20" />
+        <path d="M2.7 10.3 12 12l9.3-1.7" />
+        <path d="m12 12 4.3 8.2" />
+        <path d="m12 12-4.3 8.2" />
       </>
     ),
     trend: (
@@ -568,6 +579,22 @@ function AnimeNavIcon({ name }) {
   );
 }
 
+
+const crewImgById = {
+  home: "/crew/zoro.png",
+  chat: "/crew/nami.png",
+  trend: "/crew/sanji.png",
+  food: "/crew/usopp.png",
+  news: "/crew/chopper.png",
+  checklist: "/crew/robin.png",
+  diamond: "/crew/franky.png",
+  settings: "/crew/jinbe.png",
+};
+
+function CrewNavIcon({ name }) {
+  return <img className="crew-nav-icon" src={crewImgById[name] || "/crew/zoro.png"} alt="" loading="lazy" />;
+}
+
 function PonyMark({ theme = "rmb", compact = false }) {
   return (
     <svg className={compact ? "pony-mark compact" : "pony-mark"} viewBox="0 0 24 24" aria-hidden="true">
@@ -578,7 +605,7 @@ function PonyMark({ theme = "rmb", compact = false }) {
 
 function CultivationAvatar() {
   return (
-    <img className="cultivation-avatar" src="/avatar-cultivation.webp" alt="" loading="lazy" />
+    <img className="cultivation-avatar" src="/crew/luffy.png" alt="" loading="lazy" />
   );
 }
 
@@ -891,6 +918,7 @@ function mergeCloudWithLocal(cloud) {
     plans: mergeSyncedItems("plans", readStorage("plans", []), cloud.plans, cloud),
     consultations: dedupeConsultations(mergeSyncedItems("consultations", readStorage("consultations", []), cloud.consultations, cloud)),
     watchCheckins: mergeSyncedItems("watchCheckins", readStorage("watchCheckins", []), cloud.watchCheckins, cloud),
+    assets: mergeSyncedItems("assets", readStorage("assets", []), cloud.assets, cloud),
     dietRecords: mergeSyncedItems("dietRecords", readStorage("dietRecords", []), cloud.dietRecords, cloud),
     anniversaries: mergeSyncedItems("anniversaries", readStorage("anniversaries", []), cloud.anniversaries, cloud),
     waterTarget: cloud.waterTarget != null && Number.isFinite(Number(cloud.waterTarget))
@@ -3146,6 +3174,174 @@ function mediaAirText(item) {
   return `${Number(month)}月${Number(day)}日 ${item.type === "电影" ? "上映" : "播出"}`;
 }
 
+const assetIconImageMap = {
+  smartphone: "/assets-icons/smartphone.png", laptop: "/assets-icons/laptop.png", monitor: "/assets-icons/monitor.png", keyboard: "/assets-icons/keyboard.png", mouse: "/assets-icons/mouse.png",
+  headphones: "/assets-icons/headphones.png", camera: "/assets-icons/camera.png", tv: "/assets-icons/tv.png", gamepad: "/assets-icons/gamepad.png", watch: "/assets-icons/watch.png",
+  cpu: "/assets-icons/cpu.png", harddrive: "/assets-icons/harddrive.png", printer: "/assets-icons/printer.png", speaker: "/assets-icons/speaker.png", battery: "/assets-icons/battery.png",
+  house: "/assets-icons/house.png", key: "/assets-icons/key.png", lamp: "/assets-icons/lamp.png", sofa: "/assets-icons/sofa.png", washing: "/assets-icons/washing.png",
+  cart: "/assets-icons/cart.png", backpack: "/assets-icons/backpack.png", scissors: "/assets-icons/scissors.png", droplets: "/assets-icons/droplets.png", trash: "/assets-icons/trash.png",
+  snowflake: "/assets-icons/snowflake.png", umbrella: "/assets-icons/umbrella.png", sun: "/assets-icons/sun.png", flame: "/assets-icons/flame.png", sparkles: "/assets-icons/sparkles.png",
+  coffee: "/assets-icons/coffee.png", cup: "/assets-icons/cup.png", wine: "/assets-icons/wine.png", beer: "/assets-icons/beer.png", milk: "/assets-icons/milk.png",
+  utensils: "/assets-icons/utensils.png", pizza: "/assets-icons/pizza.png", chef: "/assets-icons/chef.png", croissant: "/assets-icons/croissant.png", apple: "/assets-icons/apple.png",
+  shirt: "/assets-icons/shirt.png", footprints: "/assets-icons/footprints.png", glasses: "/assets-icons/glasses.png", diamond: "/assets-icons/diamond.png", shoppingbag: "/assets-icons/shoppingbag.png",
+  car: "/assets-icons/car.png", bike: "/assets-icons/bike.png", plane: "/assets-icons/plane.png", train: "/assets-icons/train.png", dumbbell: "/assets-icons/dumbbell.png",
+  trophy: "/assets-icons/trophy.png", tent: "/assets-icons/tent.png", waves: "/assets-icons/waves.png", mountain: "/assets-icons/mountain.png", sailboat: "/assets-icons/sailboat.png",
+  package: "/assets-icons/package.png",
+};
+
+function AssetIcon({ name, size = 20 }) {
+  const src = asset3dIconByKey[name] || assetIconImageMap[name];
+  if (!src) {
+    return (
+      <span className="asset-icon-fallback" style={{ width: size, height: size, fontSize: Math.max(12, Math.floor(size * 0.55)) }}>
+        {String(name || "?").slice(0, 1).toUpperCase()}
+      </span>
+    );
+  }
+  return <img className="asset-icon-img" src={src} width={size} height={size} alt="" />;
+}
+
+const assetIconCategories = [
+  { id: "digital", label: "数码科技", icons: ["smartphone","laptop","monitor","keyboard","mouse","headphones","camera","tv","gamepad","watch","cpu","harddrive","printer","speaker","battery"] },
+  { id: "daily", label: "日常", icons: ["house","key","lamp","sofa","washing","cart","backpack","scissors","droplets","trash","snowflake","umbrella","sun","flame","sparkles"] },
+  { id: "food", label: "美食饮品", icons: ["coffee","cup","wine","beer","milk","utensils","pizza","chef","croissant","apple"] },
+  { id: "wear", label: "服饰", icons: ["shirt","footprints","glasses","diamond","shoppingbag","watch"] },
+  { id: "sport", label: "运动户外", icons: ["car","bike","plane","train","dumbbell","trophy","tent","waves","mountain","sailboat"] },
+  { id: "3dicons", label: "3dicons", icons: asset3dIconKeys },
+];
+
+function AssetBoard({ items = [], onAdd, onUpdate, onDelete }) {
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [formName, setFormName] = useState("");
+  const [formPrice, setFormPrice] = useState("");
+  const [formDate, setFormDate] = useState(todayKey());
+  const [formCategory, setFormCategory] = useState("数码");
+  const [formStatus, setFormStatus] = useState("服役中");
+  const [formNotes, setFormNotes] = useState("");
+  const [formIcon, setFormIcon] = useState("package");
+  const [showIconPicker, setShowIconPicker] = useState(false);
+  const [iconTab, setIconTab] = useState("digital");
+  const assetList = Array.isArray(items) ? items : [];
+  const activeItems = assetList.filter((item) => item.status === "服役中");
+  const totalAmount = activeItems.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+  const today = new Date();
+  const avgDaily = activeItems.reduce((sum, item) => {
+    const days = Math.max(1, Math.ceil((today - new Date(item.purchaseDate)) / 86400000));
+    return sum + (Number(item.price) || 0) / days;
+  }, 0);
+
+  function resetForm() {
+    setFormName(""); setFormPrice(""); setFormDate(todayKey()); setFormCategory("数码"); setFormStatus("服役中"); setFormNotes(""); setFormIcon("package"); setShowIconPicker(false); setEditingId(null); setShowForm(false);
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (!formName.trim()) return;
+    if (editingId) {
+      onUpdate(editingId, { name: formName.trim(), price: Number(formPrice) || 0, purchaseDate: formDate, category: formCategory, status: formStatus, notes: formNotes, icon: formIcon });
+    } else {
+      onAdd({ name: formName.trim(), price: Number(formPrice) || 0, purchaseDate: formDate, category: formCategory, status: formStatus, notes: formNotes, icon: formIcon });
+    }
+    resetForm();
+  }
+
+  function startEdit(item) {
+    setEditingId(item.id); setFormName(item.name); setFormPrice(String(item.price || "")); setFormDate(item.purchaseDate || todayKey()); setFormCategory(item.category || "数码"); setFormStatus(item.status || "服役中"); setFormNotes(item.notes || ""); setFormIcon(item.icon || "package"); setShowForm(true);
+  }
+
+  function calcDaily(item) {
+    const days = Math.max(1, Math.ceil((today - new Date(item.purchaseDate)) / 86400000));
+    return ((Number(item.price) || 0) / days).toFixed(2);
+  }
+
+  function daysSince(dateStr) {
+    return Math.max(0, Math.ceil((today - new Date(dateStr)) / 86400000));
+  }
+
+  return (
+    <section className="asset-board">
+      <div className="asset-summary">
+        <div className="asset-summary-main">
+          <strong>{activeItems.length} 件物品</strong>
+          <div className="asset-summary-stats">
+            <div><span>总金额</span><strong>¥{totalAmount.toLocaleString()}</strong></div>
+            <div><span>总日均</span><strong>¥{avgDaily.toFixed(2)}<small>/天</small></strong></div>
+          </div>
+        </div>
+      </div>
+      <button className="asset-add-btn" type="button" onClick={() => { resetForm(); setShowForm(true); }}>+ 添加物品</button>
+      {showForm && (
+        <form className="asset-form" onSubmit={handleSubmit}>
+          <div className="asset-form-head">
+            <h3>{editingId ? "编辑物品" : "添加物品"}</h3>
+            <button type="button" onClick={resetForm}>取消</button>
+          </div>
+          <div className="asset-name-row">
+            <input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="物品名称" required />
+            <button type="button" className="asset-icon-btn" onClick={() => setShowIconPicker(!showIconPicker)}>
+              <span className="asset-icon-preview"><AssetIcon name={formIcon} size={34} /></span>
+              <span className="asset-icon-edit">📷</span>
+            </button>
+          </div>
+          {showIconPicker && (
+            <div className="asset-icon-picker">
+              <div className="asset-icon-picker-head">
+                <strong>选择图标</strong>
+                <button type="button" onClick={() => setShowIconPicker(false)}>×</button>
+              </div>
+              <div className="asset-icon-tabs">
+                {assetIconCategories.map((cat) => (
+                  <button type="button" key={cat.id} className={iconTab === cat.id ? "active" : ""} onClick={() => setIconTab(cat.id)}>{cat.label}</button>
+                ))}
+              </div>
+              <div className="asset-icon-grid">
+                {assetIconCategories.find((c) => c.id === iconTab)?.icons.map((icon) => (
+                  <button type="button" key={icon} className={`asset-icon-cell ${formIcon === icon ? "selected" : ""}`} onClick={() => { setFormIcon(icon); setShowIconPicker(false); }}><AssetIcon name={icon} size={36} /></button>
+                ))}
+              </div>
+            </div>
+          )}
+          <input value={formPrice} onChange={(e) => setFormPrice(e.target.value)} type="number" step="0.01" placeholder="价格" required />
+          <input value={formDate} onChange={(e) => setFormDate(e.target.value)} type="date" required />
+          <div className="asset-form-row">
+            <select value={formCategory} onChange={(e) => setFormCategory(e.target.value)}>
+              <option value="数码">数码</option><option value="服饰">服饰</option><option value="家具">家具</option><option value="美食">美食</option><option value="出行">出行</option><option value="日用">日用</option><option value="其他">其他</option>
+            </select>
+            <select value={formStatus} onChange={(e) => setFormStatus(e.target.value)}>
+              <option value="服役中">服役中</option><option value="退役">退役</option><option value="已出售">已出售</option>
+            </select>
+          </div>
+          <input value={formNotes} onChange={(e) => setFormNotes(e.target.value)} placeholder="备注（选填）" />
+          <button type="submit" className="asset-submit">{editingId ? "保存修改" : "添加"}</button>
+        </form>
+      )}
+      <div className="asset-list">
+        {assetList.length === 0 && <p className="empty">还没有资产记录，点击上方添加。</p>}
+        {assetList.map((item) => (
+          <div className={`asset-row ${item.status !== "服役中" ? "asset-retired" : ""}`} key={item.id}>
+            <div className="asset-row-main">
+              <div className="asset-row-icon"><AssetIcon name={item.icon} size={36} /></div>
+              <div className="asset-row-info">
+                <strong>{item.name}</strong>
+                <small>¥{Number(item.price).toLocaleString()} · {daysSince(item.purchaseDate)}天 · {item.category}</small>
+              </div>
+              <div className="asset-row-cost">
+                <strong>¥{calcDaily(item)}<small>/天</small></strong>
+              </div>
+            </div>
+            <div className="asset-row-actions">
+              <span className={`asset-status-tag ${item.status === "服役中" ? "active" : ""}`}>{item.status}</span>
+              <button type="button" onClick={() => startEdit(item)}>编辑</button>
+              <button type="button" onClick={() => { if (window.confirm("确定删除" + item.name + "？")) onDelete(item.id); }}>删除</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function WatchCheckin({ items = [], onCheckin, watchCheckins = [] }) {
   const watchItems = items.filter((item) => item.status !== "已归档" && item.status !== "暂停/弃剧");
   const [selectedId, setSelectedId] = useState(watchItems[0]?.id || "");
@@ -3794,6 +3990,7 @@ export default function Workbench() {
   const [notes, setNotes] = useState([]);
   const [consultations, setConsultations] = useState([]);
   const [watchCheckins, setWatchCheckins] = useState([]);
+  const [assetItems, setAssetItems] = useState([]);
   const [dietRecords, setDietRecords] = useState([]);
   const [anniversaries, setAnniversaries] = useState([]);
   const [waterTarget, setWaterTarget] = useState(defaultWaterTarget);
@@ -3902,6 +4099,10 @@ export default function Workbench() {
     if (Array.isArray(cloud.watchCheckins)) {
       setWatchCheckins(cloud.watchCheckins);
       writeStorage("watchCheckins", cloud.watchCheckins);
+    }
+    if (Array.isArray(cloud.assets)) {
+      setAssetItems(cloud.assets);
+      writeStorage("assets", cloud.assets);
     }
     if (Array.isArray(cloud.anniversaries)) {
       setAnniversaries(cloud.anniversaries);
@@ -4017,6 +4218,7 @@ export default function Workbench() {
     writeStorage("consultations", nextConsultations);
     setDietRecords(readStorage("dietRecords", []));
     setWatchCheckins(readStorage("watchCheckins", []));
+    setAssetItems(readStorage("assets", []));
     let nextAnniversaries = readStorage("anniversaries", []);
     if (localStorage.getItem(key(defaultChineseHolidaysSeedKey)) !== "true") {
       nextAnniversaries = withDefaultChineseHolidays(nextAnniversaries);
@@ -4497,6 +4699,34 @@ export default function Workbench() {
     rewardPetOnce(rewardKey, "stick", 1, isMovie ? "看完一部电影，电影票 +1。" : "看完一集电视剧，电影票 +1。");
   }
 
+  function addAsset({ name, price, purchaseDate, category, status, notes }) {
+    const item = {
+      id: crypto.randomUUID(),
+      name: String(name || "").trim(),
+      price: Number(price) || 0,
+      purchaseDate: purchaseDate || todayKey(),
+      category: category || "",
+      status: status || "服役中",
+      notes: notes || "",
+      time: nowText(),
+    };
+    const next = [...assetItems, item];
+    setAssetItems(next);
+    persist("assets", next);
+  }
+
+  function updateAsset(id, updates) {
+    const next = assetItems.map((item) => item.id === id ? { ...item, ...updates, time: nowText() } : item);
+    setAssetItems(next);
+    persist("assets", next);
+  }
+
+  function deleteAsset(id) {
+    const next = assetItems.filter((item) => item.id !== id);
+    setAssetItems(next);
+    persist("assets", next);
+  }
+
   function deleteConsultation(idOrItem) {
     const item = typeof idOrItem === "object" && idOrItem ? idOrItem : consultations.find((record) => record.id === idOrItem);
     const id = item?.id || idOrItem;
@@ -4569,6 +4799,7 @@ export default function Workbench() {
       notes,
       consultations,
       watchCheckins,
+      assets,
       dietRecords,
       anniversaries,
       waterTarget,
@@ -4614,6 +4845,10 @@ export default function Workbench() {
       if (Array.isArray(payload.watchCheckins)) {
         setWatchCheckins(payload.watchCheckins);
         persist("watchCheckins", payload.watchCheckins);
+      }
+      if (Array.isArray(payload.assets)) {
+        setAssetItems(payload.assets);
+        persist("assets", payload.assets);
       }
       if (Array.isArray(payload.dietRecords)) {
         setDietRecords(payload.dietRecords);
@@ -4705,6 +4940,7 @@ export default function Workbench() {
     { id: "diet", name: "饮食记录", icon: "food", badge: "饮食", summary: `${dietRecords.filter((item) => item.date === todayKey()).length} 条` },
     { id: "news", name: "热榜时讯", icon: "news", badge: "热榜", summary: "微博B站抖音" },
     { id: "plans", name: "每日安排", icon: "checklist", badge: "安排", summary: `${todayPlans.length} 条任务` },
+    { id: "assets", name: "资产记录", icon: "diamond", badge: "资产", summary: `¥${(assetItems || []).filter((item) => item.status === "服役中").reduce((s, i) => s + (Number(i.price) || 0), 0).toLocaleString()}` },
     { id: "settings", name: "数据设置", icon: "settings", badge: "备份", summary: session ? "云同步在线" : "本地模式" },
   ];
 
@@ -4725,17 +4961,16 @@ export default function Workbench() {
           <div className="side-nav-list">
             {pages.filter((page) => page.id !== "settings").map((page) => (
               <button className={`nav-item ${activePage === page.id ? "active" : ""}`} type="button" key={page.id} onClick={() => switchPage(page.id)}>
-                <span className="nav-symbol"><AnimeNavIcon name={page.icon} /></span>
+                <span className="nav-symbol"><CrewNavIcon name={page.icon} /></span>
                 <small>{page.name}</small>
               </button>
             ))}
           </div>
           <div className="side-nav-bottom">
             <button className={`nav-item settings-nav-item ${activePage === "settings" ? "active" : ""}`} type="button" onClick={() => switchPage("settings")}>
-              <span className="nav-symbol"><AnimeNavIcon name="settings" /></span>
+              <span className="nav-symbol"><CrewNavIcon name="settings" /></span>
               <small>设置</small>
             </button>
-            <button className="more-button" type="button" onClick={() => { setMenuOpen(false); setOverviewOpen(true); }} aria-label="更多技能">...</button>
           </div>
         </nav>
 
@@ -4746,7 +4981,7 @@ export default function Workbench() {
 
               <header className="module-head">
                 <div className="module-title-row">
-                  <span className="module-icon"><AnimeNavIcon name={pages.find((page) => page.id === activePage)?.icon || "spark"} /></span>
+                  <span className="module-icon"><CrewNavIcon name={pages.find((page) => page.id === activePage)?.icon || "spark"} /></span>
                   <div>
                     <h1>{pageNames[activePage]}</h1>
                     <p>{pageDescriptions[activePage]}</p>
@@ -4864,6 +5099,10 @@ export default function Workbench() {
                 onWatchCheckin={checkinWatchItem}
               />
             </>
+          )}
+
+          {activePage === "assets" && (
+            <AssetBoard items={assetItems} onAdd={addAsset} onUpdate={updateAsset} onDelete={deleteAsset} />
           )}
 
           {activePage === "market" && (
