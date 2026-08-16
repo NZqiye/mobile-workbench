@@ -865,6 +865,25 @@ textarea { resize: vertical; }
 .watch-list-panel { display: grid; gap: 13px; padding: 16px 14px; border: 1px solid rgba(234, 215, 208, 0.82); border-radius: 8px; background: rgba(255, 255, 255, 0.9); box-shadow: var(--shadow); }
 .watch-list-panel .panel-head h2 { margin: 0; font-size: 18px; }
 .watch-list-panel .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.watch-checkin-panel { display: grid; gap: 12px; padding: 16px 14px; border: 1px solid rgba(234, 215, 208, 0.82); border-radius: 8px; background: rgba(255, 255, 255, 0.9); box-shadow: var(--shadow); }
+.watch-checkin-panel .panel-head h2 { margin: 0; font-size: 18px; }
+.watch-checkin-panel .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.watch-checkin-form { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.8fr) auto; gap: 8px; align-items: center; }
+.watch-checkin-form select,
+.watch-checkin-form input { min-width: 0; height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: #fffdf9; }
+.watch-checkin-form button { min-height: 38px; padding: 0 12px; border: 0; border-radius: 8px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 12px; font-weight: 900; }
+.watch-checkin-history { display: grid; gap: 10px; padding-top: 4px; }
+.watch-checkin-history-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.watch-checkin-history-head strong { margin: 0; font-size: 13px; color: #9f2630; }
+.watch-checkin-history-head input { min-width: 0; height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: #fffdf9; }
+.watch-checkin-history-head button { min-height: 30px; padding: 0 10px; border: 0; border-radius: 8px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 12px; font-weight: 900; }
+.watch-checkin-history-empty { margin: 0; color: var(--muted); font-size: 12px; }
+.watch-checkin-history-list { display: grid; gap: 8px; }
+.watch-checkin-history-item { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; align-items: center; min-height: 44px; padding: 6px; border: 1px solid rgba(234, 215, 208, 0.7); border-radius: 8px; background: rgba(255, 252, 250, 0.82); }
+.watch-checkin-history-poster, .watch-checkin-history-item img { width: 34px; height: 42px; object-fit: cover; border-radius: 6px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 13px; font-weight: 800; display: grid; place-items: center; }
+.watch-checkin-history-meta { display: grid; gap: 2px; min-width: 0; }
+.watch-checkin-history-meta strong { color: #26262c; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.watch-checkin-history-meta span { color: var(--muted); font-size: 11px; }
 .watch-list-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
 .watch-list-tools input { min-width: 0; height: 38px; padding: 0 12px; border-radius: 8px; }
 .watch-list-tools button { min-height: 38px; padding: 0 12px; border: 0; border-radius: 8px; color: #9f2630; background: #fff0ed; font-size: 12px; font-weight: 900; }
@@ -1368,6 +1387,9 @@ textarea { resize: vertical; }
 @media (max-width: 640px) {
   .module-tabs.market-tabs { gap: 6px; }
   .module-tabs.market-tabs button { min-height: 34px; padding-inline: 4px; font-size: 12px; }
+  .watch-checkin-form { grid-template-columns: 1fr; }
+  .watch-checkin-history-head { grid-template-columns: 1fr; }
+  .watch-checkin-history-head button { width: fit-content; }
   .index-panel .panel-head { display: grid; align-items: start; }
   .index-inline-action { width: fit-content; }
   .index-add-form { grid-template-columns: 1fr; padding: 10px; }
@@ -2445,6 +2467,36 @@ select option {
   background: rgba(224, 189, 113, 0.1);
   border-color: rgba(224, 189, 113, 0.2);
 }
+.watch-list-panel {
+  border-color: rgba(255, 255, 255, 0.14);
+  color: color-mix(in srgb, #fff 88%, var(--theme-main));
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+.watch-list-panel .panel-head h2 { color: color-mix(in srgb, var(--theme-accent) 82%, #fff); }
+.watch-list-panel .panel-head p,
+.watch-list-summary span,
+.watch-list-summary button,
+.watch-list-collapsed,
+.watch-list-more {
+  color: color-mix(in srgb, #fff 70%, var(--theme-main));
+  border-color: rgba(255, 255, 255, 0.14);
+  background: color-mix(in srgb, var(--theme-deep) 82%, #050806);
+}
+.watch-list-tools input {
+  color: color-mix(in srgb, #fff 92%, var(--theme-main));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: color-mix(in srgb, var(--theme-deep) 82%, #050806);
+}
+.watch-list-tools input::placeholder { color: color-mix(in srgb, #fff 50%, var(--theme-main)); }
+.watch-list-tools button {
+  color: color-mix(in srgb, var(--theme-accent) 88%, #fff);
+  background: rgba(224, 189, 113, 0.1);
+}
+.watch-list-summary button.active {
+  color: color-mix(in srgb, var(--theme-accent) 88%, #fff);
+  border-color: rgba(224, 189, 113, 0.28);
+  background: rgba(224, 189, 113, 0.1);
+}
 
 .tmdb-result {
   border-color: rgba(255, 255, 255, 0.14);
@@ -2457,6 +2509,39 @@ select option {
   border-color: rgba(255, 255, 255, 0.14);
   background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
 }
+.tmdb-panel strong { color: color-mix(in srgb, #fff 92%, var(--theme-main)); }
+.tmdb-panel p { color: color-mix(in srgb, #fff 72%, var(--theme-main)); }
+.tmdb-search input {
+  color: #251417;
+  background: #fffaf6;
+}
+.tmdb-search input::placeholder { color: #8a7770; }
+
+.watch-checkin-panel {
+  color: color-mix(in srgb, #fff 90%, var(--theme-main));
+  border-color: rgba(255, 255, 255, 0.14);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
+}
+.watch-checkin-panel .panel-head h2 { color: color-mix(in srgb, var(--theme-accent) 82%, #fff); }
+.watch-checkin-panel .panel-head p { color: color-mix(in srgb, #fff 72%, var(--theme-main)); }
+.watch-checkin-form select,
+.watch-checkin-form input {
+  color: color-mix(in srgb, #fff 92%, var(--theme-main));
+  border-color: rgba(255, 255, 255, 0.14);
+  background: color-mix(in srgb, var(--theme-deep) 82%, #050806);
+}
+.watch-checkin-form input::placeholder { color: color-mix(in srgb, #fff 54%, var(--theme-main)); }
+.watch-checkin-history-head strong { color: color-mix(in srgb, #fff 88%, var(--theme-main)); }
+.watch-checkin-history-head input,
+.watch-checkin-history-head button { color: color-mix(in srgb, #fff 92%, var(--theme-main)); border-color: rgba(255, 255, 255, 0.14); background: color-mix(in srgb, var(--theme-deep) 82%, #050806); }
+.watch-checkin-history-head input::placeholder { color: color-mix(in srgb, #fff 54%, var(--theme-main)); }
+.watch-checkin-history-empty { color: color-mix(in srgb, #fff 72%, var(--theme-main)); }
+.watch-checkin-history-item { border-color: rgba(255, 255, 255, 0.14); background: color-mix(in srgb, var(--theme-deep) 78%, #050806); }
+.watch-checkin-history-meta strong { color: color-mix(in srgb, #fff 92%, var(--theme-main)); }
+.watch-checkin-history-meta span { color: color-mix(in srgb, #fff 66%, var(--theme-main)); }
+.page-consultations .empty {
+  color: color-mix(in srgb, #fff 76%, var(--theme-main));
+}
 
 /* override original hardcoded light backgrounds */
 .habit-row, .task-row, .check-row, .calendar-day,
@@ -2465,7 +2550,7 @@ select option {
 .dashboard-tile, .dashboard-tile-primary, .stat-card,
 .weather-panel .weather-main, .weather-forecast div,
 .pomodoro-panel, .news-row, .skill-card, .watch-list-row,
-.tmdb-result, .tmdb-panel, .tmdb-recommendations,
+.tmdb-result, .tmdb-panel, .tmdb-recommendations, .watch-checkin-panel,
 .anniversary-section, .anniversary-card,
 .weather-outfit-tip, .outfit-main, .outfit-tags span,
 .water-actions button, .meal-tabs button,

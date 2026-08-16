@@ -141,7 +141,7 @@ const marketSymbolNames = {
 };
 const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
 const defaultChineseHolidaysSeedKey = "defaultChineseHolidays2026Seeded";
-const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems"];
+const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins"];
 const marketCacheVersion = 3;
 const fundCacheVersion = 2;
 const indexTrackerCacheVersion = 1;
@@ -890,6 +890,7 @@ function mergeCloudWithLocal(cloud) {
     notes: mergeSyncedItems("notes", readStorage("notes", []), cloud.notes, cloud),
     plans: mergeSyncedItems("plans", readStorage("plans", []), cloud.plans, cloud),
     consultations: dedupeConsultations(mergeSyncedItems("consultations", readStorage("consultations", []), cloud.consultations, cloud)),
+    watchCheckins: mergeSyncedItems("watchCheckins", readStorage("watchCheckins", []), cloud.watchCheckins, cloud),
     dietRecords: mergeSyncedItems("dietRecords", readStorage("dietRecords", []), cloud.dietRecords, cloud),
     anniversaries: mergeSyncedItems("anniversaries", readStorage("anniversaries", []), cloud.anniversaries, cloud),
     waterTarget: cloud.waterTarget != null && Number.isFinite(Number(cloud.waterTarget))
@@ -3145,7 +3146,82 @@ function mediaAirText(item) {
   return `${Number(month)}月${Number(day)}日 ${item.type === "电影" ? "上映" : "播出"}`;
 }
 
-function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked, onDeleteItem }) {
+function WatchCheckin({ items = [], onCheckin, watchCheckins = [] }) {
+  const watchItems = items.filter((item) => item.status !== "已归档" && item.status !== "暂停/弃剧");
+  const [selectedId, setSelectedId] = useState(watchItems[0]?.id || "");
+  const [historyQuery, setHistoryQuery] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const selected = watchItems.find((item) => item.id === selectedId) || watchItems[0];
+  const isMovie = selected && ((selected.tmdbMediaType || "").includes("movie") || selected.type === "电影");
+  const sortedHistory = Array.isArray(watchCheckins) ? [...watchCheckins].sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")) || String(b.time || "").localeCompare(String(a.time || ""))) : [];
+  const historyKeyword = historyQuery.trim().toLowerCase();
+  const filteredHistory = historyKeyword ? sortedHistory.filter((record) => String(record.title || "").toLowerCase().includes(historyKeyword) || String(record.type || "").toLowerCase().includes(historyKeyword) || String(record.episode || "").toLowerCase().includes(historyKeyword)) : sortedHistory;
+  const visibleHistory = historyOpen || historyKeyword ? filteredHistory : filteredHistory.slice(0, 3);
+
+  function submit(event) {
+    event.preventDefault();
+    if (!selected) return;
+    const data = new FormData(event.currentTarget);
+    onCheckin?.({
+      id: selected.id,
+      episode: String(data.get("episode") || "").trim(),
+      date: String(data.get("date") || todayKey()),
+    });
+    event.currentTarget.reset();
+    setSelectedId(selected.id);
+  }
+
+  return (
+    <section className="watch-checkin-panel">
+      <div className="panel-head">
+        <div>
+          <h2>观影打卡</h2>
+          <p>记录已看的剧集或电影，自动更新片单进度。</p>
+        </div>
+      </div>
+      {watchItems.length === 0 ? (
+        <p className="empty">先搜索或添加一部影视，再回来打卡。</p>
+      ) : (
+        <form className="watch-checkin-form" onSubmit={submit}>
+          <select value={selected?.id || ""} onChange={(event) => setSelectedId(event.target.value)}>
+            {watchItems.map((item) => (
+              <option value={item.id} key={item.id}>{item.title}</option>
+            ))}
+          </select>
+          <input name="episode" inputMode="numeric" placeholder={isMovie ? "电影无需填集数" : `第几集，当前 ${selected?.currentEpisode || 0}`} disabled={isMovie} />
+          <input name="date" type="date" defaultValue={todayKey()} />
+          <button type="submit">{isMovie ? "打卡已看电影" : "打卡已看剧集"}</button>
+        </form>
+      )}
+      <div className="watch-checkin-history">
+        <div className="watch-checkin-history-head">
+          <strong>最近打卡</strong>
+          <input value={historyQuery} onChange={(event) => setHistoryQuery(event.target.value)} placeholder="搜索标题" />
+          {!historyKeyword && filteredHistory.length > 3 && (
+            <button type="button" onClick={() => setHistoryOpen(!historyOpen)}>{historyOpen || historyKeyword ? "收起" : "全部"}</button>
+          )}
+        </div>
+        {filteredHistory.length === 0 ? (
+          <p className="watch-checkin-history-empty">还没有打卡记录。</p>
+        ) : (
+          <div className="watch-checkin-history-list">
+            {visibleHistory.map((record) => (
+              <div className="watch-checkin-history-item" key={record.id}>
+                {record.posterUrl ? <img src={record.posterUrl} alt="" /> : <div className="watch-checkin-history-poster">{String(record.title || "")[0]}</div>}
+                <div className="watch-checkin-history-meta">
+                  <strong>{record.title}</strong>
+                  <span>{(record.type === "电影" ? "电影" : `剧集 · 第${record.episode || "?"}集`)} · {record.date || ""} {record.time || ""}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked, onDeleteItem, onWatchCheckin, watchCheckins = [] }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
   const [tmdbQuery, setTmdbQuery] = useState("");
@@ -3280,6 +3356,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
               ))}
             </div>
           </section>
+          <WatchCheckin items={managedWatchItems} onCheckin={onWatchCheckin} watchCheckins={watchCheckins} />
           <section className="watch-calendar">
             <div className="panel-head">
               <h2>{monthTitle(selected.date)}</h2>
@@ -3716,6 +3793,7 @@ export default function Workbench() {
   const [plans, setPlans] = useState([]);
   const [notes, setNotes] = useState([]);
   const [consultations, setConsultations] = useState([]);
+  const [watchCheckins, setWatchCheckins] = useState([]);
   const [dietRecords, setDietRecords] = useState([]);
   const [anniversaries, setAnniversaries] = useState([]);
   const [waterTarget, setWaterTarget] = useState(defaultWaterTarget);
@@ -3821,6 +3899,10 @@ export default function Workbench() {
       setDietRecords(cloud.dietRecords);
       writeStorage("dietRecords", cloud.dietRecords);
     }
+    if (Array.isArray(cloud.watchCheckins)) {
+      setWatchCheckins(cloud.watchCheckins);
+      writeStorage("watchCheckins", cloud.watchCheckins);
+    }
     if (Array.isArray(cloud.anniversaries)) {
       setAnniversaries(cloud.anniversaries);
       writeStorage("anniversaries", cloud.anniversaries);
@@ -3878,6 +3960,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "plans", merged.plans),
         saveCloudItem(nextSession, "consultations", merged.consultations),
         saveCloudItem(nextSession, "dietRecords", merged.dietRecords),
+        saveCloudItem(nextSession, "watchCheckins", merged.watchCheckins),
         saveCloudItem(nextSession, "anniversaries", merged.anniversaries),
         saveCloudItem(nextSession, "waterTarget", merged.waterTarget),
         saveCloudItem(nextSession, "habits", merged.habits),
@@ -3906,6 +3989,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "plans", merged.plans),
         saveCloudItem(nextSession, "consultations", merged.consultations),
         saveCloudItem(nextSession, "dietRecords", merged.dietRecords),
+        saveCloudItem(nextSession, "watchCheckins", merged.watchCheckins),
         saveCloudItem(nextSession, "anniversaries", merged.anniversaries),
         saveCloudItem(nextSession, "waterTarget", merged.waterTarget),
         saveCloudItem(nextSession, "habits", merged.habits),
@@ -3932,6 +4016,7 @@ export default function Workbench() {
     setConsultations(nextConsultations);
     writeStorage("consultations", nextConsultations);
     setDietRecords(readStorage("dietRecords", []));
+    setWatchCheckins(readStorage("watchCheckins", []));
     let nextAnniversaries = readStorage("anniversaries", []);
     if (localStorage.getItem(key(defaultChineseHolidaysSeedKey)) !== "true") {
       nextAnniversaries = withDefaultChineseHolidays(nextAnniversaries);
@@ -4264,7 +4349,7 @@ export default function Workbench() {
     const next = { ...done, [id]: !done[id] };
     setDone(next);
     persist(`done:${todayKey()}`, next);
-    if (completed) rewardPetOnce(`habit:${todayKey()}:${id}`, "bone", 1, "打卡完成，小蛋糕 +1。");
+    if (completed) rewardPetOnce(`habit:${todayKey()}:${id}`, "toy", 1, "打卡完成，摸摸头 +1。");
   }
 
   function deleteHabit(id) {
@@ -4389,6 +4474,29 @@ export default function Workbench() {
     }
   }
 
+  function checkinWatchItem({ id, episode, date }) {
+    const item = consultations.find((record) => record.id === id);
+    if (!item) return;
+    const isMovie = (item.tmdbMediaType || "").includes("movie") || item.type === "电影";
+    const nextEpisode = Number(episode || item.currentEpisode || 0);
+    const total = Number(item.totalEpisodes || 0);
+    const nextStatus = isMovie || (total > 0 && nextEpisode >= total) ? "看过的剧" : "正在看";
+    const next = consultations.map((record) => record.id === id ? {
+      ...record,
+      status: nextStatus,
+      currentEpisode: isMovie ? record.currentEpisode || "" : String(nextEpisode || Number(record.currentEpisode || 0) + 1),
+      watchedDate: date || todayKey(),
+      time: nowText(),
+    } : record);
+    setConsultations(next);
+    persist("consultations", next);
+    const nextWatchCheckins = [...watchCheckins, { id: crypto.randomUUID(), consultationId: item.id, title: item.title || "", posterUrl: item.posterUrl || item.imageUrl || "", type: isMovie ? "电影" : "剧集", episode: isMovie ? "" : String(nextEpisode || Number(item.currentEpisode || 0) + 1), date: date || todayKey(), time: nowText() }];
+    setWatchCheckins(nextWatchCheckins);
+    persist("watchCheckins", nextWatchCheckins);
+    const rewardKey = isMovie ? `watch-checkin:${id}:movie` : `watch-checkin:${id}:${item.season || 1}:${nextEpisode || Number(item.currentEpisode || 0) + 1}`;
+    rewardPetOnce(rewardKey, "stick", 1, isMovie ? "看完一部电影，电影票 +1。" : "看完一集电视剧，电影票 +1。");
+  }
+
   function deleteConsultation(idOrItem) {
     const item = typeof idOrItem === "object" && idOrItem ? idOrItem : consultations.find((record) => record.id === idOrItem);
     const id = item?.id || idOrItem;
@@ -4460,6 +4568,7 @@ export default function Workbench() {
       plans,
       notes,
       consultations,
+      watchCheckins,
       dietRecords,
       anniversaries,
       waterTarget,
@@ -4501,6 +4610,10 @@ export default function Workbench() {
         const nextConsultations = dedupeConsultations(payload.consultations);
         setConsultations(nextConsultations);
         persist("consultations", nextConsultations);
+      }
+      if (Array.isArray(payload.watchCheckins)) {
+        setWatchCheckins(payload.watchCheckins);
+        persist("watchCheckins", payload.watchCheckins);
       }
       if (Array.isArray(payload.dietRecords)) {
         setDietRecords(payload.dietRecords);
@@ -4674,9 +4787,9 @@ export default function Workbench() {
               <section className="dashboard-strip" aria-label="今日概览">
                 <PetCompanionCard supplies={petSupplies} action={petAction} onUse={usePetSupply} />
                 <div className="dashboard-tile">
-                  <span>待整理</span>
-                  <strong>{stats.consultations}</strong>
-                  <small>咨询与线索</small>
+                  <span>打卡任务</span>
+                  <strong>{stats.checkin}</strong>
+                  <small>已完成 / 总数</small>
                 </div>
                 <div className="dashboard-tile">
                   <span>今日饮食</span>
@@ -4746,7 +4859,9 @@ export default function Workbench() {
                 onLoadRecommendations={loadTmdbRecommendations}
                 onSyncTmdbWatchlist={syncTmdbWatchlist}
                 onRefreshTmdbTracked={refreshTmdbTrackedItems}
+                watchCheckins={watchCheckins}
                 onDeleteItem={deleteConsultation}
+                onWatchCheckin={checkinWatchItem}
               />
             </>
           )}
