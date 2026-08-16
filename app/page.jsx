@@ -50,8 +50,8 @@ const noteTypes = [
 ];
 const consultationStatuses = ["想看的剧", "正在看", "看过的剧", "暂停/弃剧"];
 const anniversaryTypes = [
-  { id: "countdown", label: "倒数纪念日", note: "未来值得期待的日子" },
-  { id: "memory", label: "正数纪念日", note: "已经发生、按天数往上数的日子" },
+  { id: "countdown", label: "倒计时", note: "未来值得期待的日子" },
+  { id: "memory", label: "纪念日", note: "每年值得纪念的日子" },
   { id: "birthday", label: "生日", note: "重要的人的生日" },
   { id: "festival", label: "节日", note: "仪式感的节日" },
 ];
@@ -689,13 +689,20 @@ function anniversaryMeta(item) {
   const today = new Date(todayKey());
   if (Number.isNaN(original.getTime())) return { elapsed: null, nextDays: null, nextDate: "" };
   const elapsed = Math.floor((today - original) / (24 * 60 * 60 * 1000));
-  let next = new Date(today.getFullYear(), original.getMonth(), original.getDate());
-  if (next < today) next = new Date(today.getFullYear() + 1, original.getMonth(), original.getDate());
-  return {
-    elapsed,
-    nextDays: Math.ceil((next - today) / (24 * 60 * 60 * 1000)),
-    nextDate: todayKey(next),
-  };
+  const type = item.type || "memory";
+  if (type === "countdown") {
+    const diff = Math.ceil((original - today) / (24 * 60 * 60 * 1000));
+    return { elapsed, nextDays: diff, nextDate: todayKey(original), elapsedYears: 0, birthdayAge: 0, thisYearPassed: diff < 0 };
+  }
+  const thisYearDate = new Date(today.getFullYear(), original.getMonth(), original.getDate());
+  const nextDate = thisYearDate < today
+    ? new Date(today.getFullYear() + 1, original.getMonth(), original.getDate())
+    : thisYearDate;
+  const nextDays = Math.ceil((nextDate - today) / (24 * 60 * 60 * 1000));
+  const elapsedYears = today.getFullYear() - original.getFullYear();
+  const birthdayAge = nextDate.getFullYear() - original.getFullYear();
+  const thisYearPassed = thisYearDate < today;
+  return { elapsed, nextDays, nextDate: todayKey(nextDate), elapsedYears, birthdayAge, thisYearPassed };
 }
 
 function formatAnniversaryProgress(item) {
@@ -705,28 +712,31 @@ function formatAnniversaryProgress(item) {
     return { meta, primary: "--", secondary: "--" };
   }
   if (type === "countdown") {
-    if (meta.elapsed < 0) {
-      return { meta, primary: `还有 ${meta.nextDays} 天`, secondary: `到期后已过 ${Math.abs(meta.elapsed)} 天` };
-    }
-    return { meta, primary: `已过 ${meta.elapsed} 天`, secondary: `下次还有 ${meta.nextDays} 天` };
-  }
-  if (type === "birthday") {
-    const original = new Date(item.date);
-    const next = new Date(meta.nextDate);
-    const nextAge = next.getFullYear() - original.getFullYear();
-    if (meta.elapsed < 0) {
-      return { meta, primary: `还有 ${meta.nextDays} 天`, secondary: "出生日期未到" };
+    if (meta.nextDays > 0) {
+      return { meta, primary: `还有 ${meta.nextDays} 天`, secondary: "" };
     }
     if (meta.nextDays === 0) {
-      return { meta, primary: "今天生日", secondary: `今年 ${nextAge} 岁` };
+      return { meta, primary: "就是今天", secondary: "" };
     }
-    return { meta, primary: `还有 ${meta.nextDays} 天`, secondary: `下次 ${nextAge} 岁` };
+    return { meta, primary: `已过 ${Math.abs(meta.nextDays)} 天`, secondary: "" };
   }
-  const positiveDays = Math.max(1, meta.elapsed + 1);
-  if (meta.elapsed < 0) {
-    return { meta, primary: `还有 ${meta.nextDays} 天`, secondary: `到日后会变成第 1 天` };
+  if (type === "birthday") {
+    if (meta.thisYearPassed) {
+      return { meta, primary: `${meta.elapsedYears} 岁生日`, secondary: "今年已过" };
+    }
+    if (meta.nextDays === 0) {
+      return { meta, primary: "今天生日", secondary: `今年 ${meta.birthdayAge} 岁` };
+    }
+    return { meta, primary: `还有 ${meta.nextDays} 天`, secondary: `${meta.birthdayAge} 岁生日` };
   }
-  return { meta, primary: `第 ${positiveDays} 天`, secondary: `下次纪念还有 ${meta.nextDays} 天` };
+  if (meta.thisYearPassed) {
+    return { meta, primary: `第 ${meta.elapsedYears} 周年`, secondary: "今年已过" };
+  }
+  if (meta.nextDays === 0) {
+    const y = meta.elapsedYears + 1;
+    return { meta, primary: `今天`, secondary: `第 ${y} 周年` };
+  }
+  return { meta, primary: `还有 ${meta.nextDays} 天`, secondary: `第 ${meta.elapsedYears + 1} 周年` };
 }
 
 function parseFoodCount(value) {
@@ -2836,8 +2846,10 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
   const unfinishedTasks = tasks.filter((task) => task.status !== "已完成").slice(0, 8);
   const sortedAnniversaries = [...anniversaries].sort((a, b) => (anniversaryMeta(a).nextDays ?? 99999) - (anniversaryMeta(b).nextDays ?? 99999));
   const isElapsedThisYear = (item) => {
+    const type = item.type || "memory";
+    if (type === "countdown") return false;
     const meta = anniversaryMeta(item);
-    return meta.nextDate ? new Date(meta.nextDate).getFullYear() > new Date().getFullYear() : false;
+    return meta.thisYearPassed || false;
   };
   const sortByNextDays = (items) => [...items].sort((a, b) => (anniversaryMeta(a).nextDays ?? 99999) - (anniversaryMeta(b).nextDays ?? 99999));
   const renderAnniversaryCards = (items, type) => (
@@ -2860,12 +2872,13 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
     </div>
   );
   const renderAnniversaryGroup = (items, type, emptyText) => {
-    if (type.id === "memory") {
-      return renderAnniversaryCards(sortByNextDays(items), type);
+    if (type.id === "countdown") {
+      const upcoming = sortByNextDays(items.filter((item) => (anniversaryMeta(item).nextDays ?? 99999) >= 0));
+      return upcoming.length === 0 ? <p className="anniversary-empty">{emptyText}</p> : renderAnniversaryCards(upcoming, type);
     }
     const activeItems = sortByNextDays(items.filter((item) => !isElapsedThisYear(item)));
     const elapsedItems = sortByNextDays(items.filter(isElapsedThisYear));
-    const archiveTitle = type.id === "birthday" ? "今年已过生日" : "已过日期";
+    const archiveTitle = type.id === "birthday" ? "今年已过生日" : "今年已过";
     return (
       <>
         {activeItems.length === 0 ? <p className="anniversary-empty">{emptyText}</p> : renderAnniversaryCards(activeItems, type)}
@@ -2945,12 +2958,12 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
       <section className="arrange-card">
         <div className="panel-head">
           <div>
-            <h2>纪念日</h2>
-            <p>倒数重要日子还有多久到。</p>
+            <h2>倒数纪念日</h2>
+            <p>倒计时、纪念日、生日、节日。</p>
           </div>
         </div>
         <form className="anniversary-form" onSubmit={submitAnniversary}>
-          <input name="title" placeholder="纪念日名称，例如 生日、考试、旅行" required />
+          <input name="title" placeholder="名称，例如 高考、结婚纪念、生日、春节" required />
           <div className="anniversary-fields">
             <input name="date" type="date" required />
             <FormMenuSelect
@@ -2991,7 +3004,7 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
           <button type="submit">添加纪念日</button>
         </form>
         <div className="anniversary-sections">
-          {sortedAnniversaries.length === 0 && <p className="empty">还没有纪念日。</p>}
+          {sortedAnniversaries.length === 0 && <p className="empty">还没有纪念日。先添加一个吧。</p>}
           {anniversaryTypes.map((type) => {
             const items = sortedAnniversaries.filter((item) => (item.type || "memory") === type.id);
             return (

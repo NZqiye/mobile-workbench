@@ -541,7 +541,14 @@ textarea { resize: vertical; }
 .anniversary-grid { display: grid; grid-template-columns: 1fr; gap: 9px; }
 .anniversary-card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "meta days" "title days" "delete days"; gap: 5px 12px; align-items: center; min-height: 88px; padding: 12px 13px 12px 17px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--theme-main) 14%, var(--line)); border-radius: 14px; background: rgba(255, 255, 255, 0.86); box-shadow: 0 8px 18px rgba(117, 25, 35, 0.08); }
 .anniversary-card::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: linear-gradient(180deg, var(--theme-main), var(--theme-accent)); }
-.anniversary-card.countdown, .anniversary-card.memory, .anniversary-card.birthday, .anniversary-card.festival { background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), color-mix(in srgb, var(--theme-soft) 42%, #fff)); }
+.anniversary-card.countdown { background: linear-gradient(180deg, rgba(232, 243, 255, 0.96), rgba(219, 234, 254, 0.82)); }
+.anniversary-card.countdown::before { background: linear-gradient(180deg, #2563eb, #3b82f6); }
+.anniversary-card.memory { background: linear-gradient(180deg, rgba(255, 247, 235, 0.96), rgba(255, 237, 213, 0.82)); }
+.anniversary-card.memory::before { background: linear-gradient(180deg, #ea580c, #f97316); }
+.anniversary-card.birthday { background: linear-gradient(180deg, rgba(255, 241, 242, 0.96), rgba(254, 226, 226, 0.82)); }
+.anniversary-card.birthday::before { background: linear-gradient(180deg, #e11d48, #f43f5e); }
+.anniversary-card.festival { background: linear-gradient(180deg, rgba(250, 245, 255, 0.96), rgba(243, 232, 255, 0.82)); }
+.anniversary-card.festival::before { background: linear-gradient(180deg, #9333ea, #a855f7); }
 .anniversary-card span { grid-area: meta; color: var(--muted); font-size: 12px; font-weight: 800; }
 .anniversary-card strong { grid-area: title; min-width: 0; overflow: hidden; color: var(--ink); font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
 .anniversary-days { grid-area: days; display: grid; gap: 5px; justify-items: end; min-width: 112px; text-align: right; }
