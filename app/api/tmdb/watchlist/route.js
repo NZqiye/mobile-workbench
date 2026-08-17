@@ -19,7 +19,8 @@ async function readAccountId() {
 }
 
 async function readWatchlistPage(accountId, page, mediaType = "tv") {
-  const url = new URL(`https://api.themoviedb.org/3/account/${accountId}/watchlist/${mediaType}`);
+  const apiMediaType = mediaType === "movie" ? "movies" : "tv";
+  const url = new URL(`https://api.themoviedb.org/3/account/${accountId}/watchlist/${apiMediaType}`);
   url.searchParams.set("language", "zh-CN");
   url.searchParams.set("page", String(page));
   url.searchParams.set("sort_by", "created_at.desc");
@@ -38,7 +39,7 @@ export async function GET() {
     const allPages = [];
     for (const mediaType of ["movie", "tv"]) {
       const firstPage = await readWatchlistPage(accountId, 1, mediaType);
-      const totalPages = Math.min(Number(firstPage.total_pages || 1), 3);
+      const totalPages = Number(firstPage.total_pages || 1);
       const otherPages = totalPages > 1
         ? await Promise.all(Array.from({ length: totalPages - 1 }, (_, index) => readWatchlistPage(accountId, index + 2, mediaType)))
         : [];
@@ -51,26 +52,27 @@ export async function GET() {
     }
     const results = allPages.flatMap((page) => page.results || []);
     const seen = new Set();
+    const uniqueResults = results.filter((item) => {
+      const mediaType = item.media_type === "movie" ? "movie" : "tv";
+      const key = `${mediaType}:${item.id}`;
+      if (!item.id || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
-    const items = await Promise.all(results
-      .filter((item) => {
-        if (!item.id || seen.has(item.id)) return false;
-        seen.add(item.id);
-        return true;
-      })
-      .map(async (item) => {
-        const mediaType = item.media_type === "movie" ? "movie" : "tv";
-        const baseItem = mapTmdbResult({ ...item, media_type: mediaType });
-        try {
-          return { ...baseItem, ...(await loadTmdbDetails(item.id, mediaType)) };
-        } catch {
-          return baseItem;
-        }
-      }));
+    const items = await Promise.all(uniqueResults.map(async (item) => {
+      const mediaType = item.media_type === "movie" ? "movie" : "tv";
+      const baseItem = mapTmdbResult({ ...item, media_type: mediaType });
+      try {
+        return { ...baseItem, ...(await loadTmdbDetails(item.id, mediaType)) };
+      } catch {
+        return baseItem;
+      }
+    }));
 
     return Response.json({ items, count: items.length, accountId });
   } catch (error) {
-    const message = error.message === "Authentication failed: You do not have permissions to access the service."
+    const message = String(error.message || "").includes("Authentication failed")
       ? "TMDB_SESSION_ID 没有账号片单权限，请重新生成并确认授权后再填到 Vercel。"
       : error.message || "TMDB 片单暂时不可用";
     return Response.json({ error: message }, { status: 500 });
@@ -101,7 +103,7 @@ export async function POST(request) {
 
     return Response.json({ ok: true, accountId, result: data });
   } catch (error) {
-    const message = error.message === "Authentication failed: You do not have permissions to access the service."
+    const message = String(error.message || "").includes("Authentication failed")
       ? "TMDB_SESSION_ID 没有写入片单权限，请重新生成并确认授权后再填到 Vercel。"
       : error.message || "TMDB 待看片单写入失败";
     return Response.json({ error: message }, { status: 500 });
@@ -133,7 +135,7 @@ export async function DELETE(request) {
 
     return Response.json({ ok: true, accountId, result: data });
   } catch (error) {
-    const message = error.message === "Authentication failed: You do not have permissions to access the service."
+    const message = String(error.message || "").includes("Authentication failed")
       ? "TMDB_SESSION_ID \u6ca1\u6709\u5199\u5165\u7247\u5355\u6743\u9650\uff0c\u8bf7\u91cd\u65b0\u751f\u6210\u5e76\u786e\u8ba4\u6388\u6743\u540e\u518d\u586b\u5230 Vercel\u3002"
       : error.message || "\u79fb\u9664\u7247\u5355\u5931\u8d25";
     return Response.json({ error: message }, { status: 500 });
