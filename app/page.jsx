@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { hasSupabaseConfig, supabase } from "../lib/supabase";
-import { asset3dIconKeys, asset3dIconByKey } from "../lib/asset-3d-icons";
+import { asset3dIconByKey } from "../lib/asset-3d-icons";
+import { thiingsIconByKey, thiingsIconCategories } from "../lib/thiings-icons";
 
 const storagePrefix = "qiyeworkbench:";
 const statePage = "app_state";
@@ -14,6 +15,7 @@ const pages = [
   { id: "news", name: "热榜时讯", icon: "news" },
   { id: "plans", name: "每日安排", icon: "checklist" },
   { id: "assets", name: "资产记录", icon: "diamond" },
+  { id: "exercise", name: "运动记录", icon: "exercise" },
   { id: "settings", name: "设置", icon: "settings" },
 ];
 const pageNames = Object.fromEntries(pages.map((page) => [page.id, page.name]));
@@ -24,6 +26,7 @@ const pageDescriptions = {
   diet: "每日喝水、饮食热量和最近趋势",
   news: "微博、B站、抖音等热榜集中查看",
   consultations: "观影清单、想法和资料整理",
+  exercise: "记录每日运动项目、时长和消耗",
   settings: "账号同步、备份恢复和自选配置",
 };
 const defaultPetSupplies = { bone: 0, water: 0, toy: 0, stick: 0 };
@@ -143,7 +146,7 @@ const marketSymbolNames = {
 };
 const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
 const defaultChineseHolidaysSeedKey = "defaultChineseHolidays2026Seeded";
-const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins", "assets"];
+const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins", "assets", "exerciseRecords"];
 const marketCacheVersion = 3;
 const fundCacheVersion = 2;
 const indexTrackerCacheVersion = 1;
@@ -589,6 +592,7 @@ const crewImgById = {
   checklist: "/crew/robin.png",
   diamond: "/crew/franky.png",
   settings: "/crew/jinbe.png",
+  exercise: "/crew/yinyan-transparent.png",
 };
 
 function CrewNavIcon({ name }) {
@@ -930,6 +934,7 @@ function mergeCloudWithLocal(cloud) {
     watchCheckins: mergeSyncedItems("watchCheckins", readStorage("watchCheckins", []), cloud.watchCheckins, cloud),
     assets: mergeSyncedItems("assets", readStorage("assets", []), cloud.assets, cloud),
     dietRecords: mergeSyncedItems("dietRecords", readStorage("dietRecords", []), cloud.dietRecords, cloud),
+    exerciseRecords: mergeSyncedItems("exerciseRecords", readStorage("exerciseRecords", []), cloud.exerciseRecords, cloud),
     anniversaries: mergeSyncedItems("anniversaries", readStorage("anniversaries", []), cloud.anniversaries, cloud),
     waterTarget: cloud.waterTarget != null && Number.isFinite(Number(cloud.waterTarget))
       ? Number(cloud.waterTarget)
@@ -1835,8 +1840,18 @@ function normalizeMarketQuote(quote) {
   return { ...quote, name: mappedName || (brokenName ? quote.symbol : name) };
 }
 
+function tmdbMediaType(item) {
+  if (item.tmdbMediaType) return String(item.tmdbMediaType).toLowerCase().startsWith("movie") ? "movie" : "tv";
+  if (item.media_type) return String(item.media_type).toLowerCase().startsWith("movie") ? "movie" : "tv";
+  return item.type === "电影" ? "movie" : "tv";
+}
+
+function tmdbItemKey(item) {
+  return item.tmdbId ? `tmdb:${tmdbMediaType(item)}:${item.tmdbId}` : "";
+}
+
 function consultationKey(item) {
-  if (item.tmdbId) return `tmdb:${item.tmdbId}`;
+  if (item.tmdbId) return tmdbItemKey(item);
   return `title:${String(item.title || "").trim().toLowerCase()}`;
 }
 
@@ -1872,17 +1887,24 @@ function mergeTmdbFields(item, fresh) {
   };
 }
 
-function getDeletedTmdbIds() {
+function isDeletedTmdbItem(item) {
+  if (!item?.tmdbId) return false;
   const saved = readStorage("deletedTmdbWatchlist", []);
-  return new Set((Array.isArray(saved) ? saved : []).map((entry) => String(entry.tmdbId ?? entry)));
+  const itemKey = tmdbItemKey(item);
+  return (Array.isArray(saved) ? saved : []).some((entry) => {
+    if (entry && typeof entry === "object") {
+      return `tmdb:${tmdbMediaType(entry)}:${entry.tmdbId}` === itemKey || String(entry.tmdbId) === String(item.tmdbId);
+    }
+    return String(entry) === String(item.tmdbId);
+  });
 }
 
 function rememberDeletedTmdbId(item) {
   if (!item || !item.tmdbId) return;
   const id = String(item.tmdbId);
-  const mediaType = item.tmdbMediaType || (item.type === "电影" ? "movie" : "tv");
+  const mediaType = tmdbMediaType(item);
   const saved = readStorage("deletedTmdbWatchlist", []);
-  const next = (Array.isArray(saved) ? saved : []).filter((entry) => String(entry.tmdbId ?? entry) !== id);
+  const next = (Array.isArray(saved) ? saved : []).filter((entry) => String(entry.tmdbId ?? entry) !== id || (entry?.mediaType && tmdbMediaType(entry) !== mediaType));
   next.push({ tmdbId: item.tmdbId, mediaType });
   writeStorage("deletedTmdbWatchlist", next);
 }
@@ -1890,8 +1912,9 @@ function rememberDeletedTmdbId(item) {
 function clearDeletedTmdbId(item) {
   if (!item || !item.tmdbId) return;
   const id = String(item.tmdbId);
+  const mediaType = tmdbMediaType(item);
   const saved = readStorage("deletedTmdbWatchlist", []);
-  writeStorage("deletedTmdbWatchlist", (Array.isArray(saved) ? saved : []).filter((entry) => String(entry.tmdbId ?? entry) !== id));
+  writeStorage("deletedTmdbWatchlist", (Array.isArray(saved) ? saved : []).filter((entry) => String(entry.tmdbId ?? entry) !== id || (entry?.mediaType && tmdbMediaType(entry) !== mediaType)));
 }
 
 function MarketBoard({ compact = false, onAssetsChange }) {
@@ -3203,7 +3226,7 @@ const assetIconImageMap = {
 };
 
 function AssetIcon({ name, size = 20 }) {
-  const src = asset3dIconByKey[name] || assetIconImageMap[name];
+  const src = thiingsIconByKey[name] || asset3dIconByKey[name] || assetIconImageMap[name];
   if (!src) {
     return (
       <span className="asset-icon-fallback" style={{ width: size, height: size, fontSize: Math.max(12, Math.floor(size * 0.55)) }}>
@@ -3214,14 +3237,7 @@ function AssetIcon({ name, size = 20 }) {
   return <img className="asset-icon-img" src={src} width={size} height={size} alt="" />;
 }
 
-const assetIconCategories = [
-  { id: "digital", label: "数码科技", icons: ["smartphone","laptop","monitor","keyboard","mouse","headphones","camera","tv","gamepad","watch","cpu","harddrive","printer","speaker","battery"] },
-  { id: "daily", label: "日常", icons: ["house","key","lamp","sofa","washing","cart","backpack","scissors","droplets","trash","snowflake","umbrella","sun","flame","sparkles"] },
-  { id: "food", label: "美食饮品", icons: ["coffee","cup","wine","beer","milk","utensils","pizza","chef","croissant","apple"] },
-  { id: "wear", label: "服饰", icons: ["shirt","footprints","glasses","diamond","shoppingbag","watch"] },
-  { id: "sport", label: "运动户外", icons: ["car","bike","plane","train","dumbbell","trophy","tent","waves","mountain","sailboat"] },
-  { id: "3dicons", label: "3dicons", icons: asset3dIconKeys },
-];
+const assetIconCategories = thiingsIconCategories;
 
 function AssetBoard({ items = [], onAdd, onUpdate, onDelete }) {
   const [showForm, setShowForm] = useState(false);
@@ -3232,7 +3248,7 @@ function AssetBoard({ items = [], onAdd, onUpdate, onDelete }) {
   const [formCategory, setFormCategory] = useState("数码");
   const [formStatus, setFormStatus] = useState("服役中");
   const [formNotes, setFormNotes] = useState("");
-  const [formIcon, setFormIcon] = useState("package");
+  const [formIcon, setFormIcon] = useState("thiings:box");
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [iconTab, setIconTab] = useState("digital");
   const assetList = Array.isArray(items) ? items : [];
@@ -3245,7 +3261,7 @@ function AssetBoard({ items = [], onAdd, onUpdate, onDelete }) {
   }, 0);
 
   function resetForm() {
-    setFormName(""); setFormPrice(""); setFormDate(todayKey()); setFormCategory("数码"); setFormStatus("服役中"); setFormNotes(""); setFormIcon("package"); setShowIconPicker(false); setEditingId(null); setShowForm(false);
+    setFormName(""); setFormPrice(""); setFormDate(todayKey()); setFormCategory("数码"); setFormStatus("服役中"); setFormNotes(""); setFormIcon("thiings:box"); setShowIconPicker(false); setEditingId(null); setShowForm(false);
   }
 
   function handleSubmit(e) {
@@ -3996,6 +4012,150 @@ function DietTracker({ records, waterTarget, onAddWater, onAddMeal, onDelete, on
   );
 }
 
+
+const exerciseTypes = [
+  { id: 'running', label: '跑步', icon: '/assets-icons/thiings/sport/treadmill.webp', calPerMin: 12 },
+  { id: 'badminton', label: '羽毛球', icon: '/assets-icons/thiings/sport/badminton-shuttlecock.webp', calPerMin: 8 },
+  { id: 'swimming', label: '游泳', icon: '/assets-icons/thiings/sport/swimming.webp', calPerMin: 10 },
+  { id: 'cycling', label: '骑行', icon: '/assets-icons/thiings/sport/bicycle.webp', calPerMin: 9 },
+  { id: 'yoga', label: '瑜伽', icon: '/assets-icons/thiings/sport/yoga-mat.webp', calPerMin: 5 },
+  { id: 'gym', label: '健身', icon: '/assets-icons/thiings/sport/dumbbell.webp', calPerMin: 8 },
+  { id: 'walking', label: '散步', icon: '/assets-icons/thiings/sport/walking.webp', calPerMin: 4 },
+  { id: 'other', label: '乒乓球', icon: '/assets-icons/thiings/sport/table-tennis-paddle.webp', calPerMin: 6 },
+];
+
+function ExerciseIcon({ src }) {
+  return String(src || "").startsWith("/") ? <img src={src} alt="" loading="lazy" /> : src;
+}
+
+function ExerciseTracker({ records, onAdd, onDelete }) {
+  const [exerciseType, setExerciseType] = useState('running');
+  const [duration, setDuration] = useState('');
+  const [calories, setCalories] = useState('');
+  const todayRecords = records.filter((item) => item.date === todayKey());
+  const todayCalories = todayRecords.reduce((sum, item) => sum + Number(item.calories || 0), 0);
+  const todayMinutes = todayRecords.reduce((sum, item) => sum + Number(item.duration || 0), 0);
+  const todayCakes = todayRecords.length;
+
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - index));
+    const dk = todayKey(date);
+    const dayRecords = records.filter((item) => item.date === dk);
+    return {
+      dateKey: dk,
+      label: index === 6 ? '今天' : `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`,
+      minutes: dayRecords.reduce((s, i) => s + Number(i.duration || 0), 0),
+      calories: dayRecords.reduce((s, i) => s + Number(i.calories || 0), 0),
+      count: dayRecords.length,
+    };
+  });
+  const maxMinutes = Math.max(1, ...days.map((d) => d.minutes));
+
+  function submitExercise(event) {
+    event.preventDefault();
+    const type = exerciseTypes.find((t) => t.id === exerciseType);
+    const dur = Number(duration) || 0;
+    if (dur <= 0) return;
+    const cal = Number(calories) || Math.round(dur * (type?.calPerMin || 6));
+    onAdd({ type: exerciseType, label: type?.label || exerciseType, icon: type?.icon || '/assets-icons/thiings/sport/gold-medal.webp', duration: dur, calories: cal });
+    setDuration('');
+    setCalories('');
+  }
+
+  return (
+    <section className="exercise-shell">
+      <div className="exercise-title">
+        <span>{'🏋️'}</span>
+        <div>
+          <h2>{'每日运动记录'}</h2>
+          <p>{todayDisplay()} {'· 动起来，每一步都算数'}</p>
+        </div>
+      </div>
+
+      <section className="exercise-stats-row">
+        <div className="exercise-stat-card">
+          <span>{'📊'}</span>
+          <strong>{todayMinutes}</strong>
+          <small>{'今日总时长(分钟)'}</small>
+        </div>
+        <div className="exercise-stat-card">
+          <span>{'🔥'}</span>
+          <strong>{todayCalories}</strong>
+          <small>{'今日消耗(kcal)'}</small>
+        </div>
+        <div className="exercise-stat-card">
+          <span>{'🍰'}</span>
+          <strong>{todayCakes}</strong>
+          <small>{'获得小蛋糕'}</small>
+        </div>
+      </section>
+
+      <section className="exercise-card">
+        <div className="panel-head">
+          <h2>{'记录运动'}</h2>
+          <span className="tag">{'每次运动获得一个小蛋糕'} {'🍰'}</span>
+        </div>
+        <div className="exercise-type-grid">
+          {exerciseTypes.map((t) => (
+            <button className={exerciseType === t.id ? 'active' : ''} type="button" key={t.id} onClick={() => setExerciseType(t.id)}>
+              <span><ExerciseIcon src={t.icon} /></span>
+              <strong>{t.label}</strong>
+            </button>
+          ))}
+        </div>
+        <form className="exercise-form" onSubmit={submitExercise}>
+          <label>
+            <span>{'运动时长(分钟)'}</span>
+            <input name="duration" type="number" min="1" inputMode="numeric" value={duration} onChange={(e) => setDuration(e.target.value)} placeholder={'如 30'} />
+          </label>
+          <label>
+            <span>{'消耗热量(kcal)，可选'}</span>
+            <input name="calories" type="number" min="0" inputMode="numeric" value={calories} onChange={(e) => setCalories(e.target.value)} placeholder={'自动估算'} />
+          </label>
+          <button type="submit">{'记录今日运动'}</button>
+        </form>
+      </section>
+
+      <section className="exercise-card">
+        <div className="panel-head">
+          <h2>{'今日运动记录'}</h2>
+          <span className="tag">{todayRecords.length} {'条'}</span>
+        </div>
+        <div className="exercise-log-list">
+          {todayRecords.length === 0 && <p className="empty">{'今天还没有运动记录，快去动起来！'}</p>}
+          {todayRecords.map((item) => (
+            <div className="exercise-log-row" key={item.id}>
+              <span className="exercise-log-icon"><ExerciseIcon src={item.icon} /></span>
+              <div className="exercise-log-info">
+                <strong>{item.label}</strong>
+                <small>{item.duration} {'分钟'} {'·'} {item.calories} kcal {'·'} {item.time}</small>
+              </div>
+              <span className="exercise-log-cake">{'🍰'}</span>
+              <button type="button" onClick={() => onDelete(item.id)}>{'删除'}</button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="exercise-card">
+        <div className="panel-head">
+          <h2>{'最近 7 天趋势'}</h2>
+        </div>
+        <div className="exercise-trend">
+          {days.map((day) => (
+            <span key={day.dateKey}>
+              <i style={{ height: `${Math.max(4, Math.min(74, (day.minutes / maxMinutes) * 74))}px` }} />
+              <small>{day.label}</small>
+              <em>{day.minutes > 0 ? `${day.minutes}m` : ''}</em>
+            </span>
+          ))}
+        </div>
+      </section>
+    </section>
+  );
+}
+
 export default function Workbench() {
   const [activePage, setActivePage] = useState("today");
   const [clock, setClock] = useState("--:--:--");
@@ -4005,6 +4165,7 @@ export default function Workbench() {
   const [watchCheckins, setWatchCheckins] = useState([]);
   const [assetItems, setAssetItems] = useState([]);
   const [dietRecords, setDietRecords] = useState([]);
+  const [exerciseRecords, setExerciseRecords] = useState([]);
   const [anniversaries, setAnniversaries] = useState([]);
   const [waterTarget, setWaterTarget] = useState(defaultWaterTarget);
   const [habits, setHabits] = useState([]);
@@ -4109,6 +4270,10 @@ export default function Workbench() {
       setDietRecords(cloud.dietRecords);
       writeStorage("dietRecords", cloud.dietRecords);
     }
+    if (Array.isArray(cloud.exerciseRecords)) {
+      setExerciseRecords(cloud.exerciseRecords);
+      writeStorage("exerciseRecords", cloud.exerciseRecords);
+    }
     if (Array.isArray(cloud.watchCheckins)) {
       setWatchCheckins(cloud.watchCheckins);
       writeStorage("watchCheckins", cloud.watchCheckins);
@@ -4174,6 +4339,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "plans", merged.plans),
         saveCloudItem(nextSession, "consultations", merged.consultations),
         saveCloudItem(nextSession, "dietRecords", merged.dietRecords),
+        saveCloudItem(nextSession, "exerciseRecords", merged.exerciseRecords),
         saveCloudItem(nextSession, "watchCheckins", merged.watchCheckins),
         saveCloudItem(nextSession, "anniversaries", merged.anniversaries),
         saveCloudItem(nextSession, "waterTarget", merged.waterTarget),
@@ -4203,6 +4369,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "plans", merged.plans),
         saveCloudItem(nextSession, "consultations", merged.consultations),
         saveCloudItem(nextSession, "dietRecords", merged.dietRecords),
+        saveCloudItem(nextSession, "exerciseRecords", merged.exerciseRecords),
         saveCloudItem(nextSession, "watchCheckins", merged.watchCheckins),
         saveCloudItem(nextSession, "anniversaries", merged.anniversaries),
         saveCloudItem(nextSession, "waterTarget", merged.waterTarget),
@@ -4230,6 +4397,7 @@ export default function Workbench() {
     setConsultations(nextConsultations);
     writeStorage("consultations", nextConsultations);
     setDietRecords(readStorage("dietRecords", []));
+    setExerciseRecords(readStorage("exerciseRecords", []));
     setWatchCheckins(readStorage("watchCheckins", []));
     setAssetItems(readStorage("assets", []));
     let nextAnniversaries = readStorage("anniversaries", []);
@@ -4293,8 +4461,9 @@ export default function Workbench() {
       notes: `${notes.length} 条`,
       dietToday: dietRecords.filter((item) => item.date === todayKey()).length,
       consultations: consultations.filter((item) => item.status !== "已归档").length,
+      exerciseToday: exerciseRecords.filter((item) => item.date === todayKey()).length,
     };
-  }, [consultations, dietRecords, done, habits, notes, plans]);
+  }, [consultations, dietRecords, exerciseRecords, done, habits, notes, plans]);
 
   const recent = [
     ...consultations.slice(0, 3).map((record) => ({ type: "咨询", title: record.title, time: record.time, page: "consultations" })),
@@ -4435,16 +4604,18 @@ export default function Workbench() {
       const data = text ? JSON.parse(text) : {};
       if (!response.ok) throw new Error(data.error || "TMDB 片单同步失败");
       const incoming = Array.isArray(data.items) ? data.items : [];
-      const deletedTmdbIds = getDeletedTmdbIds();
-      const incomingByKey = new Map(incoming.map((item) => [consultationKey(item), item]));
+      const isDeleted = isDeletedTmdbItem;
+      const removed = incoming.filter(isDeleted);
+      const keptIncoming = incoming.filter((item) => !isDeleted(item));
+      const incomingByKey = new Map(keptIncoming.map((item) => [consultationKey(item), item]));
       const refreshedItems = consultations.map((item) => {
         const fresh = incomingByKey.get(consultationKey(item))
           || incomingByKey.get(`title:${String(item.title || "").trim().toLowerCase()}`);
         return fresh ? mergeTmdbFields(item, fresh) : item;
       });
       const refreshedKeys = new Set(refreshedItems.map(consultationKey));
-      const nextItems = incoming
-        .filter((item) => !deletedTmdbIds.has(String(item.tmdbId)) && !refreshedKeys.has(consultationKey(item)))
+      const nextItems = keptIncoming
+        .filter((item) => !refreshedKeys.has(consultationKey(item)))
         .map((item) => ({
           id: crypto.randomUUID(),
           ...item,
@@ -4457,7 +4628,6 @@ export default function Workbench() {
           totalEpisodes: item.totalEpisodes || "",
           time: nowText(),
         }));
-      const removed = incoming.filter((item) => deletedTmdbIds.has(String(item.tmdbId)));
       if (removed.length) {
         await Promise.all(removed.map((item) => fetch("/api/tmdb/watchlist", {
           method: "DELETE",
@@ -4465,7 +4635,7 @@ export default function Workbench() {
           body: JSON.stringify({ mediaId: item.tmdbId, mediaType: item.tmdbMediaType || (item.media_type === "movie" ? "movie" : "tv") }),
         }).catch(() => {})));
       }
-      const refreshedCount = incoming.length - nextItems.length;
+      const refreshedCount = keptIncoming.length - nextItems.length;
       const next = dedupeConsultations([...nextItems, ...refreshedItems]);
       setConsultations(next);
       persist("consultations", next);
@@ -4548,6 +4718,28 @@ export default function Workbench() {
     markDeleted("dietRecords", id);
     saveDietRecords(dietRecords.filter((item) => item.id !== id));
   }
+
+  function saveExerciseRecords(next) {
+    setExerciseRecords(next);
+    persist('exerciseRecords', next);
+  }
+
+  function addExercise(item) {
+    const next = [{
+      id: crypto.randomUUID(),
+      date: todayKey(),
+      time: clock.slice(0, 5),
+      ...item,
+    }, ...exerciseRecords];
+    saveExerciseRecords(next);
+    changePetSupply('bone', 1, '胖咕嘆收到了一个小蛋糕，开心地跳了一下。', 'bone');
+  }
+
+  function deleteExerciseRecord(id) {
+    markDeleted('exerciseRecords', id);
+    saveExerciseRecords(exerciseRecords.filter((item) => item.id !== id));
+  }
+
 
   function addHabit(event) {
     event.preventDefault();
@@ -4794,6 +4986,9 @@ export default function Workbench() {
       "",
       "## 饮食记录",
       ...dietRecords.map((item) => item.type === "water" ? `- ${item.date} ${item.time} 喝水 ${item.cups || Number(item.amount || 0) / cupSize} 杯（${item.amount} ml）` : `- ${item.date} ${item.time} ${item.meal} ${item.title} ${item.calories} kcal`),
+      "",
+      "## 运动记录",
+      ...exerciseRecords.map((item) => `- ${item.date} ${item.time} ${item.label} ${item.duration}分钟 ${item.calories}kcal`),
     ];
     const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -4814,6 +5009,7 @@ export default function Workbench() {
       watchCheckins,
       assets,
       dietRecords,
+      exerciseRecords,
       anniversaries,
       waterTarget,
       habits,
@@ -4866,6 +5062,10 @@ export default function Workbench() {
       if (Array.isArray(payload.dietRecords)) {
         setDietRecords(payload.dietRecords);
         persist("dietRecords", payload.dietRecords);
+      }
+      if (Array.isArray(payload.exerciseRecords)) {
+        setExerciseRecords(payload.exerciseRecords);
+        persist("exerciseRecords", payload.exerciseRecords);
       }
       if (Array.isArray(payload.anniversaries)) {
         setAnniversaries(payload.anniversaries);
@@ -4954,6 +5154,7 @@ export default function Workbench() {
     { id: "news", name: "热榜时讯", icon: "news", badge: "热榜", summary: "微博B站抖音" },
     { id: "plans", name: "每日安排", icon: "checklist", badge: "安排", summary: `${todayPlans.length} 条任务` },
     { id: "assets", name: "资产记录", icon: "diamond", badge: "资产", summary: `¥${(assetItems || []).filter((item) => item.status === "服役中").reduce((s, i) => s + (Number(i.price) || 0), 0).toLocaleString()}` },
+    { id: "exercise", name: "运动记录", icon: "exercise", badge: "运动", summary: `${exerciseRecords.filter((item) => item.date === todayKey()).length} 条` },
     { id: "settings", name: "数据设置", icon: "settings", badge: "备份", summary: session ? "云同步在线" : "本地模式" },
   ];
 
@@ -5124,6 +5325,10 @@ export default function Workbench() {
 
           {activePage === "diet" && (
             <DietTracker records={dietRecords} waterTarget={waterTarget} onAddWater={addWater} onAddMeal={addMeal} onDelete={deleteDietRecord} onSaveTarget={saveWaterTarget} />
+          )}
+
+          {activePage === "exercise" && (
+            <ExerciseTracker records={exerciseRecords} onAdd={addExercise} onDelete={deleteExerciseRecord} />
           )}
 
           {activePage === "news" && <NewsBoard />}
