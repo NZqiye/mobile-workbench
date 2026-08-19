@@ -43,6 +43,7 @@ const ponyThemes = [
   { id: "jade", name: "青玉", note: "低饱和青绿", primary: "#16645a", accent: "#c99a3a" },
   { id: "blue", name: "霜蓝", note: "冷静蓝灰", primary: "#285980", accent: "#b88a37" },
   { id: "pine", name: "松绿", note: "自然深绿", primary: "#255f3e", accent: "#c98a2c" },
+  { id: "bw", name: "\u9ed1\u767d", note: "\u7ecf\u5178\u9ed1\u767d", primary: "#18181b", accent: "#f4f4f5" },
 ];
 const noteTypes = [
   { value: "life", label: "生活" },
@@ -891,6 +892,31 @@ function mergeSyncedItems(name, localItems, cloudItems, cloud) {
     .map((item) => ({ ...item, updatedAt: itemUpdatedAt(item) }));
 }
 
+function normalizePetSupplies(value) {
+  return Object.fromEntries(Object.keys(defaultPetSupplies).map((name) => [
+    name,
+    Math.max(0, Number(value?.[name] || 0)),
+  ]));
+}
+
+function mergePetRewardHistory(cloudHistory) {
+  return {
+    ...readStorage("petRewardHistory", {}),
+    ...(cloudHistory && typeof cloudHistory === "object" ? cloudHistory : {}),
+  };
+}
+
+function mergePetSupplies(localSupplies, cloudSupplies, localUpdatedAt, cloudUpdatedAt) {
+  if (cloudUpdatedAt > localUpdatedAt) return normalizePetSupplies(cloudSupplies);
+  if (localUpdatedAt > cloudUpdatedAt) return normalizePetSupplies(localSupplies);
+  const local = normalizePetSupplies(localSupplies);
+  const cloud = normalizePetSupplies(cloudSupplies);
+  return Object.fromEntries(Object.keys(defaultPetSupplies).map((name) => [
+    name,
+    Math.max(local[name], cloud[name]),
+  ]));
+}
+
 function withDefaultChineseHolidays(items) {
   const existingIds = new Set(items.map((item) => item.id));
   const missing = defaultChineseHolidays2026.filter((item) => !existingIds.has(item.id));
@@ -901,6 +927,8 @@ function mergeCloudWithLocal(cloud) {
   const localAssets = localStorage.getItem(key("assets"));
   const localFundPortfolio = readStorage("fundPortfolio", null);
   const localFundCodes = localStorage.getItem(key("fundCodes"));
+  const localPetUpdatedAt = Number(readStorage("petSuppliesUpdatedAt", 0)) || 0;
+  const cloudPetUpdatedAt = Number(cloud.petSuppliesUpdatedAt || 0) || 0;
   const cloudFundPortfolio = Array.isArray(cloud.fundPortfolio)
     ? cloud.fundPortfolio
     : buildFundPortfolioFromCodes(cloud.fundCodes);
@@ -950,6 +978,9 @@ function mergeCloudWithLocal(cloud) {
     fundPortfolio,
     fundCodes: fundPortfolio.map((item) => item.code).join(","),
     indexTrackerItems: indexItems,
+    petSupplies: mergePetSupplies(readStorage("petSupplies", defaultPetSupplies), cloud.petSupplies, localPetUpdatedAt, cloudPetUpdatedAt),
+    petSuppliesUpdatedAt: Math.max(localPetUpdatedAt, cloudPetUpdatedAt),
+    petRewardHistory: mergePetRewardHistory(cloud.petRewardHistory),
     ...deletedIdEntries,
   };
 }
@@ -4306,6 +4337,17 @@ export default function Workbench() {
       setDone(cloud[`done:${todayKey()}`]);
       writeStorage(`done:${todayKey()}`, cloud[`done:${todayKey()}`]);
     }
+    if (cloud.petSupplies && typeof cloud.petSupplies === "object") {
+      const nextPetSupplies = normalizePetSupplies(cloud.petSupplies);
+      setPetSupplies(nextPetSupplies);
+      writeStorage("petSupplies", nextPetSupplies);
+    }
+    if (cloud.petSuppliesUpdatedAt != null) {
+      writeStorage("petSuppliesUpdatedAt", Number(cloud.petSuppliesUpdatedAt) || Date.now());
+    }
+    if (cloud.petRewardHistory && typeof cloud.petRewardHistory === "object") {
+      writeStorage("petRewardHistory", cloud.petRewardHistory);
+    }
     if (typeof cloud.assets === "string") {
       const nextAssets = normalizeSavedAssets(cloud.assets);
       setAssetInput(nextAssets);
@@ -4350,6 +4392,9 @@ export default function Workbench() {
         saveCloudItem(nextSession, "fundPortfolio", merged.fundPortfolio),
         saveCloudItem(nextSession, "fundCodes", merged.fundCodes),
         saveCloudItem(nextSession, "indexTrackerItems", merged.indexTrackerItems),
+        saveCloudItem(nextSession, "petSupplies", merged.petSupplies),
+        saveCloudItem(nextSession, "petSuppliesUpdatedAt", merged.petSuppliesUpdatedAt),
+        saveCloudItem(nextSession, "petRewardHistory", merged.petRewardHistory),
       ]);
       setSyncStatus(`云同步已连接 · ${nowText()}`);
       loadTmdbRecommendations();
@@ -4380,6 +4425,9 @@ export default function Workbench() {
         saveCloudItem(nextSession, "fundPortfolio", merged.fundPortfolio),
         saveCloudItem(nextSession, "fundCodes", merged.fundCodes),
         saveCloudItem(nextSession, "indexTrackerItems", merged.indexTrackerItems),
+        saveCloudItem(nextSession, "petSupplies", merged.petSupplies),
+        saveCloudItem(nextSession, "petSuppliesUpdatedAt", merged.petSuppliesUpdatedAt),
+        saveCloudItem(nextSession, "petRewardHistory", merged.petRewardHistory),
       ]);
       setSyncStatus(`同步完成 · ${nowText()}`);
     } catch (error) {
@@ -4489,12 +4537,16 @@ export default function Workbench() {
 
   function changePetSupply(type, amount, actionText, actionType = type) {
     setPetSupplies((current) => {
+      const updatedAt = Date.now();
       const next = {
         ...defaultPetSupplies,
         ...current,
         [type]: Math.max(0, Number(current[type] || 0) + amount),
       };
       writeStorage("petSupplies", next);
+      writeStorage("petSuppliesUpdatedAt", updatedAt);
+      persist("petSupplies", next);
+      persist("petSuppliesUpdatedAt", updatedAt);
       return next;
     });
     setPetAction({ type: actionType, text: actionText });
@@ -4503,7 +4555,9 @@ export default function Workbench() {
   function rewardPetOnce(rewardId, type, amount, actionText) {
     const history = readStorage("petRewardHistory", {});
     if (history[rewardId]) return;
-    writeStorage("petRewardHistory", { ...history, [rewardId]: nowText() });
+    const nextHistory = { ...history, [rewardId]: nowText() };
+    writeStorage("petRewardHistory", nextHistory);
+    persist("petRewardHistory", nextHistory);
     changePetSupply(type, amount, actionText, "reward");
   }
 
@@ -5015,6 +5069,9 @@ export default function Workbench() {
       habits,
       deletedHabitIds: readStorage("deletedHabitIds", []),
       done,
+      petSupplies: normalizePetSupplies(petSupplies),
+      petSuppliesUpdatedAt: readStorage("petSuppliesUpdatedAt", 0),
+      petRewardHistory: readStorage("petRewardHistory", {}),
       assets: assetInput,
       fundPortfolio: normalizeFundPortfolio(readStorage("fundPortfolio", [])),
       fundCodes: localStorage.getItem(key("fundCodes")) || "",
@@ -5085,6 +5142,17 @@ export default function Workbench() {
       if (payload.done && typeof payload.done === "object") {
         setDone(payload.done);
         persist(`done:${todayKey()}`, payload.done);
+      }
+      if (payload.petSupplies && typeof payload.petSupplies === "object") {
+        const nextPetSupplies = normalizePetSupplies(payload.petSupplies);
+        setPetSupplies(nextPetSupplies);
+        persist("petSupplies", nextPetSupplies);
+      }
+      if (payload.petSuppliesUpdatedAt != null) {
+        persist("petSuppliesUpdatedAt", Number(payload.petSuppliesUpdatedAt) || Date.now());
+      }
+      if (payload.petRewardHistory && typeof payload.petRewardHistory === "object") {
+        persist("petRewardHistory", payload.petRewardHistory);
       }
       if (typeof payload.assets === "string") {
         setAssetInput(payload.assets);
