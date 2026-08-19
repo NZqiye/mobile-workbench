@@ -147,7 +147,7 @@ const marketSymbolNames = {
 };
 const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
 const defaultChineseHolidaysSeedKey = "defaultChineseHolidays2026Seeded";
-const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins", "assets", "exerciseRecords"];
+const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins", "assetRecords", "exerciseRecords"];
 const marketCacheVersion = 3;
 const fundCacheVersion = 2;
 const indexTrackerCacheVersion = 1;
@@ -779,6 +779,18 @@ function writeStorage(name, value) {
   localStorage.setItem(key(name), JSON.stringify(value));
 }
 
+function readAssetRecords() {
+  const current = readStorage("assetRecords", null);
+  if (Array.isArray(current)) return current;
+  const legacy = readStorage("assets", []);
+  return Array.isArray(legacy) ? legacy : [];
+}
+
+function cloudAssetRecords(cloud) {
+  if (Array.isArray(cloud.assetRecords)) return cloud.assetRecords;
+  return Array.isArray(cloud.assets) ? cloud.assets : [];
+}
+
 function splitTags(value) {
   return String(value || "")
     .split(/[，,]/)
@@ -960,7 +972,7 @@ function mergeCloudWithLocal(cloud) {
     plans: mergeSyncedItems("plans", readStorage("plans", []), cloud.plans, cloud),
     consultations: dedupeConsultations(mergeSyncedItems("consultations", readStorage("consultations", []), cloud.consultations, cloud)),
     watchCheckins: mergeSyncedItems("watchCheckins", readStorage("watchCheckins", []), cloud.watchCheckins, cloud),
-    assets: mergeSyncedItems("assets", readStorage("assets", []), cloud.assets, cloud),
+    assetRecords: mergeSyncedItems("assetRecords", readAssetRecords(), cloudAssetRecords(cloud), cloud),
     dietRecords: mergeSyncedItems("dietRecords", readStorage("dietRecords", []), cloud.dietRecords, cloud),
     exerciseRecords: mergeSyncedItems("exerciseRecords", readStorage("exerciseRecords", []), cloud.exerciseRecords, cloud),
     anniversaries: mergeSyncedItems("anniversaries", readStorage("anniversaries", []), cloud.anniversaries, cloud),
@@ -987,6 +999,9 @@ function mergeCloudWithLocal(cloud) {
 
 function normalizeSavedAssets(assets) {
   if (assets === null || assets === undefined || assets === legacyDefaultAssets || assets === stockDefaultAssets) return defaultAssets;
+  try {
+    if (Array.isArray(JSON.parse(assets))) return defaultAssets;
+  } catch {}
   return String(assets)
     .split(",")
     .map((item) => normalizeStockSymbol(item) || item.trim())
@@ -4309,9 +4324,9 @@ export default function Workbench() {
       setWatchCheckins(cloud.watchCheckins);
       writeStorage("watchCheckins", cloud.watchCheckins);
     }
-    if (Array.isArray(cloud.assets)) {
-      setAssetItems(cloud.assets);
-      writeStorage("assets", cloud.assets);
+    if (Array.isArray(cloud.assetRecords)) {
+      setAssetItems(cloud.assetRecords);
+      writeStorage("assetRecords", cloud.assetRecords);
     }
     if (Array.isArray(cloud.anniversaries)) {
       setAnniversaries(cloud.anniversaries);
@@ -4388,6 +4403,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "habits", merged.habits),
         saveCloudItem(nextSession, "deletedHabitIds", merged.deletedHabitIds),
         saveCloudItem(nextSession, `done:${todayKey()}`, merged[`done:${todayKey()}`]),
+        saveCloudItem(nextSession, "assetRecords", merged.assetRecords),
         saveCloudItem(nextSession, "assets", merged.assets),
         saveCloudItem(nextSession, "fundPortfolio", merged.fundPortfolio),
         saveCloudItem(nextSession, "fundCodes", merged.fundCodes),
@@ -4421,6 +4437,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "habits", merged.habits),
         saveCloudItem(nextSession, "deletedHabitIds", merged.deletedHabitIds),
         saveCloudItem(nextSession, `done:${todayKey()}`, merged[`done:${todayKey()}`]),
+        saveCloudItem(nextSession, "assetRecords", merged.assetRecords),
         saveCloudItem(nextSession, "assets", merged.assets),
         saveCloudItem(nextSession, "fundPortfolio", merged.fundPortfolio),
         saveCloudItem(nextSession, "fundCodes", merged.fundCodes),
@@ -4447,7 +4464,7 @@ export default function Workbench() {
     setDietRecords(readStorage("dietRecords", []));
     setExerciseRecords(readStorage("exerciseRecords", []));
     setWatchCheckins(readStorage("watchCheckins", []));
-    setAssetItems(readStorage("assets", []));
+    setAssetItems(readAssetRecords());
     let nextAnniversaries = readStorage("anniversaries", []);
     if (localStorage.getItem(key(defaultChineseHolidaysSeedKey)) !== "true") {
       nextAnniversaries = withDefaultChineseHolidays(nextAnniversaries);
@@ -4971,19 +4988,19 @@ export default function Workbench() {
     };
     const next = [...assetItems, item];
     setAssetItems(next);
-    persist("assets", next);
+    persist("assetRecords", next);
   }
 
   function updateAsset(id, updates) {
     const next = assetItems.map((item) => item.id === id ? { ...item, ...updates, time: nowText() } : item);
     setAssetItems(next);
-    persist("assets", next);
+    persist("assetRecords", next);
   }
 
   function deleteAsset(id) {
     const next = assetItems.filter((item) => item.id !== id);
     setAssetItems(next);
-    persist("assets", next);
+    persist("assetRecords", next);
   }
 
   function deleteConsultation(idOrItem) {
@@ -5061,7 +5078,7 @@ export default function Workbench() {
       notes,
       consultations,
       watchCheckins,
-      assets,
+      assetRecords: assetItems,
       dietRecords,
       exerciseRecords,
       anniversaries,
@@ -5112,9 +5129,10 @@ export default function Workbench() {
         setWatchCheckins(payload.watchCheckins);
         persist("watchCheckins", payload.watchCheckins);
       }
-      if (Array.isArray(payload.assets)) {
-        setAssetItems(payload.assets);
-        persist("assets", payload.assets);
+      const nextAssetRecords = Array.isArray(payload.assetRecords) ? payload.assetRecords : (Array.isArray(payload.assets) ? payload.assets : null);
+      if (nextAssetRecords) {
+        setAssetItems(nextAssetRecords);
+        persist("assetRecords", nextAssetRecords);
       }
       if (Array.isArray(payload.dietRecords)) {
         setDietRecords(payload.dietRecords);
