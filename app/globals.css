@@ -3675,3 +3675,108 @@ textarea::placeholder {
 .theme-jade { --pony-primary: #0f5f56; }
 .theme-blue { --pony-primary: #1f4e79; }
 .theme-pine { --pony-primary: #1f5b3d; }
+
+/* consultation page contrast polish */
+.page-consultations .work-area {
+  background:
+    radial-gradient(520px 280px at 80% -8%, color-mix(in srgb, var(--theme-accent) 14%, transparent), transparent 62%),
+    linear-gradient(180deg, color-mix(in srgb, var(--theme-deep) 76%, #101112), color-mix(in srgb, var(--theme-main) 34%, #101112) 46%, #0b1513 100%);
+}
+
+.page-consultations .watch-calendar,
+.page-consultations .watch-list-panel,
+.page-consultations .watch-checkin-panel,
+.page-consultations .tmdb-panel,
+.page-consultations .tmdb-recommendations {
+  border-color: rgba(255, 255, 255, 0.14);
+  background:
+    radial-gradient(260px 130px at 92% 4%, rgba(255, 255, 255, 0.08), transparent 62%),
+    linear-gradient(180deg, color-mix(in srgb, var(--theme-main) 54%, #25272a), color-mix(in srgb, var(--theme-deep) 74%, #16181a)) !important;
+  box-shadow: 0 22px 42px rgba(0, 0, 0, 0.24);
+}
+
+.page-consultations .watch-calendar .panel-head h2,
+.page-consultations .watch-time,
+.page-consultations .watch-title-row strong,
+.page-consultations .watch-list-panel .panel-head h2,
+.page-consultations .watch-checkin-panel .panel-head h2,
+.page-consultations .tmdb-panel strong,
+.page-consultations .tmdb-recommendations .panel-head h2,
+.page-consultations .media-feed-title,
+.page-consultations .tmdb-section h3 {
+  color: color-mix(in srgb, var(--theme-accent) 74%, #fff);
+}
+
+.page-consultations .watch-list-panel .panel-head p,
+.page-consultations .watch-checkin-panel .panel-head p,
+.page-consultations .tmdb-panel p,
+.page-consultations .tmdb-recommendations .panel-head p,
+.page-consultations .watch-info p,
+.page-consultations .media-meta,
+.page-consultations .media-summary,
+.page-consultations .tmdb-poster-card small {
+  color: color-mix(in srgb, #fff 68%, var(--theme-main));
+}
+
+.page-consultations .week-day {
+  color: color-mix(in srgb, #fff 88%, var(--theme-main));
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.page-consultations .week-day span {
+  color: color-mix(in srgb, #fff 70%, var(--theme-main));
+}
+
+.page-consultations .week-day.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.page-consultations .day-updates {
+  color: color-mix(in srgb, var(--theme-accent) 82%, #fff);
+}
+
+.page-consultations .watch-timeline::before {
+  border-left-color: color-mix(in srgb, var(--theme-accent) 34%, rgba(255, 255, 255, 0.18));
+}
+
+.page-consultations .timeline-dot {
+  border-color: color-mix(in srgb, var(--theme-main) 62%, #111);
+  background: color-mix(in srgb, var(--theme-accent) 80%, #fff);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--theme-accent) 16%, transparent);
+}
+
+.page-consultations .watch-card {
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.page-consultations .watch-title-row small,
+.page-consultations .episode-line,
+.page-consultations .episode-line strong {
+  color: color-mix(in srgb, #fff 74%, var(--theme-main));
+}
+
+.page-consultations .watch-progress {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.page-consultations .watch-progress i {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 92%, #fff), color-mix(in srgb, var(--theme-main) 72%, #fff));
+}
+
+.page-consultations .poster-box {
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
+}
+
+.page-consultations .tmdb-search input,
+.page-consultations .watch-list-tools input,
+.page-consultations .watch-checkin-form select,
+.page-consultations .watch-checkin-form input {
+  color: color-mix(in srgb, #fff 92%, var(--theme-main));
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+}
