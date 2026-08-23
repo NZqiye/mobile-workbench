@@ -880,6 +880,28 @@ select:focus-visible {
 .exercise-trend span { display: grid; gap: 4px; justify-items: center; align-items: end; color: var(--muted); font-size: 11px; }
 .exercise-trend i { display: block; width: 100%; max-width: 28px; min-height: 4px; border-radius: 8px 8px 2px 2px; background: linear-gradient(180deg, var(--theme-accent), var(--theme-main)); opacity: 0.82; }
 .exercise-trend em { font-style: normal; color: var(--theme-main); font-size: 10px; font-weight: 900; }
+.weight-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.weight-summary > div { display: grid; gap: 4px; padding: 12px; border-radius: 14px; background: rgba(246, 239, 232, 0.72); }
+.weight-summary small { color: var(--muted); font-size: 12px; font-weight: 800; }
+.weight-summary strong { color: var(--theme-main); font-size: 22px; font-weight: 950; line-height: 1.1; }
+.weight-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; padding: 12px; border-radius: 16px; background: color-mix(in srgb, var(--theme-soft) 72%, #fff); }
+.weight-form label { display: grid; gap: 5px; min-width: 0; }
+.weight-form span { color: var(--muted); font-size: 12px; font-weight: 900; }
+.weight-form input { width: 100%; height: 40px; padding: 0 10px; background: rgba(255, 255, 255, 0.9); }
+.weight-form input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
+.weight-form input[type="number"]::-webkit-outer-spin-button,
+.weight-form input[type="number"]::-webkit-inner-spin-button { margin: 0; appearance: none; -webkit-appearance: none; }
+.weight-form button { min-width: 104px; min-height: 40px; border: 0; border-radius: 12px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-weight: 900; }
+.weight-trend { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; align-items: end; min-height: 108px; padding-top: 2px; }
+.weight-trend span { display: grid; gap: 4px; justify-items: center; align-items: end; min-width: 0; color: var(--muted); font-size: 11px; }
+.weight-trend em { overflow: hidden; max-width: 100%; font-style: normal; color: var(--theme-main); font-size: 11px; font-weight: 950; white-space: nowrap; }
+.weight-trend i { display: block; width: 100%; max-width: 26px; min-height: 6px; border-radius: 8px 8px 3px 3px; background: rgba(117, 25, 35, 0.14); opacity: 0.75; }
+.weight-trend i.active { background: linear-gradient(180deg, var(--theme-accent), var(--theme-main)); opacity: 0.88; }
+.weight-record-list { display: grid; gap: 10px; }
+.weight-record-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid rgba(234, 215, 208, 0.78); }
+.weight-record-row strong { margin-right: auto; color: #3d3530; font-size: 16px; font-weight: 900; }
+.weight-record-row small { color: var(--muted); font-size: 12px; font-weight: 700; }
+.weight-record-row button { min-width: 58px; min-height: 34px; border: 0; border-radius: 17px; color: var(--theme-main); background: rgba(180, 35, 44, 0.1); font-weight: 900; flex-shrink: 0; }
 
 .page-exercise .exercise-shell {
   background:
@@ -961,6 +983,60 @@ select:focus-visible {
 
 .page-exercise .exercise-form input::placeholder {
   color: color-mix(in srgb, #fff 55%, var(--theme-main));
+}
+
+.page-exercise .weight-summary > div,
+.page-exercise .weight-form {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.04)),
+    color-mix(in srgb, var(--theme-deep) 78%, #081311);
+}
+
+.page-exercise .weight-summary strong,
+.page-exercise .weight-trend em {
+  color: color-mix(in srgb, #fff 92%, var(--theme-accent));
+}
+
+.page-exercise .weight-summary small,
+.page-exercise .weight-form span,
+.page-exercise .weight-trend span {
+  color: color-mix(in srgb, #fff 62%, var(--theme-main));
+}
+
+.page-exercise .weight-form input {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.page-exercise .weight-form input::placeholder {
+  color: color-mix(in srgb, #fff 55%, var(--theme-main));
+}
+
+.page-exercise .weight-form button {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-main) 88%, #000), color-mix(in srgb, var(--theme-accent) 66%, #fff));
+}
+
+.page-exercise .weight-trend i.active {
+  background: linear-gradient(180deg, var(--theme-accent), var(--theme-main));
+}
+
+.page-exercise .weight-record-row {
+  border-top-color: rgba(255, 255, 255, 0.12);
+}
+
+.page-exercise .weight-record-row strong {
+  color: color-mix(in srgb, #fff 90%, var(--theme-main));
+}
+
+.page-exercise .weight-record-row small {
+  color: color-mix(in srgb, #fff 62%, var(--theme-main));
+}
+
+.page-exercise .weight-record-row button {
+  color: color-mix(in srgb, var(--theme-accent) 86%, #fff);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .page-exercise .exercise-log-row {

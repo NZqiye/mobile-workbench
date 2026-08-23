@@ -147,7 +147,7 @@ const marketSymbolNames = {
 };
 const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
 const defaultChineseHolidaysSeedKey = "defaultChineseHolidays2026Seeded";
-const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins", "assetRecords", "exerciseRecords"];
+const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins", "assetRecords", "exerciseRecords", "weightRecords"];
 const marketCacheVersion = 3;
 const fundCacheVersion = 2;
 const indexTrackerCacheVersion = 1;
@@ -975,6 +975,7 @@ function mergeCloudWithLocal(cloud) {
     assetRecords: mergeSyncedItems("assetRecords", readAssetRecords(), cloudAssetRecords(cloud), cloud),
     dietRecords: mergeSyncedItems("dietRecords", readStorage("dietRecords", []), cloud.dietRecords, cloud),
     exerciseRecords: mergeSyncedItems("exerciseRecords", readStorage("exerciseRecords", []), cloud.exerciseRecords, cloud),
+    weightRecords: mergeSyncedItems("weightRecords", readStorage("weightRecords", []), cloud.weightRecords, cloud),
     anniversaries: mergeSyncedItems("anniversaries", readStorage("anniversaries", []), cloud.anniversaries, cloud),
     waterTarget: cloud.waterTarget != null && Number.isFinite(Number(cloud.waterTarget))
       ? Number(cloud.waterTarget)
@@ -4074,11 +4075,15 @@ function ExerciseIcon({ src }) {
   return String(src || "").startsWith("/") ? <img src={src} alt="" loading="lazy" /> : src;
 }
 
-function ExerciseTracker({ records, onAdd, onDelete }) {
+function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight, onDeleteWeight }) {
   const [exerciseType, setExerciseType] = useState('running');
   const [duration, setDuration] = useState('');
   const [calories, setCalories] = useState('');
+  const [weightInput, setWeightInput] = useState('');
   const todayRecords = records.filter((item) => item.date === todayKey());
+  const todayWeightRecords = [...weightRecords]
+    .filter((item) => item.date === todayKey())
+    .sort((a, b) => itemUpdatedAt(b) - itemUpdatedAt(a));
   const todayCalories = todayRecords.reduce((sum, item) => sum + Number(item.calories || 0), 0);
   const todayMinutes = todayRecords.reduce((sum, item) => sum + Number(item.duration || 0), 0);
   const todayCakes = todayRecords.length;
@@ -4088,15 +4093,27 @@ function ExerciseTracker({ records, onAdd, onDelete }) {
     date.setDate(date.getDate() - (6 - index));
     const dk = todayKey(date);
     const dayRecords = records.filter((item) => item.date === dk);
+    const dayWeightRecords = weightRecords.filter((item) => item.date === dk);
     return {
       dateKey: dk,
       label: index === 6 ? '今天' : `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`,
       minutes: dayRecords.reduce((s, i) => s + Number(i.duration || 0), 0),
       calories: dayRecords.reduce((s, i) => s + Number(i.calories || 0), 0),
       count: dayRecords.length,
+      weight: [...dayWeightRecords].sort((a, b) => itemUpdatedAt(b) - itemUpdatedAt(a))[0]?.weight,
     };
   });
   const maxMinutes = Math.max(1, ...days.map((d) => d.minutes));
+  const weekWeights = days.map((day) => Number(day.weight)).filter((weight) => Number.isFinite(weight) && weight > 0);
+  const minWeekWeight = Math.min(...weekWeights);
+  const maxWeekWeight = Math.max(...weekWeights);
+  const latestWeight = [...weightRecords].sort((a, b) => itemUpdatedAt(b) - itemUpdatedAt(a))[0];
+  const recordedWeightDays = days.filter((day) => Number(day.weight) > 0);
+  const firstWeightDay = recordedWeightDays[0];
+  const lastWeightDay = recordedWeightDays.at(-1);
+  const weekWeightChange = firstWeightDay && lastWeightDay
+    ? Math.round((Number(lastWeightDay.weight) - Number(firstWeightDay.weight)) * 10) / 10
+    : null;
 
   function submitExercise(event) {
     event.preventDefault();
@@ -4107,6 +4124,20 @@ function ExerciseTracker({ records, onAdd, onDelete }) {
     onAdd({ type: exerciseType, label: type?.label || exerciseType, icon: type?.icon || '/assets-icons/thiings/sport/gold-medal.webp', duration: dur, calories: cal });
     setDuration('');
     setCalories('');
+  }
+
+  function submitWeight(event) {
+    event.preventDefault();
+    const value = Number(weightInput);
+    if (!Number.isFinite(value) || value <= 0) return;
+    onAddWeight({ weight: value });
+    setWeightInput('');
+  }
+
+  function weightBarHeight(value) {
+    if (!Number.isFinite(value)) return 6;
+    if (maxWeekWeight === minWeekWeight) return 38;
+    return Math.round(16 + ((value - minWeekWeight) / (maxWeekWeight - minWeekWeight)) * 46);
   }
 
   return (
@@ -4134,6 +4165,39 @@ function ExerciseTracker({ records, onAdd, onDelete }) {
           <span>{'🍰'}</span>
           <strong>{todayCakes}</strong>
           <small>{'获得小蛋糕'}</small>
+        </div>
+      </section>
+
+      <section className="exercise-card">
+        <div className="panel-head">
+          <h2>{'体重记录'}</h2>
+          <span className="tag">{recordedWeightDays.length} {'天'}</span>
+        </div>
+        <div className="weight-summary">
+          <div>
+            <small>{'最新体重(kg)'}</small>
+            <strong>{latestWeight ? latestWeight.weight : '--'}</strong>
+          </div>
+          <div>
+            <small>{'本周变化(kg)'}</small>
+            <strong>{weekWeightChange == null ? '--' : `${weekWeightChange > 0 ? '+' : ''}${weekWeightChange}`}</strong>
+          </div>
+        </div>
+        <form className="weight-form" onSubmit={submitWeight}>
+          <label>
+            <span>{'今日体重(kg)'}</span>
+            <input name="weight" type="number" min="1" step="0.1" inputMode="decimal" value={weightInput} onChange={(event) => setWeightInput(event.target.value)} placeholder={'如 65.5'} />
+          </label>
+          <button type="submit">{'记录体重'}</button>
+        </form>
+        <div className="weight-trend">
+          {days.map((day) => (
+            <span key={day.dateKey}>
+              <em>{Number(day.weight) > 0 ? day.weight : '--'}</em>
+              <i className={Number(day.weight) > 0 ? 'active' : ''} style={{ height: `${weightBarHeight(Number(day.weight))}px` }} />
+              <small>{day.label}</small>
+            </span>
+          ))}
         </div>
       </section>
 
@@ -4184,6 +4248,24 @@ function ExerciseTracker({ records, onAdd, onDelete }) {
         </div>
       </section>
 
+      {todayWeightRecords.length > 0 && (
+        <section className="exercise-card">
+          <div className="panel-head">
+            <h2>{'今日体重记录'}</h2>
+            <span className="tag">{todayWeightRecords.length} {'条'}</span>
+          </div>
+          <div className="weight-record-list">
+            {todayWeightRecords.map((item) => (
+              <div className="weight-record-row" key={item.id}>
+                <strong>{item.weight} kg</strong>
+                <small>{item.time}</small>
+                <button type="button" onClick={() => onDeleteWeight(item.id)}>{'删除'}</button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="exercise-card">
         <div className="panel-head">
           <h2>{'最近 7 天趋势'}</h2>
@@ -4212,6 +4294,7 @@ export default function Workbench() {
   const [assetItems, setAssetItems] = useState([]);
   const [dietRecords, setDietRecords] = useState([]);
   const [exerciseRecords, setExerciseRecords] = useState([]);
+  const [weightRecords, setWeightRecords] = useState([]);
   const [anniversaries, setAnniversaries] = useState([]);
   const [waterTarget, setWaterTarget] = useState(defaultWaterTarget);
   const [habits, setHabits] = useState([]);
@@ -4320,6 +4403,10 @@ export default function Workbench() {
       setExerciseRecords(cloud.exerciseRecords);
       writeStorage("exerciseRecords", cloud.exerciseRecords);
     }
+    if (Array.isArray(cloud.weightRecords)) {
+      setWeightRecords(cloud.weightRecords);
+      writeStorage("weightRecords", cloud.weightRecords);
+    }
     if (Array.isArray(cloud.watchCheckins)) {
       setWatchCheckins(cloud.watchCheckins);
       writeStorage("watchCheckins", cloud.watchCheckins);
@@ -4397,6 +4484,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "consultations", merged.consultations),
         saveCloudItem(nextSession, "dietRecords", merged.dietRecords),
         saveCloudItem(nextSession, "exerciseRecords", merged.exerciseRecords),
+        saveCloudItem(nextSession, "weightRecords", merged.weightRecords),
         saveCloudItem(nextSession, "watchCheckins", merged.watchCheckins),
         saveCloudItem(nextSession, "anniversaries", merged.anniversaries),
         saveCloudItem(nextSession, "waterTarget", merged.waterTarget),
@@ -4431,6 +4519,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "consultations", merged.consultations),
         saveCloudItem(nextSession, "dietRecords", merged.dietRecords),
         saveCloudItem(nextSession, "exerciseRecords", merged.exerciseRecords),
+        saveCloudItem(nextSession, "weightRecords", merged.weightRecords),
         saveCloudItem(nextSession, "watchCheckins", merged.watchCheckins),
         saveCloudItem(nextSession, "anniversaries", merged.anniversaries),
         saveCloudItem(nextSession, "waterTarget", merged.waterTarget),
@@ -4463,6 +4552,7 @@ export default function Workbench() {
     writeStorage("consultations", nextConsultations);
     setDietRecords(readStorage("dietRecords", []));
     setExerciseRecords(readStorage("exerciseRecords", []));
+    setWeightRecords(readStorage("weightRecords", []));
     setWatchCheckins(readStorage("watchCheckins", []));
     setAssetItems(readAssetRecords());
     let nextAnniversaries = readStorage("anniversaries", []);
@@ -4811,6 +4901,26 @@ export default function Workbench() {
     saveExerciseRecords(exerciseRecords.filter((item) => item.id !== id));
   }
 
+  function saveWeightRecords(next) {
+    setWeightRecords(next);
+    persist('weightRecords', next);
+  }
+
+  function addWeight(item) {
+    const next = [{
+      id: crypto.randomUUID(),
+      date: todayKey(),
+      time: clock.slice(0, 5),
+      ...item,
+    }, ...weightRecords];
+    saveWeightRecords(next);
+  }
+
+  function deleteWeightRecord(id) {
+    markDeleted('weightRecords', id);
+    saveWeightRecords(weightRecords.filter((item) => item.id !== id));
+  }
+
 
   function addHabit(event) {
     event.preventDefault();
@@ -5060,6 +5170,9 @@ export default function Workbench() {
       "",
       "## 运动记录",
       ...exerciseRecords.map((item) => `- ${item.date} ${item.time} ${item.label} ${item.duration}分钟 ${item.calories}kcal`),
+      "",
+      "## 体重记录",
+      ...weightRecords.map((item) => `- ${item.date} ${item.time} ${item.weight}kg`),
     ];
     const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -5081,6 +5194,7 @@ export default function Workbench() {
       assetRecords: assetItems,
       dietRecords,
       exerciseRecords,
+      weightRecords,
       anniversaries,
       waterTarget,
       habits,
@@ -5141,6 +5255,10 @@ export default function Workbench() {
       if (Array.isArray(payload.exerciseRecords)) {
         setExerciseRecords(payload.exerciseRecords);
         persist("exerciseRecords", payload.exerciseRecords);
+      }
+      if (Array.isArray(payload.weightRecords)) {
+        setWeightRecords(payload.weightRecords);
+        persist("weightRecords", payload.weightRecords);
       }
       if (Array.isArray(payload.anniversaries)) {
         setAnniversaries(payload.anniversaries);
@@ -5414,7 +5532,7 @@ export default function Workbench() {
           )}
 
           {activePage === "exercise" && (
-            <ExerciseTracker records={exerciseRecords} onAdd={addExercise} onDelete={deleteExerciseRecord} />
+            <ExerciseTracker records={exerciseRecords} weightRecords={weightRecords} onAdd={addExercise} onDelete={deleteExerciseRecord} onAddWeight={addWeight} onDeleteWeight={deleteWeightRecord} />
           )}
 
           {activePage === "news" && <NewsBoard />}
