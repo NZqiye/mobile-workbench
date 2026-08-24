@@ -1663,6 +1663,7 @@ select:focus-visible {
 .desktop-shell.page-today .today-time-panel {
   grid-column: span 5;
   min-height: 180px;
+  align-self: start;
   justify-content: center;
   border-radius: var(--r);
 }
@@ -1670,6 +1671,42 @@ select:focus-visible {
 .desktop-shell.page-today .weather-panel,
 .desktop-shell.page-today .dashboard-strip {
   grid-column: span 7;
+}
+
+.desktop-shell.page-today .weather-panel {
+  min-height: 172px;
+  align-self: start;
+}
+
+.desktop-shell.page-today .weather-forecast,
+.desktop-shell.page-today .weather-outfit-tip {
+  display: none;
+}
+
+.desktop-shell.page-today .quick-note-bar {
+  grid-column: span 7;
+}
+
+/* 首页使用双列工作区，右侧概览栏会重复时间和统计信息，改为内容内聚。 */
+.desktop-shell.page-today .desktop-context-rail {
+  display: none;
+}
+
+.desktop-shell.page-today .app-body {
+  grid-template-columns: 196px minmax(0, 1fr);
+}
+
+.desktop-shell.page-today .content {
+  grid-template-rows: auto auto auto auto auto;
+}
+
+.desktop-shell.page-today .weather-panel {
+  min-height: 214px;
+  align-content: start;
+}
+
+.desktop-shell.page-today .weather-panel .weather-main {
+  min-height: 110px;
 }
 
 .desktop-shell.page-today .daily-quote-card,
@@ -3228,6 +3265,7 @@ textarea::placeholder {
 
 @media (min-width: 960px) {
   body {
+    padding: 8px 10px 0;
     background:
       radial-gradient(900px 520px at 18% -12%, color-mix(in srgb, var(--theme-accent, #c98a2c) 12%, transparent), transparent 60%),
       radial-gradient(780px 520px at 92% 8%, color-mix(in srgb, var(--theme-main, #16645a) 10%, transparent), transparent 62%),
@@ -3237,6 +3275,19 @@ textarea::placeholder {
   .desktop-shell {
     border-color: var(--surface-hairline);
     background: rgba(12, 29, 25, 0.92);
+    width: min(1480px, 100%);
+    height: calc(100dvh - 8px);
+  }
+
+  /* 网页端保持原桌面工作台的固定阅读宽度，避免窄桌面断点把内容压扁。 */
+  @media (max-width: 1180px) {
+    body { overflow-x: hidden; }
+    .desktop-shell {
+      min-width: 0;
+    }
+    .desktop-shell .app-body {
+      grid-template-columns: 188px minmax(0, 1fr);
+    }
   }
 
   .desktop-shell .phone-status {
@@ -3253,6 +3304,11 @@ textarea::placeholder {
     margin: 0;
     min-height: 172px;
     border-radius: var(--r);
+  }
+
+  .desktop-shell.page-assets .asset-board {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 }
 
@@ -3426,6 +3482,57 @@ textarea::placeholder {
 /* mainstream black and white theme */
 .theme-bw {
   --pony-primary: #18181b;
+}
+
+/* 桌面端统一为主内容优先的单工作区，避免右侧概览栏割裂阅读路径。 */
+@media (min-width: 960px) {
+  .desktop-shell .app-body {
+    grid-template-columns: 196px minmax(0, 1fr);
+  }
+
+  .desktop-shell .desktop-context-rail {
+    display: none;
+  }
+
+  .desktop-shell .content {
+    gap: 14px;
+    padding-inline: 24px;
+  }
+
+  .desktop-shell.page-today .content {
+    gap: 14px;
+  }
+
+  .desktop-shell.page-today .weather-panel {
+    min-height: 214px;
+    height: 214px;
+    overflow: hidden;
+    width: calc(100% + 24px);
+  }
+
+  .desktop-shell.page-today .weather-panel .weather-forecast,
+  .desktop-shell.page-today .weather-panel .weather-outfit-tip {
+    display: none;
+  }
+
+  .desktop-shell.page-today .today-time-panel {
+    min-height: 172px;
+    height: 172px;
+  }
+
+  .desktop-shell.page-today .daily-quote-card,
+  .desktop-shell.page-today .quick-note-bar {
+    min-height: 122px;
+  }
+
+  .desktop-shell.page-today .quick-note-bar {
+    height: 122px;
+    width: 100%;
+  }
+
+  .desktop-shell.page-today .dashboard-strip {
+    gap: 10px;
+  }
 }
 
 .pony-theme-bw {
