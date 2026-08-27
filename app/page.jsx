@@ -4075,15 +4075,21 @@ function ExerciseIcon({ src }) {
   return String(src || "").startsWith("/") ? <img src={src} alt="" loading="lazy" /> : src;
 }
 
+function formatWeight(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number.toFixed(2) : '--';
+}
+
 function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight, onDeleteWeight }) {
   const [exerciseType, setExerciseType] = useState('running');
   const [duration, setDuration] = useState('');
   const [calories, setCalories] = useState('');
   const [weightInput, setWeightInput] = useState('');
+  const [weightDate, setWeightDate] = useState(todayKey());
   const todayRecords = records.filter((item) => item.date === todayKey());
-  const todayWeightRecords = [...weightRecords]
-    .filter((item) => item.date === todayKey())
-    .sort((a, b) => itemUpdatedAt(b) - itemUpdatedAt(a));
+  const selectedWeightRecord = [...weightRecords]
+    .filter((item) => item.date === weightDate)
+    .sort((a, b) => itemUpdatedAt(b) - itemUpdatedAt(a))[0];
   const todayCalories = todayRecords.reduce((sum, item) => sum + Number(item.calories || 0), 0);
   const todayMinutes = todayRecords.reduce((sum, item) => sum + Number(item.duration || 0), 0);
   const todayCakes = todayRecords.length;
@@ -4100,19 +4106,19 @@ function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight,
       minutes: dayRecords.reduce((s, i) => s + Number(i.duration || 0), 0),
       calories: dayRecords.reduce((s, i) => s + Number(i.calories || 0), 0),
       count: dayRecords.length,
-      weight: [...dayWeightRecords].sort((a, b) => itemUpdatedAt(b) - itemUpdatedAt(a))[0]?.weight,
+      weightRecord: [...dayWeightRecords].sort((a, b) => itemUpdatedAt(b) - itemUpdatedAt(a))[0],
     };
   });
   const maxMinutes = Math.max(1, ...days.map((d) => d.minutes));
-  const weekWeights = days.map((day) => Number(day.weight)).filter((weight) => Number.isFinite(weight) && weight > 0);
+  const weekWeights = days.map((day) => Number(day.weightRecord?.weight)).filter((weight) => Number.isFinite(weight) && weight > 0);
   const minWeekWeight = Math.min(...weekWeights);
   const maxWeekWeight = Math.max(...weekWeights);
   const latestWeight = [...weightRecords].sort((a, b) => itemUpdatedAt(b) - itemUpdatedAt(a))[0];
-  const recordedWeightDays = days.filter((day) => Number(day.weight) > 0);
+  const recordedWeightDays = days.filter((day) => Number(day.weightRecord?.weight) > 0);
   const firstWeightDay = recordedWeightDays[0];
   const lastWeightDay = recordedWeightDays.at(-1);
   const weekWeightChange = firstWeightDay && lastWeightDay
-    ? Math.round((Number(lastWeightDay.weight) - Number(firstWeightDay.weight)) * 10) / 10
+    ? Math.round((Number(lastWeightDay.weightRecord.weight) - Number(firstWeightDay.weightRecord.weight)) * 100) / 100
     : null;
 
   function submitExercise(event) {
@@ -4129,13 +4135,25 @@ function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight,
   function submitWeight(event) {
     event.preventDefault();
     const value = Number(weightInput);
-    if (!Number.isFinite(value) || value <= 0) return;
-    onAddWeight({ weight: value });
+    const date = String(weightDate || todayKey()).trim();
+    if (!Number.isFinite(value) || value < 0) return;
+    onAddWeight({
+      id: selectedWeightRecord?.id || undefined,
+      date,
+      weight: Math.round(value * 100) / 100,
+    });
     setWeightInput('');
+    setWeightDate(todayKey());
+  }
+
+  function selectWeightDay(day) {
+    setWeightDate(day.dateKey);
+    setWeightInput(String(day.weightRecord?.weight ?? 0));
   }
 
   function weightBarHeight(value) {
-    if (!Number.isFinite(value)) return 6;
+    if (!Number.isFinite(value) || value <= 0) return 6;
+    if (!weekWeights.length) return 6;
     if (maxWeekWeight === minWeekWeight) return 38;
     return Math.round(16 + ((value - minWeekWeight) / (maxWeekWeight - minWeekWeight)) * 46);
   }
@@ -4176,27 +4194,30 @@ function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight,
         <div className="weight-summary">
           <div>
             <small>{'最新体重(kg)'}</small>
-            <strong>{latestWeight ? latestWeight.weight : '--'}</strong>
+            <strong>{formatWeight(latestWeight?.weight)}</strong>
           </div>
           <div>
             <small>{'本周变化(kg)'}</small>
-            <strong>{weekWeightChange == null ? '--' : `${weekWeightChange > 0 ? '+' : ''}${weekWeightChange}`}</strong>
+            <strong>{weekWeightChange == null ? '--' : `${weekWeightChange > 0 ? '+' : ''}${weekWeightChange.toFixed(2)}`}</strong>
           </div>
         </div>
         <form className="weight-form" onSubmit={submitWeight}>
           <label>
-            <span>{'今日体重(kg)'}</span>
-            <input name="weight" type="number" min="1" step="0.1" inputMode="decimal" value={weightInput} onChange={(event) => setWeightInput(event.target.value)} placeholder={'如 65.5'} />
+            <span>{weightDate === todayKey() ? '今日体重(kg)' : `${weightDate} 体重(kg)`}</span>
+            <input name="weight" type="number" min="0" step="0.01" inputMode="decimal" value={weightInput} onChange={(event) => {
+              const nextValue = event.target.value;
+              if (/^\d*(?:\.\d{0,2})?$/.test(nextValue)) setWeightInput(nextValue);
+            }} placeholder={'如 65.50'} />
           </label>
-          <button type="submit">{'记录体重'}</button>
+          <button type="submit">{'保存修改'}</button>
         </form>
         <div className="weight-trend">
           {days.map((day) => (
-            <span key={day.dateKey}>
-              <em>{Number(day.weight) > 0 ? day.weight : '--'}</em>
-              <i className={Number(day.weight) > 0 ? 'active' : ''} style={{ height: `${weightBarHeight(Number(day.weight))}px` }} />
+            <button type="button" key={day.dateKey} className="weight-trend-item" onClick={() => selectWeightDay(day)}>
+              <em>{day.weightRecord ? formatWeight(day.weightRecord.weight) : '0.00'}</em>
+              <i className={Number(day.weightRecord?.weight) > 0 ? 'active' : ''} style={{ height: `${weightBarHeight(Number(day.weightRecord?.weight))}px` }} />
               <small>{day.label}</small>
-            </span>
+            </button>
           ))}
         </div>
       </section>
@@ -4247,24 +4268,6 @@ function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight,
           ))}
         </div>
       </section>
-
-      {todayWeightRecords.length > 0 && (
-        <section className="exercise-card">
-          <div className="panel-head">
-            <h2>{'今日体重记录'}</h2>
-            <span className="tag">{todayWeightRecords.length} {'条'}</span>
-          </div>
-          <div className="weight-record-list">
-            {todayWeightRecords.map((item) => (
-              <div className="weight-record-row" key={item.id}>
-                <strong>{item.weight} kg</strong>
-                <small>{item.time}</small>
-                <button type="button" onClick={() => onDeleteWeight(item.id)}>{'删除'}</button>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       <section className="exercise-card">
         <div className="panel-head">
@@ -4907,12 +4910,21 @@ export default function Workbench() {
   }
 
   function addWeight(item) {
-    const next = [{
-      id: crypto.randomUUID(),
-      date: todayKey(),
+    const nextItem = {
+      id: item.id || crypto.randomUUID(),
+      date: item.date || todayKey(),
       time: clock.slice(0, 5),
-      ...item,
-    }, ...weightRecords];
+      weight: Math.round(Number(item.weight || 0) * 100) / 100,
+      updatedAt: Date.now(),
+    };
+    const index = weightRecords.findIndex((record) => record.id === nextItem.id || record.date === nextItem.date);
+    const next = index < 0
+      ? [nextItem, ...weightRecords]
+      : weightRecords.map((record, currentIndex) => (
+        currentIndex === index
+          ? { ...record, ...nextItem, id: record.id }
+          : record
+      ));
     saveWeightRecords(next);
   }
 
@@ -5172,7 +5184,7 @@ export default function Workbench() {
       ...exerciseRecords.map((item) => `- ${item.date} ${item.time} ${item.label} ${item.duration}分钟 ${item.calories}kcal`),
       "",
       "## 体重记录",
-      ...weightRecords.map((item) => `- ${item.date} ${item.time} ${item.weight}kg`),
+      ...weightRecords.map((item) => `- ${item.date} ${item.time} ${formatWeight(item.weight)}kg`),
     ];
     const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);

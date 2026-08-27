@@ -893,12 +893,13 @@ select:focus-visible {
 .weight-form input[type="number"]::-webkit-inner-spin-button { margin: 0; appearance: none; -webkit-appearance: none; }
 .weight-form button { min-width: 104px; min-height: 40px; border: 0; border-radius: 12px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-weight: 900; }
 .weight-trend { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; align-items: end; min-height: 108px; padding-top: 2px; }
-.weight-trend span { display: grid; gap: 4px; justify-items: center; align-items: end; min-width: 0; color: var(--muted); font-size: 11px; }
+.weight-trend-item { display: grid; gap: 4px; justify-items: center; align-items: end; min-width: 0; padding: 0; border: 0; background: transparent; color: var(--muted); font-size: 11px; }
 .weight-trend em { overflow: hidden; max-width: 100%; font-style: normal; color: var(--theme-main); font-size: 11px; font-weight: 950; white-space: nowrap; }
 .weight-trend i { display: block; width: 100%; max-width: 26px; min-height: 6px; border-radius: 8px 8px 3px 3px; background: rgba(117, 25, 35, 0.14); opacity: 0.75; }
 .weight-trend i.active { background: linear-gradient(180deg, var(--theme-accent), var(--theme-main)); opacity: 0.88; }
+.weight-trend-item:focus-visible { outline: 2px solid color-mix(in srgb, var(--theme-accent) 70%, #fff); outline-offset: 2px; }
 .weight-record-list { display: grid; gap: 10px; }
-.weight-record-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid rgba(234, 215, 208, 0.78); }
+.weight-record-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid rgba(234, 215, 208, 0.78); }
 .weight-record-row strong { margin-right: auto; color: #3d3530; font-size: 16px; font-weight: 900; }
 .weight-record-row small { color: var(--muted); font-size: 12px; font-weight: 700; }
 .weight-record-row button { min-width: 58px; min-height: 34px; border: 0; border-radius: 17px; color: var(--theme-main); background: rgba(180, 35, 44, 0.1); font-weight: 900; flex-shrink: 0; }
@@ -1000,7 +1001,7 @@ select:focus-visible {
 
 .page-exercise .weight-summary small,
 .page-exercise .weight-form span,
-.page-exercise .weight-trend span {
+.page-exercise .weight-trend-item {
   color: color-mix(in srgb, #fff 62%, var(--theme-main));
 }
 
@@ -1010,12 +1011,20 @@ select:focus-visible {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.page-exercise .weight-form input[type="date"] {
+  color-scheme: dark;
+}
+
 .page-exercise .weight-form input::placeholder {
   color: color-mix(in srgb, #fff 55%, var(--theme-main));
 }
 
 .page-exercise .weight-form button {
   background: linear-gradient(135deg, color-mix(in srgb, var(--theme-main) 88%, #000), color-mix(in srgb, var(--theme-accent) 66%, #fff));
+}
+
+.page-exercise .weight-trend-item {
+  color: color-mix(in srgb, #fff 78%, var(--theme-main));
 }
 
 .page-exercise .weight-trend i.active {
@@ -1381,6 +1390,9 @@ select:focus-visible {
   .side-nav { width: 88px; padding-inline: 8px; }
   .nav-item small { max-width: 68px; }
   .content { padding-inline: 10px; }
+  .weight-form { grid-template-columns: 1fr; }
+  .weight-form button { width: 100%; }
+  .weight-trend { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .quick-form, .filter-panel, .quote-row, .timeline-row { grid-template-columns: 1fr; }
   .market-add-form { grid-template-columns: 1fr; }
   .market-delete { justify-self: start; }
