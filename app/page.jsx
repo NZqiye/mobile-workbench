@@ -4309,7 +4309,7 @@ export default function Workbench() {
   const [editing, setEditing] = useState(null);
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [displayMode, setDisplayMode] = useState("mobile");
+  const [displayMode, setDisplayMode] = useState("desktop");
   const [ponyTheme, setPonyTheme] = useState("jade");
   const [tmdbResults, setTmdbResults] = useState([]);
   const [tmdbStatus, setTmdbStatus] = useState("输入剧名搜索，点击结果即可加入观影列表");
@@ -4570,11 +4570,8 @@ export default function Workbench() {
     setDone(readStorage(`done:${todayKey()}`, {}));
     setPetSupplies({ ...defaultPetSupplies, ...readStorage("petSupplies", defaultPetSupplies) });
     setAssetInput(normalizeSavedAssets(localStorage.getItem(key("assets"))));
-    const savedDisplayMode = localStorage.getItem(key("displayMode"));
-    const searchParams = new URLSearchParams(window.location.search);
-    const forcedWebMode = searchParams.has("web") || searchParams.get("mode") === "web";
-    setDisplayMode(forcedWebMode || savedDisplayMode === "desktop" || (!savedDisplayMode && window.innerWidth >= 960) ? "desktop" : "mobile");
-    if (forcedWebMode) localStorage.setItem(key("displayMode"), "desktop");
+    setDisplayMode(window.innerWidth >= 960 ? "desktop" : "mobile");
+    localStorage.setItem(key("displayMode"), window.innerWidth >= 960 ? "desktop" : "mobile");
     setPonyTheme(ponyThemes.some((theme) => theme.id === localStorage.getItem(key("ponyTheme"))) ? localStorage.getItem(key("ponyTheme")) : "jade");
     setClock(clockText());
     loadTmdbRecommendations();
@@ -5375,7 +5372,7 @@ export default function Workbench() {
   ];
 
   return (
-    <main className={`phone-shell ${displayMode === "desktop" ? "desktop-shell" : "mobile-shell"} ${menuOpen ? "menu-open" : ""} page-${activePage} pony-theme-${ponyTheme}`}>
+    <main className={`phone-shell ${displayMode === "desktop" ? "desktop-shell desktop-redesign" : "mobile-shell"} ${menuOpen ? "menu-open" : ""} page-${activePage} pony-theme-${ponyTheme}`}>
       <div className="phone-status">
         <button className="menu-toggle" type="button" aria-label="打开菜单" onClick={() => setMenuOpen(true)}>☰</button>
         <strong>{clock}</strong>
@@ -5462,12 +5459,7 @@ export default function Workbench() {
                   <small>饮食与饮水记录</small>
                 </div>
               </section>
-              <section className="stats-grid">
-                <StatButton label="任务安排" value={`${stats.pendingTasks} 条`} onClick={() => switchPage("plans")} />
-                <StatButton label="饮食记录" value={`${stats.dietToday} 条`} onClick={() => switchPage("diet")} />
-                <StatButton label="观影记录" value={`${stats.consultations} 条`} onClick={() => switchPage("consultations")} />
-              </section>
-              <section className="panel">
+              <section className="panel today-task-panel">
                 <div className="panel-head"><h2>今日任务</h2><span className="tag">{dateKey}</span></div>
                 <div className="record-list">
                   {todayPlans.length === 0 && <p className="empty">今天没有未完成计划。</p>}
@@ -5477,6 +5469,12 @@ export default function Workbench() {
                     </button>
                   ))}
                 </div>
+              </section>
+              <section className="stats-grid">
+                <StatButton label="今日速看" value="看板" onClick={() => switchPage("today")} />
+                <StatButton label="任务安排" value={`${stats.pendingTasks} 条`} onClick={() => switchPage("plans")} />
+                <StatButton label="饮食记录" value={`${stats.dietToday} 条`} onClick={() => switchPage("diet")} />
+                <StatButton label="观影记录" value={`${stats.consultations} 条`} onClick={() => switchPage("consultations")} />
               </section>
               <MarketBoard compact onAssetsChange={syncAssetsToCloud} />
               <section className="panel">
