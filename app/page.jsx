@@ -3272,15 +3272,16 @@ const assetIconImageMap = {
 };
 
 function AssetIcon({ name, size = 20 }) {
+  const [err, setErr] = React.useState(false);
   const src = thiingsIconByKey[name] || assetIconImageMap[name];
-  if (!src) {
+  if (!src || err) {
     return (
       <span className="asset-icon-fallback" style={{ width: size, height: size, fontSize: Math.max(12, Math.floor(size * 0.55)) }}>
         {String(name || "?").slice(0, 1).toUpperCase()}
       </span>
     );
   }
-  return <img className="asset-icon-img" src={src} width={size} height={size} alt="" loading="lazy" decoding="async" />;
+  return <img className="asset-icon-img" src={src} width={size} height={size} alt="" loading="eager" decoding="async" onError={() => setErr(true)} />;
 }
 
 const assetIconCategories = thiingsIconCategories;
