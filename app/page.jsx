@@ -3272,7 +3272,7 @@ const assetIconImageMap = {
 };
 
 function AssetIcon({ name, size = 20 }) {
-  const [err, setErr] = React.useState(false);
+  const [err, setErr] = useState(false);
   const src = thiingsIconByKey[name] || assetIconImageMap[name];
   if (!src || err) {
     return (
