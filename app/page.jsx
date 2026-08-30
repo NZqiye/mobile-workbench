@@ -4572,7 +4572,7 @@ export default function Workbench() {
     setAssetInput(normalizeSavedAssets(localStorage.getItem(key("assets"))));
     const savedMode = localStorage.getItem(key("displayMode"));
     const detectedMode = window.innerWidth >= 960 ? "desktop" : "mobile";
-    const nextMode = savedMode === "desktop" || savedMode === "mobile" ? savedMode : detectedMode;
+    const nextMode = window.innerWidth >= 960 && (savedMode === "desktop" || savedMode === "mobile") ? savedMode : detectedMode;
     setDisplayMode(nextMode);
     localStorage.setItem(key("displayMode"), nextMode);
     setPonyTheme(ponyThemes.some((theme) => theme.id === localStorage.getItem(key("ponyTheme"))) ? localStorage.getItem(key("ponyTheme")) : "jade");
@@ -5416,7 +5416,7 @@ export default function Workbench() {
                     <h1>{pageNames[activePage]}</h1>
                     <p>{pageDescriptions[activePage]}</p>
                   </div>
-                  <button className="date-pill" type="button" onClick={toggleDisplayMode}>{displayMode === "desktop" ? "手机端" : "网页端"}</button>
+                  <button className="date-pill" type="button" onClick={toggleDisplayMode}>{displayMode === "desktop" ? "网页端" : "手机端"}</button>
                 </div>
                 {activePage === "consultations" ? (
                   <div className="module-tabs consultation-tabs" aria-label="观影内容切换">
