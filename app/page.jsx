@@ -5097,7 +5097,7 @@ export default function Workbench() {
     rewardPetOnce(rewardKey, "stick", 1, isMovie ? "看完一部电影，电影票 +1。" : "看完一集电视剧，电影票 +1。");
   }
 
-  function addAsset({ name, price, purchaseDate, category, status, notes }) {
+  function addAsset({ name, price, purchaseDate, category, status, notes, icon }) {
     const item = {
       id: crypto.randomUUID(),
       name: String(name || "").trim(),
@@ -5106,7 +5106,7 @@ export default function Workbench() {
       category: category || "",
       status: status || "服役中",
       notes: notes || "",
-      time: nowText(),
+      icon: icon || "thiings:box",
     };
     const next = [...assetItems, item];
     setAssetItems(next);
