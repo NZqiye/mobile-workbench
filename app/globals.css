@@ -4641,25 +4641,10 @@ textarea::placeholder {
   }
 }
 
-/* Mobile sizing pass: tighten spacing and scale back oversized hero areas on phones only. */
-.phone-shell.mobile-shell .content {
-  gap: 12px;
-  padding: 10px 14px 22px;
-}
 
+/* Mobile sizing: tighten oversized decorative areas only. No sidebar/nav changes. */
 .phone-shell.mobile-shell .module-head {
-  padding: 14px 14px 16px;
-}
-
-.phone-shell.mobile-shell .module-title-row {
-  grid-template-columns: 42px minmax(0, 1fr) auto;
-  gap: 10px;
-}
-
-.phone-shell.mobile-shell .module-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
+  padding: 16px 14px 18px;
 }
 
 .phone-shell.mobile-shell .module-head h1 {
@@ -4667,7 +4652,7 @@ textarea::placeholder {
 }
 
 .phone-shell.mobile-shell .module-head p {
-  margin-top: 3px;
+  margin-top: 4px;
   font-size: 11px;
 }
 
@@ -4681,45 +4666,32 @@ textarea::placeholder {
 }
 
 .phone-shell.mobile-shell.page-today .today-time-panel {
-  min-height: 116px;
-  margin: 0 -14px 2px;
-  padding: 13px 18px 14px;
+  min-height: 136px;
+  padding: 16px 20px 18px;
 }
 
 .phone-shell.mobile-shell .clock-dial {
-  width: 62px;
-  height: 62px;
+  width: 68px;
+  height: 68px;
 }
 
 .phone-shell.mobile-shell .today-time-panel strong {
-  font-size: 28px;
+  font-size: 30px;
 }
 
 .phone-shell.mobile-shell .weather-panel .weather-main strong {
-  font-size: 32px;
+  font-size: 34px;
 }
 
 .phone-shell.mobile-shell .daily-quote-card {
   gap: 8px;
-  padding: 13px 14px;
-}
-
-.phone-shell.mobile-shell .dashboard-strip {
-  gap: 8px;
+  padding: 14px;
 }
 
 .phone-shell.mobile-shell .dashboard-tile {
-  min-height: 78px;
+  min-height: 82px;
   gap: 6px;
-  padding: 11px 12px;
-}
-
-.phone-shell.mobile-shell .dashboard-tile-primary {
-  min-height: 150px;
-}
-
-.phone-shell.mobile-shell .pet-card-head strong {
-  font-size: 17px;
+  padding: 12px;
 }
 
 .phone-shell.mobile-shell .stats-grid {
@@ -4727,37 +4699,21 @@ textarea::placeholder {
 }
 
 .phone-shell.mobile-shell .stat-card {
-  min-height: 76px;
+  min-height: 78px;
   gap: 6px;
   padding: 12px;
 }
 
-.phone-shell.mobile-shell .quick-note-bar {
-  padding: 3px 3px 3px 12px;
-}
-
 .phone-shell.mobile-shell .hero-card {
   gap: 12px;
-  padding: 15px 14px;
+  padding: 16px 14px;
 }
 
 .phone-shell.mobile-shell .hero-card span {
-  width: 44px;
-  height: 44px;
-}
-
-.phone-shell.mobile-shell .side-nav {
-  gap: 12px;
-  width: 86px;
-  padding: 16px 9px 12px;
-}
-
-.phone-shell.mobile-shell .profile-button .avatar-mark {
   width: 46px;
   height: 46px;
-  border-width: 3px;
 }
 
-.phone-shell.mobile-shell .side-nav-list {
-  gap: 7px;
+.phone-shell.mobile-shell .pet-card-head strong {
+  font-size: 17px;
 }
