@@ -4309,7 +4309,7 @@ export default function Workbench() {
   const [editing, setEditing] = useState(null);
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [displayMode, setDisplayMode] = useState("desktop");
+  const [displayMode, setDisplayMode] = useState("mobile");
   const [ponyTheme, setPonyTheme] = useState("jade");
   const [tmdbResults, setTmdbResults] = useState([]);
   const [tmdbStatus, setTmdbStatus] = useState("输入剧名搜索，点击结果即可加入观影列表");
@@ -4570,8 +4570,11 @@ export default function Workbench() {
     setDone(readStorage(`done:${todayKey()}`, {}));
     setPetSupplies({ ...defaultPetSupplies, ...readStorage("petSupplies", defaultPetSupplies) });
     setAssetInput(normalizeSavedAssets(localStorage.getItem(key("assets"))));
-    setDisplayMode(window.innerWidth >= 960 ? "desktop" : "mobile");
-    localStorage.setItem(key("displayMode"), window.innerWidth >= 960 ? "desktop" : "mobile");
+    const savedMode = localStorage.getItem(key("displayMode"));
+    const detectedMode = window.innerWidth >= 960 ? "desktop" : "mobile";
+    const nextMode = savedMode === "desktop" || savedMode === "mobile" ? savedMode : detectedMode;
+    setDisplayMode(nextMode);
+    localStorage.setItem(key("displayMode"), nextMode);
     setPonyTheme(ponyThemes.some((theme) => theme.id === localStorage.getItem(key("ponyTheme"))) ? localStorage.getItem(key("ponyTheme")) : "jade");
     setClock(clockText());
     loadTmdbRecommendations();
