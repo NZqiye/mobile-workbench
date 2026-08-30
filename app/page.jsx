@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { hasSupabaseConfig, supabase } from "../lib/supabase";
-import { asset3dIconByKey } from "../lib/asset-3d-icons";
 import { thiingsIconByKey, thiingsIconCategories } from "../lib/thiings-icons";
 
 const storagePrefix = "qiyeworkbench:";
@@ -3273,7 +3272,7 @@ const assetIconImageMap = {
 };
 
 function AssetIcon({ name, size = 20 }) {
-  const src = thiingsIconByKey[name] || asset3dIconByKey[name] || assetIconImageMap[name];
+  const src = thiingsIconByKey[name] || assetIconImageMap[name];
   if (!src) {
     return (
       <span className="asset-icon-fallback" style={{ width: size, height: size, fontSize: Math.max(12, Math.floor(size * 0.55)) }}>
@@ -3281,7 +3280,7 @@ function AssetIcon({ name, size = 20 }) {
       </span>
     );
   }
-  return <img className="asset-icon-img" src={src} width={size} height={size} alt="" />;
+  return <img className="asset-icon-img" src={src} width={size} height={size} alt="" loading="lazy" decoding="async" />;
 }
 
 const assetIconCategories = thiingsIconCategories;
