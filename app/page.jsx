@@ -5416,7 +5416,7 @@ export default function Workbench() {
                     <h1>{pageNames[activePage]}</h1>
                     <p>{pageDescriptions[activePage]}</p>
                   </div>
-                  <button className="date-pill" type="button" onClick={toggleDisplayMode}>{displayMode === "desktop" ? "网页端" : "手机端"}</button>
+                  <button className="date-pill" type="button" onClick={toggleDisplayMode}>{displayMode === "desktop" ? "切回手机端" : "切到网页端"}</button>
                 </div>
                 {activePage === "consultations" ? (
                   <div className="module-tabs consultation-tabs" aria-label="观影内容切换">
