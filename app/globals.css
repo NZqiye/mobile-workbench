@@ -4751,3 +4751,9 @@ textarea::placeholder {
 .watch-rating-status { flex: 0 0 auto; color: var(--muted); font-size: 11px; white-space: nowrap; }
 .page-consultations .watch-rating-sync { color: #ffe9e0; border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); }
 .page-consultations .watch-rating-status { color: rgba(255,233,224,.72); }
+
+.watch-checkin-history-item { grid-template-columns: 34px minmax(0, 1fr) auto; }
+.watch-checkin-remove { min-height: 26px; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; color: #9f2630; background: transparent; font-size: 11px; white-space: nowrap; }
+.watch-checkin-remove:hover { color: #fff; background: rgba(159, 38, 48, 0.75); }
+.page-consultations .watch-checkin-remove { color: #ffd9cf; border-color: rgba(255,255,255,.16); background: rgba(255,255,255,.06); }
+.page-consultations .watch-checkin-remove:hover { color: #fff; background: rgba(190,55,72,.6); }

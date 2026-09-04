@@ -1902,13 +1902,39 @@ function consultationKey(item) {
 }
 
 function dedupeConsultations(items) {
-  const seen = new Set();
-  return items.filter((item) => {
+  const list = Array.isArray(items) ? items : [];
+  const kept = [];
+  const seenKeys = new Set();
+  const titleIndex = new Map();
+  list.forEach((item) => {
     const key = consultationKey(item);
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
+    const title = String(item.title || "").trim().toLowerCase();
+    if (key && seenKeys.has(key)) return;
+    if (title && titleIndex.has(title)) {
+      const prevIndex = titleIndex.get(title);
+      const prev = kept[prevIndex];
+      const prevHasTmdb = Boolean(prev?.tmdbId);
+      const curHasTmdb = Boolean(item.tmdbId);
+      const sameTmdb = prevHasTmdb && curHasTmdb && String(prev.tmdbId) === String(item.tmdbId);
+      if (sameTmdb) return;
+      if (prevHasTmdb && curHasTmdb) {
+        // 同名但 tmdbId 不同，视为不同作品，保留
+      } else if (!prevHasTmdb && curHasTmdb) {
+        kept[prevIndex] = item;
+        titleIndex.set(title, prevIndex);
+        if (key) seenKeys.add(key);
+        return;
+      } else if (prevHasTmdb && !curHasTmdb) {
+        return;
+      } else {
+        return;
+      }
+    }
+    kept.push(item);
+    titleIndex.set(title, kept.length - 1);
+    if (key) seenKeys.add(key);
   });
+  return kept;
 }
 
 function mergeTmdbFields(item, fresh) {
@@ -3218,10 +3244,15 @@ function parseEpisodeList(value, fallbackEpisode) {
 function dedupeWatchCheckins(items) {
   const seen = new Set();
   return (Array.isArray(items) ? items : []).filter((record) => {
-    const owner = record.consultationId || String(record.title || "").trim().toLowerCase();
-    const key = [owner, record.type === "电影" ? "movie" : String(record.episode || ""), record.date || ""].join("|");
-    if (seen.has(key)) return false;
-    seen.add(key);
+    const episode = record.type === "电影" ? "movie" : String(record.episode || "");
+    const date = record.date || "";
+    const title = String(record.title || "").trim().toLowerCase();
+    const keys = [];
+    if (record.consultationId) keys.push(["id", String(record.consultationId), episode, date].join("|"));
+    if (title) keys.push(["title", title, episode, date].join("|"));
+    if (!keys.length) return true;
+    if (keys.some((key) => seen.has(key))) return false;
+    keys.forEach((key) => seen.add(key));
     return true;
   });
 }
@@ -3430,7 +3461,7 @@ function AssetBoard({ items = [], onAdd, onUpdate, onDelete }) {
   );
 }
 
-function WatchCheckin({ items = [], onCheckin, onSyncTmdbRating, watchCheckins = [] }) {
+function WatchCheckin({ items = [], onCheckin, onSyncTmdbRating, onRemoveCheckin, watchCheckins = [] }) {
   const watchItems = items.filter((item) => item.status !== "已归档" && item.status !== "暂停/弃剧");
   const [selectedId, setSelectedId] = useState(watchItems[0]?.id || "");
   const [watchQuery, setWatchQuery] = useState("");
@@ -3503,13 +3534,13 @@ function WatchCheckin({ items = [], onCheckin, onSyncTmdbRating, watchCheckins =
         </form>
       )}
       <div className="watch-checkin-history"><div className="watch-checkin-history-head"><strong>最近打卡</strong><input value={historyQuery} onChange={(event) => setHistoryQuery(event.target.value)} placeholder="搜索标题" />{!historyKeyword && filteredHistory.length > 3 && <button type="button" onClick={() => setHistoryOpen(!historyOpen)}>{historyOpen ? "收起" : "全部"}</button>}</div>
-        {filteredHistory.length === 0 ? <p className="watch-checkin-history-empty">还没有打卡记录。</p> : <div className="watch-checkin-history-list">{visibleHistory.map((record) => <div className="watch-checkin-history-item" key={record.id}>{record.posterUrl ? <img src={record.posterUrl} alt="" /> : <div className="watch-checkin-history-poster">{String(record.title || "")[0]}</div>}<div className="watch-checkin-history-meta"><strong>{record.title}</strong><span>{record.type === "电影" ? "电影" : `剧集 · 第${record.episode || "?"}集`} · {record.date || ""} {record.time || ""}{record.rating ? ` · 评分 ${record.rating}` : ""}{record.tmdbRating ? ` · TMDB ${record.tmdbRating}` : ""}</span></div></div>)}</div>}
+        {filteredHistory.length === 0 ? <p className="watch-checkin-history-empty">还没有打卡记录。</p> : <div className="watch-checkin-history-list">{visibleHistory.map((record) => <div className="watch-checkin-history-item" key={record.id}>{record.posterUrl ? <img src={record.posterUrl} alt="" /> : <div className="watch-checkin-history-poster">{String(record.title || "")[0]}</div>}<div className="watch-checkin-history-meta"><strong>{record.title}</strong><span>{record.type === "电影" ? "电影" : `剧集 · 第${record.episode || "?"}集`} · {record.date || ""} {record.time || ""}{record.rating ? ` · 评分 ${record.rating}` : ""}{record.tmdbRating ? ` · TMDB ${record.tmdbRating}` : ""}</span></div><button type="button" className="watch-checkin-remove" onClick={() => { if (window.confirm(`移除《${record.title}》这条打卡记录吗？`)) onRemoveCheckin?.(record.id); }}>移除</button></div>)}</div>}
       </div>
     </section>
   );
 }
 
-function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked, onDeleteItem, onWatchCheckin, onSyncTmdbRating, watchCheckins = [] }) {
+function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked, onDeleteItem, onWatchCheckin, onSyncTmdbRating, onRemoveCheckin, watchCheckins = [] }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
   const [tmdbQuery, setTmdbQuery] = useState("");
@@ -3644,7 +3675,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
               ))}
             </div>
           </section>
-          <WatchCheckin items={managedWatchItems} onCheckin={onWatchCheckin} onSyncTmdbRating={onSyncTmdbRating} watchCheckins={watchCheckins} />
+          <WatchCheckin items={managedWatchItems} onCheckin={onWatchCheckin} onSyncTmdbRating={onSyncTmdbRating} onRemoveCheckin={onRemoveCheckin} watchCheckins={watchCheckins} />
           <section className="watch-calendar">
             <div className="panel-head">
               <h2>{monthTitle(selected.date)}</h2>
@@ -5166,6 +5197,11 @@ export default function Workbench() {
     persist("assetRecords", next);
   }
 
+  function deleteWatchCheckin(recordId) {
+    const nextWatchCheckins = dedupeWatchCheckins(watchCheckins.filter((record) => record.id !== recordId));
+    setWatchCheckins(nextWatchCheckins);
+    persist("watchCheckins", nextWatchCheckins);
+  }
   function deleteConsultation(idOrItem) {
     const item = typeof idOrItem === "object" && idOrItem ? idOrItem : consultations.find((record) => record.id === idOrItem);
     const id = item?.id || idOrItem;
@@ -5578,6 +5614,7 @@ export default function Workbench() {
                 onDeleteItem={deleteConsultation}
                 onWatchCheckin={checkinWatchItem}
                 onSyncTmdbRating={syncTmdbRating}
+                onRemoveCheckin={deleteWatchCheckin}
               />
             </>
           )}
