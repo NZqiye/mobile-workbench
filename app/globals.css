@@ -4728,3 +4728,9 @@ textarea::placeholder {
 .watch-checkin-options button { display: grid; gap: 2px; padding: 8px; border: 0; border-radius: 6px; text-align: left; color: var(--ink); background: transparent; }
 .watch-checkin-options button:hover { background: rgba(159, 38, 48, 0.08); }
 .watch-checkin-options small { color: var(--muted); }
+
+.watch-checkin-options { color: #f7e9e5; background: #3a1720; border-color: rgba(255,210,190,.24); box-shadow: 0 14px 30px rgba(0,0,0,.28); }
+.watch-checkin-options button { color: #fff5f0; }
+.watch-checkin-options button:hover { background: rgba(255,206,167,.16); }
+.watch-checkin-options small { color: rgba(255,233,224,.68); }
+.watch-checkin-options .empty { padding: 10px; color: rgba(255,233,224,.68); }
