@@ -3501,8 +3501,15 @@ function WatchCheckin({ items = [], onCheckin, onSyncTmdbRating, onRemoveCheckin
 
   async function syncRating() {
     if (!selected?.tmdbId || !manualRating) return;
-    setRatingSyncStatus("同步中…");
-    const ok = await onSyncTmdbRating?.({ id: selected.id, rating: manualRating });
+    const raw = Number(manualRating);
+    if (!Number.isFinite(raw) || raw < 0.5 || raw > 10) {
+      setRatingSyncStatus("评分需在 0.5-10 之间");
+      return;
+    }
+    const rounded = Math.round(raw * 2) / 2;
+    if (rounded !== raw) setRatingSyncStatus(`已按 TMDB 规则取整为 ${rounded}，同步中…`);
+    else setRatingSyncStatus("同步中…");
+    const ok = await onSyncTmdbRating?.({ id: selected.id, rating: rounded });
     setRatingSyncStatus(ok ? "已同步到 TMDB" : "同步失败");
   }
 
@@ -3528,7 +3535,7 @@ function WatchCheckin({ items = [], onCheckin, onSyncTmdbRating, onRemoveCheckin
             {watchOpen && <div className="watch-checkin-options">{filteredWatchItems.length === 0 ? <span className="empty">没有匹配的片单</span> : filteredWatchItems.map((item) => <button type="button" key={item.id} onClick={() => { setSelectedId(item.id); setWatchQuery(""); setWatchOpen(false); }}><strong>{item.title}</strong><small>{item.status || "想看的剧"}</small></button>)}</div>}
           </div>
           <input name="episode" inputMode="numeric" placeholder={isMovie ? "电影无需填集数" : `第几集，支持 12-15 或 12,13（当前 ${selected?.currentEpisode || 0}）`} disabled={isMovie} />
-          <div className="watch-rating-field"><input name="rating" type="number" min="0" max="10" step="0.1" inputMode="decimal" value={manualRating} onChange={(event) => { setManualRating(event.target.value); setRatingSyncStatus(""); }} placeholder="我的评分 0-10" aria-label="我的评分" />{selected?.tmdbId ? <button type="button" className="watch-rating-sync" onClick={syncRating} disabled={!manualRating}>同步到 TMDB</button> : null}{ratingSyncStatus ? <span className="watch-rating-status">{ratingSyncStatus}</span> : null}</div>
+          <div className="watch-rating-field"><input name="rating" type="number" min="0" max="10" step="0.1" inputMode="decimal" value={manualRating} onChange={(event) => { setManualRating(event.target.value); setRatingSyncStatus(""); }} placeholder="我的评分 0-10（0.5 或整数）" aria-label="我的评分" />{selected?.tmdbId ? <button type="button" className="watch-rating-sync" onClick={syncRating} disabled={!manualRating}>同步到 TMDB</button> : null}{ratingSyncStatus ? <span className="watch-rating-status">{ratingSyncStatus}</span> : null}</div>
           <input name="date" type="date" defaultValue={todayKey()} />
           <button type="submit">{isMovie ? "打卡已看电影" : "打卡已看剧集"}</button>
         </form>
@@ -4813,7 +4820,7 @@ export default function Workbench() {
 
   async function syncTmdbRating({ id, rating }) {
     const item = consultations.find((record) => record.id === id);
-    const value = Number(rating);
+    const value = Math.round(Number(rating) * 2) / 2;
     if (!item?.tmdbId || !Number.isFinite(value) || value < 0.5 || value > 10) return false;
     try {
       const response = await fetch("/api/tmdb/rating", {
