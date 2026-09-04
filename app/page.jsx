@@ -3430,10 +3430,12 @@ function AssetBoard({ items = [], onAdd, onUpdate, onDelete }) {
   );
 }
 
-function WatchCheckin({ items = [], onCheckin, watchCheckins = [] }) {
+function WatchCheckin({ items = [], onCheckin, onSyncTmdbRating, watchCheckins = [] }) {
   const watchItems = items.filter((item) => item.status !== "已归档" && item.status !== "暂停/弃剧");
   const [selectedId, setSelectedId] = useState(watchItems[0]?.id || "");
   const [watchQuery, setWatchQuery] = useState("");
+  const [manualRating, setManualRating] = useState("");
+  const [ratingSyncStatus, setRatingSyncStatus] = useState("");
   const [watchOpen, setWatchOpen] = useState(false);
   const pickerRef = useRef(null);
   const [historyQuery, setHistoryQuery] = useState("");
@@ -3446,6 +3448,10 @@ function WatchCheckin({ items = [], onCheckin, watchCheckins = [] }) {
   const historyKeyword = historyQuery.trim().toLowerCase();
   const filteredHistory = historyKeyword ? sortedHistory.filter((record) => String(record.title || "").toLowerCase().includes(historyKeyword) || String(record.type || "").toLowerCase().includes(historyKeyword) || String(record.episode || "").toLowerCase().includes(historyKeyword)) : sortedHistory;
   const visibleHistory = historyOpen || historyKeyword ? filteredHistory : filteredHistory.slice(0, 3);
+
+  useEffect(() => {
+    setManualRating(String(selected?.rating || ""));
+  }, [selectedId, selected?.rating]);
 
   useEffect(() => {
     function closePicker(event) {
@@ -3462,6 +3468,13 @@ function WatchCheckin({ items = [], onCheckin, watchCheckins = [] }) {
     };
   }, []);
 
+  async function syncRating() {
+    if (!selected?.tmdbId || !manualRating) return;
+    setRatingSyncStatus("同步中…");
+    const ok = await onSyncTmdbRating?.({ id: selected.id, rating: manualRating });
+    setRatingSyncStatus(ok ? "已同步到 TMDB" : "同步失败");
+  }
+
   function submit(event) {
     event.preventDefault();
     if (!selected) return;
@@ -3470,6 +3483,7 @@ function WatchCheckin({ items = [], onCheckin, watchCheckins = [] }) {
     event.currentTarget.reset();
     setSelectedId(selected.id);
     setWatchQuery("");
+    setManualRating(String(data.get("rating") || ""));
     setWatchOpen(false);
   }
 
@@ -3483,7 +3497,7 @@ function WatchCheckin({ items = [], onCheckin, watchCheckins = [] }) {
             {watchOpen && <div className="watch-checkin-options">{filteredWatchItems.length === 0 ? <span className="empty">没有匹配的片单</span> : filteredWatchItems.map((item) => <button type="button" key={item.id} onClick={() => { setSelectedId(item.id); setWatchQuery(""); setWatchOpen(false); }}><strong>{item.title}</strong><small>{item.status || "想看的剧"}</small></button>)}</div>}
           </div>
           <input name="episode" inputMode="numeric" placeholder={isMovie ? "电影无需填集数" : `第几集，支持 12-15 或 12,13（当前 ${selected?.currentEpisode || 0}）`} disabled={isMovie} />
-          <select name="rating" defaultValue={selected?.rating || ""} aria-label="手工评分"><option value="">暂不评分</option><option value="10">10 分</option><option value="9">9 分</option><option value="8">8 分</option><option value="7">7 分</option><option value="6">6 分</option><option value="5">5 分</option><option value="4">4 分及以下</option></select>
+          <div className="watch-rating-field"><input name="rating" type="number" min="0" max="10" step="0.1" inputMode="decimal" value={manualRating} onChange={(event) => { setManualRating(event.target.value); setRatingSyncStatus(""); }} placeholder="我的评分 0-10" aria-label="我的评分" />{selected?.tmdbId ? <button type="button" className="watch-rating-sync" onClick={syncRating} disabled={!manualRating}>同步到 TMDB</button> : null}{ratingSyncStatus ? <span className="watch-rating-status">{ratingSyncStatus}</span> : null}</div>
           <input name="date" type="date" defaultValue={todayKey()} />
           <button type="submit">{isMovie ? "打卡已看电影" : "打卡已看剧集"}</button>
         </form>
@@ -3495,7 +3509,7 @@ function WatchCheckin({ items = [], onCheckin, watchCheckins = [] }) {
   );
 }
 
-function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked, onDeleteItem, onWatchCheckin, watchCheckins = [] }) {
+function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked, onDeleteItem, onWatchCheckin, onSyncTmdbRating, watchCheckins = [] }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
   const [tmdbQuery, setTmdbQuery] = useState("");
@@ -3630,7 +3644,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
               ))}
             </div>
           </section>
-          <WatchCheckin items={managedWatchItems} onCheckin={onWatchCheckin} watchCheckins={watchCheckins} />
+          <WatchCheckin items={managedWatchItems} onCheckin={onWatchCheckin} onSyncTmdbRating={onSyncTmdbRating} watchCheckins={watchCheckins} />
           <section className="watch-calendar">
             <div className="panel-head">
               <h2>{monthTitle(selected.date)}</h2>
@@ -4766,6 +4780,25 @@ export default function Workbench() {
     setTmdbStatus(`已加入：${mergedItem.title || item.title}${nextItem.nextAirDate ? ` · 下次 ${nextItem.nextAirDate} 更新第 ${nextItem.updateEpisodes || "--"} 集` : ""}${watchlistStatus}`);
   }
 
+  async function syncTmdbRating({ id, rating }) {
+    const item = consultations.find((record) => record.id === id);
+    const value = Number(rating);
+    if (!item?.tmdbId || !Number.isFinite(value) || value < 0.5 || value > 10) return false;
+    try {
+      const response = await fetch("/api/tmdb/rating", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mediaId: item.tmdbId, mediaType: item.tmdbMediaType || (item.type === "电影" ? "movie" : "tv"), rating: value }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "TMDB 评分同步失败");
+      return true;
+    } catch (error) {
+      setTmdbStatus(error.message || "TMDB 评分同步失败");
+      return false;
+    }
+  }
+
   async function syncTmdbWatchlist() {
     setTmdbStatus("正在同步 TMDB 待看片单...");
     try {
@@ -5544,6 +5577,7 @@ export default function Workbench() {
                 watchCheckins={watchCheckins}
                 onDeleteItem={deleteConsultation}
                 onWatchCheckin={checkinWatchItem}
+                onSyncTmdbRating={syncTmdbRating}
               />
             </>
           )}

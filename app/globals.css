@@ -4734,3 +4734,20 @@ textarea::placeholder {
 .watch-checkin-options button:hover { background: rgba(255,206,167,.16); }
 .watch-checkin-options small { color: rgba(255,233,224,.68); }
 .watch-checkin-options .empty { padding: 10px; color: rgba(255,233,224,.68); }
+
+.watch-rating-field { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.watch-rating-field input { min-width: 92px; flex: 1 1 100px; }
+.watch-tmdb-rating { flex: 0 0 auto; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.watch-rating-use-tmdb { flex: 0 0 auto; min-height: 30px; padding: 0 8px; border: 1px solid var(--line); border-radius: 7px; color: var(--theme-main); background: transparent; font-size: 11px; white-space: nowrap; }
+.watch-rating-use-tmdb:hover { background: rgba(159, 38, 48, 0.08); }
+
+.page-consultations .watch-tmdb-rating { color: rgba(255,233,224,.72); }
+.page-consultations .watch-rating-use-tmdb { color: #ffe9e0; border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); }
+.page-consultations .watch-rating-use-tmdb:hover { background: rgba(255,206,167,.16); }
+
+.watch-rating-sync { flex: 0 0 auto; min-height: 30px; padding: 0 8px; border: 1px solid var(--line); border-radius: 7px; color: var(--theme-main); background: transparent; font-size: 11px; white-space: nowrap; }
+.watch-rating-sync:hover:not(:disabled) { background: rgba(159, 38, 48, 0.08); }
+.watch-rating-sync:disabled { opacity: .5; cursor: not-allowed; }
+.watch-rating-status { flex: 0 0 auto; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.page-consultations .watch-rating-sync { color: #ffe9e0; border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.08); }
+.page-consultations .watch-rating-status { color: rgba(255,233,224,.72); }
