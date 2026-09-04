@@ -3547,6 +3547,126 @@ function WatchCheckin({ items = [], onCheckin, onSyncTmdbRating, onRemoveCheckin
   );
 }
 
+function MediaUpdates({ watchItems = [] }) {
+  const [data, setData] = useState(null);
+  const [status, setStatus] = useState("loading");
+  const [selected, setSelected] = useState(0);
+  const [expandedDay, setExpandedDay] = useState(null);
+  const [platformFilter, setPlatformFilter] = useState("all");
+
+  async function load() {
+    setStatus("loading");
+    try {
+      const response = await fetch("/api/media-updates?days=7");
+      const text = await response.text();
+      const payload = text ? JSON.parse(text) : {};
+      if (!response.ok || !payload.ok) throw new Error(payload.error || "加载失败");
+      setData(payload);
+      setStatus(Array.isArray(payload.days) && payload.days.length ? "ready" : "empty");
+    } catch (error) {
+      setStatus("error");
+    }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  function dayLabel(key, index) {
+    if (index === 0) return "今天";
+    if (index === 1) return "明天";
+    const date = new Date(key + "T00:00:00");
+    return [weekdayText(date), date.getMonth() + 1 + "/" + date.getDate()].join(" ");
+  }
+
+  function isTracked(title) {
+    const name = String(title || "").trim().toLowerCase();
+    if (!name) return false;
+    return (Array.isArray(watchItems) ? watchItems : []).some((item) => {
+      const watch = String(item.title || "").trim().toLowerCase();
+      if (!watch) return false;
+      if (watch.includes(name) || name.includes(watch)) return true;
+      return false;
+    });
+  }
+
+  const ready = status === "ready";
+  const days = ready && Array.isArray(data.days) ? data.days : [];
+  const selectedDay = days[selected] || null;
+  const visibleItems = selectedDay && Array.isArray(selectedDay.items) ? selectedDay.items : [];
+  const platformList = Array.from(new Set(days.flatMap((day) => (day.items || []).map((item) => item.platform).filter(Boolean)))).sort((a, b) => a.localeCompare(b));
+  const platformZhMap = Object.fromEntries(days.flatMap((day) => (day.items || []).map((item) => [item.platform, item.platformZh || item.platform])));
+  const filteredItems = platformFilter === "all" ? visibleItems : visibleItems.filter((item) => item.platform === platformFilter);
+  const showCount = expandedDay === (selectedDay && selectedDay.date) ? filteredItems.length : Math.min(25, filteredItems.length);
+
+  useEffect(() => {
+    if (!ready || !days.length || platformFilter === "all") return;
+    const hasMatch = (day) => (day.items || []).some((item) => item.platform === platformFilter);
+    if (hasMatch(days[selected])) return;
+    const first = days.findIndex(hasMatch);
+    if (first >= 0) {
+      setSelected(first);
+      setExpandedDay(null);
+    }
+  }, [ready, days, platformFilter, selected]);
+
+  return (
+    <section className="media-updates-panel">
+      <div className="panel-head">
+        <div>
+          <h2><MotionIcon name="quote" />各平台更新日历</h2>
+          <p>TVMaze 排期 · 欧美流媒体与电视网未来 7 天更新{status === "ready" && days.length ? " · " + days.length + " 天" : ""}</p>
+        </div>
+        <button className="chip-button" type="button" onClick={load} disabled={status === "loading"}>刷新</button>
+      </div>
+      {status === "loading" && <p className="empty">正在加载各平台更新…</p>}
+      {status === "error" && <p className="empty">更新日历加载失败，可能是网络问题。<button type="button" onClick={load}>重试</button></p>}
+      {status === "empty" && <p className="empty">暂时没有获取到更新数据。</p>}
+      {ready && days.length > 0 && (
+        <>
+          <div className="media-updates-tabs">
+            {days.map((day, index) => (
+              <button className={selected === index ? "active" : ""} type="button" key={day.date} onClick={() => { setSelected(index); setExpandedDay(null); }}>
+                <span>{dayLabel(day.date, index)}</span>
+                <small>{day.items.length} 条</small>
+              </button>
+            ))}
+          </div>
+          {platformList.length > 1 && (
+            <div className="media-updates-platforms">
+              <button className={platformFilter === "all" ? "active" : ""} type="button" onClick={() => setPlatformFilter("all")}>全部</button>
+              {platformList.map((name) => (
+                <button className={platformFilter === name ? "active" : ""} type="button" key={name} onClick={() => setPlatformFilter(name)}>{platformZhMap[name] || name}</button>
+              ))}
+            </div>
+          )}
+          {filteredItems.length === 0 ? (
+            <p className="empty">这一天暂时没有排期数据。</p>
+          ) : (
+            <div className="media-updates-list">
+              {filteredItems.slice(0, showCount).map((item) => {
+                const tracked = isTracked(item.title);
+                const itemTitle = item.titleZh ? item.titleZh + " · " + item.title : item.title;
+                const meta = [item.airtime || "--:--", item.platformZh || item.platform, item.type === "premiere" ? "首播" : item.type === "finale" ? "季终" : "", item.season ? "S" + item.season + "E" + item.number : ""].filter(Boolean).join(" · ");
+                return (
+                  <div className="media-update-row" key={selectedDay.date + "-" + (item.id || item.title) + "-" + item.season + "-" + item.number}>
+                    {item.image ? <img className="media-update-poster" src={item.image} alt="" loading="lazy" /> : <span className="media-update-poster" />}
+                    <div className="media-update-main">
+                      <strong>{itemTitle}</strong>
+                      <small>{meta}</small>
+                    </div>
+                    {tracked && <span className="media-update-tracked">在追</span>}
+                  </div>
+                );
+              })}
+              {filteredItems.length > 25 && expandedDay !== selectedDay.date && (
+                <button className="media-updates-more" type="button" onClick={() => setExpandedDay(selectedDay.date)}>展开全部 {filteredItems.length} 条</button>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
 function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked, onDeleteItem, onWatchCheckin, onSyncTmdbRating, onRemoveCheckin, watchCheckins = [] }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
@@ -3683,6 +3803,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
             </div>
           </section>
           <WatchCheckin items={managedWatchItems} onCheckin={onWatchCheckin} onSyncTmdbRating={onSyncTmdbRating} onRemoveCheckin={onRemoveCheckin} watchCheckins={watchCheckins} />
+          <MediaUpdates watchItems={managedWatchItems} />
           <section className="watch-calendar">
             <div className="panel-head">
               <h2>{monthTitle(selected.date)}</h2>
