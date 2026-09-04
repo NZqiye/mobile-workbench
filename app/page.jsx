@@ -1920,6 +1920,7 @@ function mergeTmdbFields(item, fresh) {
     platform: fresh.platform || item.platform,
     tmdbId: fresh.tmdbId || item.tmdbId,
     tmdbMediaType: fresh.tmdbMediaType || item.tmdbMediaType,
+    tmdbRating: fresh.tmdbRating ?? item.tmdbRating ?? "",
     posterUrl: fresh.posterUrl || item.posterUrl,
     review: fresh.review || item.review,
     season: fresh.season || item.season || "1",
@@ -3421,10 +3422,14 @@ function AssetBoard({ items = [], onAdd, onUpdate, onDelete }) {
 function WatchCheckin({ items = [], onCheckin, watchCheckins = [] }) {
   const watchItems = items.filter((item) => item.status !== "已归档" && item.status !== "暂停/弃剧");
   const [selectedId, setSelectedId] = useState(watchItems[0]?.id || "");
+  const [watchQuery, setWatchQuery] = useState("");
+  const [watchOpen, setWatchOpen] = useState(false);
   const [historyQuery, setHistoryQuery] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
   const selected = watchItems.find((item) => item.id === selectedId) || watchItems[0];
   const isMovie = selected && ((selected.tmdbMediaType || "").includes("movie") || selected.type === "电影");
+  const watchKeyword = watchQuery.trim().toLowerCase();
+  const filteredWatchItems = watchKeyword ? watchItems.filter((item) => [item.title, item.status].some((value) => String(value || "").toLowerCase().includes(watchKeyword))) : watchItems;
   const sortedHistory = Array.isArray(watchCheckins) ? [...watchCheckins].sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")) || String(b.time || "").localeCompare(String(a.time || ""))) : [];
   const historyKeyword = historyQuery.trim().toLowerCase();
   const filteredHistory = historyKeyword ? sortedHistory.filter((record) => String(record.title || "").toLowerCase().includes(historyKeyword) || String(record.type || "").toLowerCase().includes(historyKeyword) || String(record.episode || "").toLowerCase().includes(historyKeyword)) : sortedHistory;
@@ -3434,60 +3439,29 @@ function WatchCheckin({ items = [], onCheckin, watchCheckins = [] }) {
     event.preventDefault();
     if (!selected) return;
     const data = new FormData(event.currentTarget);
-    onCheckin?.({
-      id: selected.id,
-      episode: String(data.get("episode") || "").trim(),
-      date: String(data.get("date") || todayKey()),
-    });
+    onCheckin?.({ id: selected.id, episode: String(data.get("episode") || "").trim(), date: String(data.get("date") || todayKey()) });
     event.currentTarget.reset();
     setSelectedId(selected.id);
+    setWatchQuery("");
+    setWatchOpen(false);
   }
 
   return (
     <section className="watch-checkin-panel">
-      <div className="panel-head">
-        <div>
-          <h2>观影打卡</h2>
-          <p>记录已看的剧集或电影，自动更新片单进度。</p>
-        </div>
-      </div>
-      {watchItems.length === 0 ? (
-        <p className="empty">先搜索或添加一部影视，再回来打卡。</p>
-      ) : (
+      <div className="panel-head"><div><h2>观影打卡</h2><p>记录已看的剧集或电影，自动更新片单进度。</p></div></div>
+      {watchItems.length === 0 ? <p className="empty">先搜索或添加一部影视，再回来打卡。</p> : (
         <form className="watch-checkin-form" onSubmit={submit}>
-          <select value={selected?.id || ""} onChange={(event) => setSelectedId(event.target.value)}>
-            {watchItems.map((item) => (
-              <option value={item.id} key={item.id}>{item.title}</option>
-            ))}
-          </select>
-          <input name="episode" inputMode="numeric" placeholder={isMovie ? "电影无需填集数" : `第几集，当前 ${selected?.currentEpisode || 0}`} disabled={isMovie} />
+          <div className="watch-checkin-picker">
+            <input value={watchQuery || selected?.title || ""} onChange={(event) => { setWatchQuery(event.target.value); setWatchOpen(true); }} onFocus={() => setWatchOpen(true)} placeholder="搜索片名或状态" role="combobox" aria-expanded={watchOpen} aria-label="搜索观影条目" />
+            {watchOpen && <div className="watch-checkin-options">{filteredWatchItems.length === 0 ? <span className="empty">没有匹配的片单</span> : filteredWatchItems.map((item) => <button type="button" key={item.id} onClick={() => { setSelectedId(item.id); setWatchQuery(""); setWatchOpen(false); }}><strong>{item.title}</strong><small>{item.status || "想看的剧"}</small></button>)}</div>}
+          </div>
+          <input name="episode" inputMode="numeric" placeholder={isMovie ? "电影无需填集数" : `第几集，支持 12-15 或 12,13（当前 ${selected?.currentEpisode || 0}）`} disabled={isMovie} />
           <input name="date" type="date" defaultValue={todayKey()} />
           <button type="submit">{isMovie ? "打卡已看电影" : "打卡已看剧集"}</button>
         </form>
       )}
-      <div className="watch-checkin-history">
-        <div className="watch-checkin-history-head">
-          <strong>最近打卡</strong>
-          <input value={historyQuery} onChange={(event) => setHistoryQuery(event.target.value)} placeholder="搜索标题" />
-          {!historyKeyword && filteredHistory.length > 3 && (
-            <button type="button" onClick={() => setHistoryOpen(!historyOpen)}>{historyOpen || historyKeyword ? "收起" : "全部"}</button>
-          )}
-        </div>
-        {filteredHistory.length === 0 ? (
-          <p className="watch-checkin-history-empty">还没有打卡记录。</p>
-        ) : (
-          <div className="watch-checkin-history-list">
-            {visibleHistory.map((record) => (
-              <div className="watch-checkin-history-item" key={record.id}>
-                {record.posterUrl ? <img src={record.posterUrl} alt="" /> : <div className="watch-checkin-history-poster">{String(record.title || "")[0]}</div>}
-                <div className="watch-checkin-history-meta">
-                  <strong>{record.title}</strong>
-                  <span>{(record.type === "电影" ? "电影" : `剧集 · 第${record.episode || "?"}集`)} · {record.date || ""} {record.time || ""}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="watch-checkin-history"><div className="watch-checkin-history-head"><strong>最近打卡</strong><input value={historyQuery} onChange={(event) => setHistoryQuery(event.target.value)} placeholder="搜索标题" />{!historyKeyword && filteredHistory.length > 3 && <button type="button" onClick={() => setHistoryOpen(!historyOpen)}>{historyOpen ? "收起" : "全部"}</button>}</div>
+        {filteredHistory.length === 0 ? <p className="watch-checkin-history-empty">还没有打卡记录。</p> : <div className="watch-checkin-history-list">{visibleHistory.map((record) => <div className="watch-checkin-history-item" key={record.id}>{record.posterUrl ? <img src={record.posterUrl} alt="" /> : <div className="watch-checkin-history-poster">{String(record.title || "")[0]}</div>}<div className="watch-checkin-history-meta"><strong>{record.title}</strong><span>{record.type === "电影" ? "电影" : `剧集 · 第${record.episode || "?"}集`} · {record.date || ""} {record.time || ""}{record.tmdbRating ? ` · TMDB ${record.tmdbRating}` : ""}</span></div></div>)}</div>}
       </div>
     </section>
   );
@@ -3898,7 +3872,7 @@ function ConsultationList({ consultations, onDelete, onEdit }) {
         {filteredConsultations.map((item) => (
           <article className="record" key={item.id}>
             <div className="record-head"><strong>{item.title}</strong><span>{item.status || "想看的剧"}</span></div>
-            <p className="record-meta">{[item.year, item.type || "剧集", item.rating ? `${item.rating} 分` : "", item.platform || item.source, item.nextAirDate ? `更新 ${item.nextAirDate} ${item.airTime || ""}` : "", item.updateEpisodes ? `更新第 ${item.updateEpisodes} 集` : "", item.currentEpisode ? `当前第 ${item.currentEpisode} 集` : "", item.totalEpisodes ? `共 ${item.totalEpisodes} 集` : "", item.watchedDate, ...(item.tags || [])].filter(Boolean).join(" · ")}</p>
+            <p className="record-meta">{[item.year, item.type || "剧集", item.rating ? `${item.rating} 分` : "", item.tmdbRating ? `TMDB ${item.tmdbRating}` : "", item.platform || item.source, item.nextAirDate ? `更新 ${item.nextAirDate} ${item.airTime || ""}` : "", item.updateEpisodes ? `更新第 ${item.updateEpisodes} 集` : "", item.currentEpisode ? `当前第 ${item.currentEpisode} 集` : "", item.totalEpisodes ? `共 ${item.totalEpisodes} 集` : "", item.watchedDate, ...(item.tags || [])].filter(Boolean).join(" · ")}</p>
             {(item.review || item.conclusion) && <p><strong>评价：</strong>{item.review || item.conclusion}</p>}
             {(item.note || item.nextAction) && <p><strong>后续：</strong>{item.note || item.nextAction}</p>}
             <div className="record-actions">
@@ -4393,8 +4367,9 @@ export default function Workbench() {
       setPlans(cloud.plans);
       writeStorage("plans", cloud.plans);
     }
+    const deletedConsultationIds = new Set((Array.isArray(cloud[syncDeletedKey("consultations")]) ? cloud[syncDeletedKey("consultations")] : []).map((id) => String(id)));
     if (Array.isArray(cloud.consultations)) {
-      const nextConsultations = dedupeConsultations(cloud.consultations);
+      const nextConsultations = dedupeConsultations(cloud.consultations).filter((item) => !deletedConsultationIds.has(String(item.id)));
       setConsultations(nextConsultations);
       writeStorage("consultations", nextConsultations);
     }
@@ -4411,8 +4386,9 @@ export default function Workbench() {
       writeStorage("weightRecords", cloud.weightRecords);
     }
     if (Array.isArray(cloud.watchCheckins)) {
-      setWatchCheckins(cloud.watchCheckins);
-      writeStorage("watchCheckins", cloud.watchCheckins);
+      const nextWatchCheckins = cloud.watchCheckins.filter((record) => !deletedConsultationIds.has(String(record.consultationId)));
+      setWatchCheckins(nextWatchCheckins);
+      writeStorage("watchCheckins", nextWatchCheckins);
     }
     if (Array.isArray(cloud.assetRecords)) {
       setAssetItems(cloud.assetRecords);
@@ -5078,23 +5054,25 @@ export default function Workbench() {
     const item = consultations.find((record) => record.id === id);
     if (!item) return;
     const isMovie = (item.tmdbMediaType || "").includes("movie") || item.type === "电影";
-    const nextEpisode = Number(episode || item.currentEpisode || 0);
+    const currentEpisode = Number(item.currentEpisode || 0);
+    const episodes = isMovie ? [] : parseEpisodeList(episode, currentEpisode + 1);
+    const maxEpisode = isMovie ? currentEpisode : Math.max(...episodes);
     const total = Number(item.totalEpisodes || 0);
-    const nextStatus = isMovie || (total > 0 && nextEpisode >= total) ? "看过的剧" : "正在看";
-    const next = consultations.map((record) => record.id === id ? {
-      ...record,
-      status: nextStatus,
-      currentEpisode: isMovie ? record.currentEpisode || "" : String(nextEpisode || Number(record.currentEpisode || 0) + 1),
-      watchedDate: date || todayKey(),
-      time: nowText(),
-    } : record);
+    const nextStatus = isMovie || (total > 0 && maxEpisode >= total) ? "看过的剧" : "正在看";
+    const watchedAt = date || todayKey();
+    const time = nowText();
+    const next = consultations.map((record) => record.id === id ? { ...record, status: nextStatus, currentEpisode: isMovie ? record.currentEpisode || "" : String(maxEpisode), watchedDate: watchedAt, time } : record);
     setConsultations(next);
     persist("consultations", next);
-    const nextWatchCheckins = [...watchCheckins, { id: crypto.randomUUID(), consultationId: item.id, title: item.title || "", posterUrl: item.posterUrl || item.imageUrl || "", type: isMovie ? "电影" : "剧集", episode: isMovie ? "" : String(nextEpisode || Number(item.currentEpisode || 0) + 1), date: date || todayKey(), time: nowText() }];
+    const checkedEpisodes = isMovie ? [""] : episodes;
+    const newCheckins = checkedEpisodes.map((checkedEpisode) => ({ id: crypto.randomUUID(), consultationId: item.id, title: item.title || "", posterUrl: item.posterUrl || item.imageUrl || "", type: isMovie ? "电影" : "剧集", episode: String(checkedEpisode), tmdbRating: item.tmdbRating || "", date: watchedAt, time }));
+    const nextWatchCheckins = [...watchCheckins, ...newCheckins];
     setWatchCheckins(nextWatchCheckins);
     persist("watchCheckins", nextWatchCheckins);
-    const rewardKey = isMovie ? `watch-checkin:${id}:movie` : `watch-checkin:${id}:${item.season || 1}:${nextEpisode || Number(item.currentEpisode || 0) + 1}`;
-    rewardPetOnce(rewardKey, "stick", 1, isMovie ? "看完一部电影，电影票 +1。" : "看完一集电视剧，电影票 +1。");
+    checkedEpisodes.forEach((checkedEpisode) => {
+      const rewardKey = isMovie ? `watch-checkin:${id}:movie` : `watch-checkin:${id}:${item.season || 1}:${checkedEpisode}`;
+      rewardPetOnce(rewardKey, "stick", 1, isMovie ? "看完一部电影，电影票 +1。" : "看完一集电视剧，电影票 +1。");
+    });
   }
 
   function addAsset({ name, price, purchaseDate, category, status, notes, icon }) {
@@ -5132,6 +5110,14 @@ export default function Workbench() {
     const next = consultations.filter((record) => record.id !== id);
     setConsultations(next);
     persist("consultations", next);
+    const title = String(item?.title || "").trim().toLowerCase();
+    const nextWatchCheckins = watchCheckins.filter((record) => {
+      const recordTitle = String(record.title || "").trim().toLowerCase();
+      const titleMatched = title && recordTitle && (recordTitle.includes(title) || title.includes(recordTitle));
+      return String(record.consultationId || "") !== String(id) && !titleMatched;
+    });
+    setWatchCheckins(nextWatchCheckins);
+    persist("watchCheckins", nextWatchCheckins);
     if (!item?.tmdbId) return;
     rememberDeletedTmdbId(item);
     fetch("/api/tmdb/watchlist", {
