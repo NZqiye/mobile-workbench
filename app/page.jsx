@@ -3590,10 +3590,18 @@ function MediaUpdates({ watchItems = [] }) {
 
   const ready = status === "ready";
   const days = ready && Array.isArray(data.days) ? data.days : [];
+  const platformMetaMap = ready && data && data.platforms && typeof data.platforms === "object" ? data.platforms : {};
   const selectedDay = days[selected] || null;
   const visibleItems = selectedDay && Array.isArray(selectedDay.items) ? selectedDay.items : [];
-  const platformList = Array.from(new Set(days.flatMap((day) => (day.items || []).map((item) => item.platform).filter(Boolean)))).sort((a, b) => a.localeCompare(b));
-  const platformZhMap = Object.fromEntries(days.flatMap((day) => (day.items || []).map((item) => [item.platform, item.platformZh || item.platform])));
+  const platformList = Object.keys(platformMetaMap).length
+    ? Object.keys(platformMetaMap).sort((a, b) => a.localeCompare(b))
+    : Array.from(new Set(days.flatMap((day) => (day.items || []).map((item) => item.platform).filter(Boolean)))).sort((a, b) => a.localeCompare(b));
+  const platformZhMap = Object.keys(platformMetaMap).length
+    ? Object.fromEntries(platformList.map((name) => [name, platformMetaMap[name]?.displayName || name]))
+    : Object.fromEntries(days.flatMap((day) => (day.items || []).map((item) => [item.platform, item.platformZh || item.platform])));
+  const platformLevelMap = Object.keys(platformMetaMap).length
+    ? Object.fromEntries(platformList.map((name) => [name, platformMetaMap[name]?.level || "中"]))
+    : {};
   const filteredItems = platformFilter === "all" ? visibleItems : visibleItems.filter((item) => item.platform === platformFilter);
   const showCount = expandedDay === (selectedDay && selectedDay.date) ? filteredItems.length : Math.min(25, filteredItems.length);
 
@@ -3613,7 +3621,7 @@ function MediaUpdates({ watchItems = [] }) {
       <div className="panel-head">
         <div>
           <h2><MotionIcon name="quote" />各平台更新日历</h2>
-          <p>TVMaze 排期 · 欧美流媒体与电视网未来 7 天更新{status === "ready" && days.length ? " · " + days.length + " 天" : ""}</p>
+          <p>{data?.sourceNote || "TVMaze 排期 · 欧美流媒体与电视网未来 7 天更新"}{status === "ready" && days.length ? " · " + days.length + " 天" : ""}</p>
         </div>
         <button className="chip-button" type="button" onClick={load} disabled={status === "loading"}>刷新</button>
       </div>
@@ -3631,12 +3639,18 @@ function MediaUpdates({ watchItems = [] }) {
             ))}
           </div>
           {platformList.length > 1 && (
-            <div className="media-updates-platforms">
+            <div className="media-updates-platforms" aria-label="平台校准筛选">
               <button className={platformFilter === "all" ? "active" : ""} type="button" onClick={() => setPlatformFilter("all")}>全部</button>
               {platformList.map((name) => (
-                <button className={platformFilter === name ? "active" : ""} type="button" key={name} onClick={() => setPlatformFilter(name)}>{platformZhMap[name] || name}</button>
+                <button className={platformFilter === name ? "active" : ""} type="button" key={name} onClick={() => setPlatformFilter(name)}>
+                  <span>{platformZhMap[name] || name}</span>
+                  <small>{platformLevelMap[name] || "中"}</small>
+                </button>
               ))}
             </div>
+          )}
+          {Object.keys(platformMetaMap).length > 0 && (
+            <p className="media-updates-scale">平台校准：高 = 命中更稳；中 = 以 TVMaze 参考为主；中文标题优先用别名，其次 TMDB 回填。</p>
           )}
           {filteredItems.length === 0 ? (
             <p className="empty">这一天暂时没有排期数据。</p>
@@ -3644,13 +3658,17 @@ function MediaUpdates({ watchItems = [] }) {
             <div className="media-updates-list">
               {filteredItems.slice(0, showCount).map((item) => {
                 const tracked = isTracked(item.title);
-                const itemTitle = item.titleZh ? item.titleZh + " · " + item.title : item.title;
-                const meta = [item.airtime || "--:--", item.platformZh || item.platform, item.type === "premiere" ? "首播" : item.type === "finale" ? "季终" : "", item.season ? "S" + item.season + "E" + item.number : ""].filter(Boolean).join(" · ");
+                const itemTitle = item.titleZh || item.title;
+                const titleSource = item.titleSource === "manual" ? "中译" : item.titleSource === "tvmaze-aka" ? "别名" : item.titleSource === "tmdb" ? "TMDB" : "";
+                const meta = [item.titleZh ? `原名 ${item.title}` : "", item.airtime || "--:--", item.platformZh || item.platform, item.type === "premiere" ? "首播" : item.type === "finale" ? "季终" : "", item.season ? "S" + item.season + "E" + item.number : ""].filter(Boolean).join(" · ");
                 return (
                   <div className="media-update-row" key={selectedDay.date + "-" + (item.id || item.title) + "-" + item.season + "-" + item.number}>
                     {item.image ? <img className="media-update-poster" src={item.image} alt="" loading="lazy" /> : <span className="media-update-poster" />}
                     <div className="media-update-main">
-                      <strong>{itemTitle}</strong>
+                      <div className="media-update-title-row">
+                        <strong>{itemTitle}</strong>
+                        {titleSource && <span className="media-update-origin">{titleSource}</span>}
+                      </div>
                       <small>{meta}</small>
                     </div>
                     {tracked && <span className="media-update-tracked">在追</span>}
@@ -3802,7 +3820,6 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
               ))}
             </div>
           </section>
-          <WatchCheckin items={managedWatchItems} onCheckin={onWatchCheckin} onSyncTmdbRating={onSyncTmdbRating} onRemoveCheckin={onRemoveCheckin} watchCheckins={watchCheckins} />
           <MediaUpdates watchItems={managedWatchItems} />
           <section className="watch-calendar">
             <div className="panel-head">
@@ -3909,6 +3926,9 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
             )}
           </section>
         </>
+      )}
+      {activeView === "checkin" && (
+        <WatchCheckin items={managedWatchItems} onCheckin={onWatchCheckin} onSyncTmdbRating={onSyncTmdbRating} onRemoveCheckin={onRemoveCheckin} watchCheckins={watchCheckins} />
       )}
       {selectedRecommendationSection && (
         <section className="tmdb-recommendations">
@@ -5636,6 +5656,7 @@ export default function Workbench() {
                     <button className={consultationView === "today" ? "active" : ""} type="button" onClick={() => setConsultationView("today")}>追剧日历</button>
                     <button className={consultationView === "movies" ? "active" : ""} type="button" onClick={() => setConsultationView("movies")}>电影</button>
                     <button className={consultationView === "tv" ? "active" : ""} type="button" onClick={() => setConsultationView("tv")}>电视剧</button>
+                    <button className={consultationView === "checkin" ? "active" : ""} type="button" onClick={() => setConsultationView("checkin")}>观影打卡</button>
                   </div>
                 ) : activePage === "market" ? (
                   <div className="module-tabs market-tabs" aria-label="行情内容切换">
