@@ -4757,3 +4757,47 @@ textarea::placeholder {
 .watch-checkin-remove:hover { color: #fff; background: rgba(159, 38, 48, 0.75); }
 .page-consultations .watch-checkin-remove { color: #ffd9cf; border-color: rgba(255,255,255,.16); background: rgba(255,255,255,.06); }
 .page-consultations .watch-checkin-remove:hover { color: #fff; background: rgba(190,55,72,.6); }
+
+.media-updates-panel { display: grid; gap: 12px; padding: 16px; border: 1px solid rgba(234, 215, 208, 0.82); border-radius: 14px; background: rgba(255, 255, 255, 0.9); box-shadow: var(--shadow); }
+.media-updates-panel .panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.media-updates-panel .panel-head h2 { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 16px; }
+.media-updates-panel .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+.media-updates-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; -ms-overflow-style: none; scroll-snap-type: x proximity; }
+.media-updates-tabs::-webkit-scrollbar,
+.media-updates-platforms::-webkit-scrollbar { display: none; }
+.media-updates-tabs button { flex: 0 0 auto; display: grid; gap: 2px; min-width: 84px; min-height: 44px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 12px; text-align: center; color: var(--ink); background: rgba(255, 253, 249, 0.8); scroll-snap-align: start; }
+.media-updates-tabs button.active { color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); border-color: transparent; }
+.media-updates-tabs button small { font-size: 10px; opacity: 0.75; }
+.media-updates-platforms { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; -ms-overflow-style: none; scroll-snap-type: x proximity; }
+.media-updates-platforms button { flex: 0 0 auto; min-height: 30px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); background: rgba(255, 253, 249, 0.8); font-size: 11px; white-space: nowrap; scroll-snap-align: start; }
+.media-updates-platforms button.active { color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); border-color: transparent; }
+.media-updates-list { display: grid; gap: 8px; }
+.media-update-row { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 10px; align-items: center; min-height: 64px; padding: 8px 10px; border: 1px solid rgba(234, 215, 208, 0.6); border-radius: 12px; background: rgba(255, 252, 250, 0.8); }
+.media-update-poster { display: block; width: 48px; height: 68px; border-radius: 8px; object-fit: cover; background: rgba(234, 215, 208, 0.45); }
+.media-update-main { display: grid; gap: 3px; min-width: 0; }
+.media-update-main strong { color: var(--ink); font-size: 13px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.media-update-main small { color: var(--muted); font-size: 11px; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.media-update-tracked { align-self: start; padding: 2px 8px; border-radius: 999px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 10px; font-weight: 800; white-space: nowrap; }
+.media-updates-more { min-height: 36px; border: 0; border-radius: 10px; color: var(--theme-main); background: rgba(159, 38, 48, 0.08); font-size: 12px; }
+.page-consultations .media-updates-panel { border-color: rgba(255, 255, 255, 0.14); background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)); }
+.page-consultations .media-updates-panel .panel-head h2 { color: color-mix(in srgb, var(--theme-accent) 82%, #fff); }
+.page-consultations .media-updates-panel .panel-head p { color: rgba(255, 233, 224, 0.72); }
+.page-consultations .media-updates-tabs button { color: #ffe9e0; border-color: rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.06); }
+.page-consultations .media-updates-platforms button { color: #ffe9e0; border-color: rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.06); }
+.page-consultations .media-updates-platforms button.active { color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); border-color: transparent; }
+.page-consultations .media-update-row { border-color: rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); }
+.page-consultations .media-update-poster { background: rgba(255, 255, 255, 0.14); }
+.page-consultations .media-update-row strong { color: #fff5f0; }
+.page-consultations .media-update-row small { color: rgba(255, 233, 224, 0.68); }
+.page-consultations .media-updates-more { color: #ffe9e0; background: rgba(255, 255, 255, 0.08); }
+
+.phone-shell.mobile-shell .media-updates-panel { gap: 10px; padding: 12px; border-radius: 14px; }
+.phone-shell.mobile-shell .media-updates-panel .panel-head h2 { font-size: 15px; line-height: 1.25; }
+.phone-shell.mobile-shell .media-updates-panel .panel-head p { font-size: 10px; line-height: 1.35; }
+.phone-shell.mobile-shell .media-updates-tabs button { min-width: 76px; min-height: 40px; padding: 6px 8px; }
+.phone-shell.mobile-shell .media-updates-platforms button { min-height: 28px; padding-inline: 9px; }
+.phone-shell.mobile-shell .media-update-row { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 8px; min-height: 60px; padding: 7px 8px; }
+.phone-shell.mobile-shell .media-update-poster { width: 44px; height: 62px; }
+.phone-shell.mobile-shell .media-update-main strong { font-size: 12px; }
+.phone-shell.mobile-shell .media-update-main small { font-size: 10px; }
+.phone-shell.mobile-shell .media-update-tracked { padding-inline: 6px; }
