@@ -4128,13 +4128,13 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
               {(Array.isArray(selectedRecommendationSection.items) ? selectedRecommendationSection.items : []).length === 0 && <p className="empty">暂无片单，稍后点刷新片单重试。</p>}
               {visibleRecommendationItems.map((item) => (
                 <div className="media-feed-card" role="button" tabIndex={0} key={`${selectedRecommendationSection.id}-${item.tmdbId || item.id || item.title}`} onClick={() => onImportTmdb(item)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onImportTmdb(item); } }}>
-                  <div className="media-gallery">
+                  <div className={`media-gallery ${item.backdropUrl ? "" : "media-gallery-single"}`}>
                     <div className="media-still">
-                      {item.backdropUrl ? <img src={item.backdropUrl} alt="" /> : <span>{mediaTitle(item).slice(0, 1)}</span>}
+                      {item.backdropUrl || item.posterUrl ? <img src={item.backdropUrl || item.posterUrl} alt="" /> : <span>{mediaTitle(item).slice(0, 1)}</span>}
                     </div>
-                    <div className="media-poster-thumb">
+                    {item.backdropUrl && <div className="media-poster-thumb">
                       {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{mediaTitle(item).slice(0, 1)}</span>}
-                    </div>
+                    </div>}
                   </div>
                   <strong className="media-feed-title">{mediaTitle(item)}</strong>
                   <span className="media-air">{mediaAirText(item)}</span>
