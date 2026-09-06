@@ -7,9 +7,9 @@ const sectionMeta = [
   ["tvHot", "\u7535\u89c6\u5267", "\u8fd1\u671f\u70ed\u64ad", "tv", "https://api.themoviedb.org/3/tv/popular"],
   ["tvUpcoming", "\u7535\u89c6\u5267", "\u5373\u5c06\u4e0a\u7ebf", "tv", "https://api.themoviedb.org/3/tv/on_the_air"],
   ["tvHistory", "\u7535\u89c6\u5267", "\u5386\u53f2\u70ed\u699c", "tv", "https://api.themoviedb.org/3/tv/top_rated"],
-  ["varietyHot", "\u7efc\u827a", "\u8fd1\u671f\u70ed\u64ad", "tv", "https://api.themoviedb.org/3/discover/tv", "10764,10767", "popularity.desc"],
-  ["varietyUpcoming", "\u7efc\u827a", "\u5373\u5c06\u4e0a\u7ebf", "tv", "https://api.themoviedb.org/3/discover/tv", "10764,10767", "first_air_date.desc"],
-  ["varietyHistory", "\u7efc\u827a", "\u5386\u53f2\u70ed\u699c", "tv", "https://api.themoviedb.org/3/discover/tv", "10764,10767", "vote_average.desc"],
+  ["varietyHot", "\u7efc\u827a", "\u8fd1\u671f\u70ed\u64ad", "tv", "https://api.themoviedb.org/3/discover/tv", "10764|10767", "popularity.desc"],
+  ["varietyUpcoming", "\u7efc\u827a", "\u5373\u5c06\u4e0a\u7ebf", "tv", "https://api.themoviedb.org/3/discover/tv", "10764|10767", "first_air_date.desc"],
+  ["varietyHistory", "\u7efc\u827a", "\u5386\u53f2\u70ed\u699c", "tv", "https://api.themoviedb.org/3/discover/tv", "10764|10767", "vote_average.desc"],
   ["animeHot", "\u52a8\u6f2b", "\u8fd1\u671f\u70ed\u64ad"],
   ["animeUpcoming", "\u52a8\u6f2b", "\u5373\u5c06\u4e0a\u7ebf"],
   ["animeHistory", "\u52a8\u6f2b", "\u5386\u53f2\u70ed\u699c"],
@@ -55,7 +55,7 @@ async function readPage(source, page, genres = "", sortBy = "") {
   url.searchParams.set("timezone", "Asia/Shanghai");
   url.searchParams.set("page", String(page));
   if (genres) url.searchParams.set("with_genres", genres);
-  if (genres === "10764,10767") url.searchParams.set("with_origin_country", "CN|KR");
+  if (genres === "10764|10767") url.searchParams.set("with_origin_country", "CN|KR");
   if (sortBy) url.searchParams.set("sort_by", sortBy);
   if (sortBy === "vote_average.desc") url.searchParams.set("vote_count.gte", "200");
   const response = await fetchTmdb(url, { signal: AbortSignal.timeout(6000) });
@@ -67,8 +67,11 @@ async function readPage(source, page, genres = "", sortBy = "") {
 
 async function loadSection([id, type, category, mediaType, source, genres, sortBy]) {
   if (!source) return null;
-  const data = await readPage(source, 1, genres, sortBy);
-  const items = (data.results || [])
+  const settled = await Promise.allSettled([1, 2, 3].map((page) => readPage(source, page, genres, sortBy)));
+  const pages = settled
+    .filter((result) => result.status === "fulfilled")
+    .map((result) => result.value);
+  const items = pages.flatMap((data) => data.results || [])
     .filter((item) => item.media_type !== "person")
     .filter((item) => {
       const genreIds = Array.isArray(item.genre_ids) ? item.genre_ids : [];
