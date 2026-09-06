@@ -3873,6 +3873,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
   const [varietySectionId, setVarietySectionId] = useState("varietyHot");
   const [animeSectionId, setAnimeSectionId] = useState("animeHot");
   const [recommendationMenuOpen, setRecommendationMenuOpen] = useState(false);
+  const [recommendationMode, setRecommendationMode] = useState("hot");
   const [recommendationExpanded, setRecommendationExpanded] = useState(false);
   const allItems = Array.isArray(items) ? items : [];
   const managedWatchItems = allItems.filter((item) => item.status !== "已归档");
@@ -3928,8 +3929,33 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
         : activeView === "anime"
           ? animeSectionId
           : "";
-  const selectedRecommendationSection = activeRecommendationOptions.find((section) => section.id === selectedRecommendationId) || activeRecommendationOptions[0];
-  const selectedRecommendationItems = Array.isArray(selectedRecommendationSection?.items) ? selectedRecommendationSection.items : [];
+  const selectedSourceSection = activeRecommendationOptions.find((section) => section.id === selectedRecommendationId) || activeRecommendationOptions[0];
+  const recommendationModeLabels = {
+    hot: "热门",
+    high: "高分",
+    rising: "上升",
+    personal: "为你推荐",
+  };
+  const recommendationModeSectionId = {
+    hot: activeRecommendationOptions.find((section) => section.id.endsWith("Hot"))?.id,
+    high: activeRecommendationOptions.find((section) => section.id.endsWith("History"))?.id,
+    rising: activeRecommendationOptions.find((section) => section.id.endsWith("Upcoming"))?.id,
+  };
+  const modeSourceSection = recommendationMode === "personal"
+    ? selectedSourceSection
+    : activeRecommendationOptions.find((section) => section.id === recommendationModeSectionId[recommendationMode]) || selectedSourceSection;
+  const modeItems = Array.isArray(modeSourceSection?.items) ? modeSourceSection.items : [];
+  const personalItems = recommendationMode === "personal"
+    ? [...modeItems, ...activeRecommendationOptions.flatMap((section) => Array.isArray(section.items) ? section.items : [])]
+      .filter((item, index, list) => (item.tmdbId || item.id || item.title) && list.findIndex((candidate) => (candidate.tmdbId || candidate.id || candidate.title) === (item.tmdbId || item.id || item.title)) === index)
+      .sort((a, b) => Number(b.tmdbRating || b.voteAverage || 0) - Number(a.tmdbRating || a.voteAverage || 0))
+    : modeItems;
+  const selectedRecommendationSection = {
+    ...(modeSourceSection || { id: "recommendation", title: "今日推荐", items: [] }),
+    title: recommendationModeLabels[recommendationMode],
+    items: personalItems,
+  };
+  const selectedRecommendationItems = personalItems;
   const selectedRecommendationCount = selectedRecommendationItems.length;
   const visibleRecommendationItems = recommendationExpanded ? selectedRecommendationItems : selectedRecommendationItems.slice(0, 20);
   const selectedRecommendationIcon = activeView === "anime" ? "spark" : activeView === "variety" ? "screen" : selectedRecommendationSection?.id?.startsWith("movie") ? "movie" : "tv";
@@ -4136,6 +4162,13 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
       )}
       {selectedRecommendationSection && (
         <section className="tmdb-recommendations">
+          <div className="recommendation-mode-tabs" aria-label="榜单类型">
+            {Object.entries(recommendationModeLabels).map(([mode, label]) => (
+              <button className={recommendationMode === mode ? "active" : ""} type="button" key={mode} onClick={() => { setRecommendationMode(mode); setRecommendationExpanded(false); }}>
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="panel-head">
             <div>
               <h2 className="icon-heading"><MotionIcon name={selectedRecommendationIcon} />{selectedRecommendationSection.title}</h2>
@@ -4177,6 +4210,9 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
                   <strong className="media-feed-title">{mediaTitle(item)}</strong>
                   <span className="media-air">{mediaAirText(item)}</span>
                   <small className="media-meta">{[item.year, item.type || "剧集", item.platform || "TMDB"].filter(Boolean).join(" / ")}</small>
+                  <small className="media-recommendation-reason">
+                    {recommendationMode === "hot" ? "近期讨论度较高" : recommendationMode === "high" ? "高分作品，适合收藏" : recommendationMode === "rising" ? "近期值得关注" : "根据你的观影片单精选"}
+                  </small>
                   <details className="media-summary-details" onClick={(event) => event.stopPropagation()}><summary>简介</summary><p className="media-summary">{mediaDescription(item)}</p></details>
                 </div>
               ))}

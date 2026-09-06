@@ -651,6 +651,10 @@ textarea { resize: vertical; }
 .tmdb-recommendations .panel-head h2 { margin: 0; font-size: 18px; }
 .tmdb-recommendations .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
 .recommendation-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+.recommendation-mode-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 5px; border-radius: 14px; background: color-mix(in srgb, var(--theme-soft) 72%, #fff); }
+.recommendation-mode-tabs button { min-height: 36px; padding: 0 10px; border: 0; border-radius: 10px; color: var(--muted); background: transparent; font-size: 12px; font-weight: 900; }
+.recommendation-mode-tabs button.active { color: var(--theme-main); background: #fff; box-shadow: 0 5px 14px rgba(117, 25, 35, 0.1); }
+.media-recommendation-reason { color: var(--theme-main); font-size: 12px; font-weight: 800; }
 .recommendation-menu { position: relative; z-index: 5; }
 .recommendation-menu-trigger {
   display: inline-flex;
