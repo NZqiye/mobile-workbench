@@ -1,18 +1,18 @@
 import { fetchTmdb, mapTmdbResult, tmdbToken } from "../../../../lib/tmdb";
 
 const sectionMeta = [
-  ["movieHot", "\u7535\u5f71", "\u8fd1\u671f\u70ed\u64ad", "movie", "https://api.themoviedb.org/3/movie/popular"],
-  ["movieUpcoming", "\u7535\u5f71", "\u5373\u5c06\u4e0a\u7ebf", "movie", "https://api.themoviedb.org/3/movie/upcoming"],
-  ["movieHistory", "\u7535\u5f71", "\u5386\u53f2\u70ed\u699c", "movie", "https://api.themoviedb.org/3/movie/top_rated"],
-  ["tvHot", "\u7535\u89c6\u5267", "\u8fd1\u671f\u70ed\u64ad", "tv", "https://api.themoviedb.org/3/tv/popular"],
-  ["tvUpcoming", "\u7535\u89c6\u5267", "\u5373\u5c06\u4e0a\u7ebf", "tv", "https://api.themoviedb.org/3/tv/on_the_air"],
-  ["tvHistory", "\u7535\u89c6\u5267", "\u5386\u53f2\u70ed\u699c", "tv", "https://api.themoviedb.org/3/tv/top_rated"],
-  ["varietyHot", "\u7efc\u827a", "\u8fd1\u671f\u70ed\u64ad", "tv", "https://api.themoviedb.org/3/discover/tv", "10764|10767", "popularity.desc"],
-  ["varietyUpcoming", "\u7efc\u827a", "\u5373\u5c06\u4e0a\u7ebf", "tv", "https://api.themoviedb.org/3/discover/tv", "10764|10767", "first_air_date.desc"],
-  ["varietyHistory", "\u7efc\u827a", "\u5386\u53f2\u70ed\u699c", "tv", "https://api.themoviedb.org/3/discover/tv", "10764|10767", "vote_average.desc"],
-  ["animeHot", "\u52a8\u6f2b", "\u8fd1\u671f\u70ed\u64ad"],
-  ["animeUpcoming", "\u52a8\u6f2b", "\u5373\u5c06\u4e0a\u7ebf"],
-  ["animeHistory", "\u52a8\u6f2b", "\u5386\u53f2\u70ed\u699c"],
+  ["movieHot", "\u7535\u5f71", "\u70ed\u95e8\u699c", "movie", "https://api.themoviedb.org/3/movie/popular"],
+  ["movieUpcoming", "\u7535\u5f71", "\u4e0a\u5347\u699c", "movie", "https://api.themoviedb.org/3/movie/upcoming"],
+  ["movieHistory", "\u7535\u5f71", "\u9ad8\u5206\u699c", "movie", "https://api.themoviedb.org/3/movie/top_rated"],
+  ["tvHot", "\u7535\u89c6\u5267", "\u70ed\u95e8\u699c", "tv", "https://api.themoviedb.org/3/tv/popular"],
+  ["tvUpcoming", "\u7535\u89c6\u5267", "\u4e0a\u5347\u699c", "tv", "https://api.themoviedb.org/3/tv/on_the_air"],
+  ["tvHistory", "\u7535\u89c6\u5267", "\u9ad8\u5206\u699c", "tv", "https://api.themoviedb.org/3/tv/top_rated"],
+  ["varietyHot", "\u7efc\u827a", "\u70ed\u95e8\u699c", "tv", "https://api.themoviedb.org/3/discover/tv", "10764|10767", "popularity.desc"],
+  ["varietyUpcoming", "\u7efc\u827a", "\u4e0a\u5347\u699c", "tv", "https://api.themoviedb.org/3/discover/tv", "10764|10767", "first_air_date.desc"],
+  ["varietyHistory", "\u7efc\u827a", "\u9ad8\u5206\u699c", "tv", "https://api.themoviedb.org/3/discover/tv", "10764|10767", "vote_average.desc"],
+  ["animeHot", "\u52a8\u6f2b", "\u70ed\u95e8\u699c"],
+  ["animeUpcoming", "\u52a8\u6f2b", "\u4e0a\u5347\u699c"],
+  ["animeHistory", "\u52a8\u6f2b", "\u9ad8\u5206\u699c"],
 ];
 
 const fallbackNames = {
