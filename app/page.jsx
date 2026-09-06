@@ -3645,7 +3645,7 @@ function WatchCheckin({ items = [], onCheckin, onSyncTmdbRating, onRemoveCheckin
 
   return (
     <section className="watch-checkin-panel">
-      <div className="panel-head"><div><h2>观影打卡</h2><p>记录已看的剧集或电影，自动更新片单进度。</p></div></div>
+      <div className="panel-head"><div><h2>观影评分</h2></div></div>
       {watchItems.length === 0 ? <p className="empty">先搜索或添加一部影视，再回来打卡。</p> : (
         <form className="watch-checkin-form" onSubmit={submit}>
           <div className="watch-checkin-picker" ref={pickerRef}>
@@ -3897,7 +3897,30 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
     .filter((item) => item.count > 0);
   const searchResults = Array.isArray(tmdbResults) ? tmdbResults : [];
   const recommendationSections = Array.isArray(tmdbSections) ? tmdbSections : [];
-  const visibleRecommendationSections = recommendationSections.length ? recommendationSections : [
+  const watchedIds = new Set(
+    allItems
+      .filter((item) => item.status === "看过的剧")
+      .map((item) => String(item.tmdbId || "").trim())
+      .filter(Boolean),
+  );
+  const watchedTitles = new Set(
+    [
+      ...allItems.filter((item) => item.status === "看过的剧").map((item) => mediaTitle(item)),
+      ...(Array.isArray(watchCheckins) ? watchCheckins.map((record) => record.title) : []),
+    ]
+      .map((title) => String(title || "").trim().toLowerCase())
+      .filter(Boolean),
+  );
+  const isAlreadyWatched = (item) => {
+    const itemId = String(item?.tmdbId || "").trim();
+    const itemTitle = mediaTitle(item).trim().toLowerCase();
+    return (itemId && watchedIds.has(itemId)) || (itemTitle && watchedTitles.has(itemTitle));
+  };
+  const filterRecommendationSections = (sections) => sections.map((section) => ({
+    ...section,
+    items: (Array.isArray(section.items) ? section.items : []).filter((item) => !isAlreadyWatched(item)),
+  }));
+  const visibleRecommendationSections = filterRecommendationSections(recommendationSections.length ? recommendationSections : [
     { id: "movieHot", title: "近期热播", items: [] },
     { id: "movieUpcoming", title: "即将上线", items: [] },
     { id: "movieHistory", title: "历史热榜", items: [] },
@@ -3910,7 +3933,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
     { id: "animeHot", title: "近期热播", items: [] },
     { id: "animeUpcoming", title: "即将上线", items: [] },
     { id: "animeHistory", title: "历史热榜", items: [] },
-  ];
+  ]);
   const recommendationGroups = {
     movies: ["movieHot", "movieUpcoming", "movieHistory"],
     tv: ["tvHot", "tvUpcoming", "tvHistory"],
@@ -3950,11 +3973,11 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
       .filter((item, index, list) => (item.tmdbId || item.id || item.title) && list.findIndex((candidate) => (candidate.tmdbId || candidate.id || candidate.title) === (item.tmdbId || item.id || item.title)) === index)
       .sort((a, b) => Number(b.tmdbRating || b.voteAverage || 0) - Number(a.tmdbRating || a.voteAverage || 0))
     : modeItems;
-  const selectedRecommendationSection = {
-    ...(modeSourceSection || { id: "recommendation", title: "今日推荐", items: [] }),
+  const selectedRecommendationSection = modeSourceSection ? {
+    ...modeSourceSection,
     title: recommendationModeLabels[recommendationMode],
     items: personalItems,
-  };
+  } : null;
   const selectedRecommendationItems = personalItems;
   const selectedRecommendationCount = selectedRecommendationItems.length;
   const visibleRecommendationItems = recommendationExpanded ? selectedRecommendationItems : selectedRecommendationItems.slice(0, 20);
@@ -5612,6 +5635,13 @@ export default function Workbench() {
     const nextWatchCheckins = dedupeWatchCheckins([...watchCheckins, ...newCheckins]);
     setWatchCheckins(nextWatchCheckins);
     persist("watchCheckins", nextWatchCheckins);
+    if (nextStatus === "看过的剧" && item.tmdbId) {
+      fetch("/api/tmdb/watchlist", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mediaId: item.tmdbId, mediaType: item.tmdbMediaType || (isMovie ? "movie" : "tv") }),
+      }).catch(() => {});
+    }
     checkedEpisodes.forEach((checkedEpisode) => {
       const rewardKey = isMovie ? `watch-checkin:${id}:movie` : `watch-checkin:${id}:${item.season || 1}:${checkedEpisode}`;
       rewardPetOnce(rewardKey, "stick", 1, isMovie ? "看完一部电影，电影票 +1。" : "看完一集电视剧，电影票 +1。");
