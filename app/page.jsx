@@ -38,6 +38,7 @@ function normalizeTvmazeRecommendation(item) {
     allowOriginalTitle: true,
     type: category === "anime" ? "动漫" : category === "variety" ? "综艺" : "电视剧",
     category,
+    originCountry: item.originCountry || "",
     platform: item.platformZh || item.platform || "TVMaze",
     source: "TVMaze",
     sourceLabel: "TVMaze",
@@ -52,6 +53,11 @@ function normalizeTvmazeRecommendation(item) {
     summary: item.summaryZh || (item.number ? `第${item.number}集 · TVMaze 实时排期` : "TVMaze 实时排期"),
     summaryZh: item.summaryZh || "",
   };
+}
+
+function isPreferredVarietyCountry(item) {
+  const countries = Array.isArray(item?.originCountry) ? item.originCountry : [item?.originCountry || ""];
+  return countries.some((country) => country === "CN" || country === "KR");
 }
 
 function mergeRecommendationItems(primary = [], secondary = []) {
@@ -77,8 +83,8 @@ function mergeRecommendationSources(baseSections = [], mediaData, animeData) {
   const upcomingItems = days.slice(1).flatMap((day) => day.items || []).map(normalizeTvmazeRecommendation).filter(Boolean);
   replaceSectionItems("tvHot", liveItems.filter((item) => item.category === "tv"));
   replaceSectionItems("tvUpcoming", upcomingItems.filter((item) => item.category === "tv"));
-  replaceSectionItems("varietyHot", liveItems.filter((item) => item.category === "variety"));
-  replaceSectionItems("varietyUpcoming", upcomingItems.filter((item) => item.category === "variety"));
+  replaceSectionItems("varietyHot", liveItems.filter((item) => item.category === "variety" && isPreferredVarietyCountry(item)));
+  replaceSectionItems("varietyUpcoming", upcomingItems.filter((item) => item.category === "variety" && isPreferredVarietyCountry(item)));
   replaceSectionItems("animeHot", liveItems.filter((item) => item.category === "anime"));
   replaceSectionItems("animeUpcoming", upcomingItems.filter((item) => item.category === "anime"));
 
