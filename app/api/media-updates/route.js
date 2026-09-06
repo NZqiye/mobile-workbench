@@ -166,6 +166,7 @@ async function normalizeEpisode(episode, compact = false) {
     platformScore: calibration.score,
     platformNote: calibration.note,
     showType: show.type || "",
+    originCountry: show.network?.country?.code || show.webChannel?.country?.code || show.country?.code || "",
     status: show.status || "",
     titleZh: titleZh.titleZh,
     summaryZh: titleZh.summaryZh,
