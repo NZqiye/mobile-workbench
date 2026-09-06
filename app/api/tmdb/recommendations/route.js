@@ -55,6 +55,7 @@ async function readPage(source, page, genres = "", sortBy = "") {
   url.searchParams.set("timezone", "Asia/Shanghai");
   url.searchParams.set("page", String(page));
   if (genres) url.searchParams.set("with_genres", genres);
+  if (genres === "10764,10767") url.searchParams.set("with_origin_country", "CN|KR");
   if (sortBy) url.searchParams.set("sort_by", sortBy);
   if (sortBy === "vote_average.desc") url.searchParams.set("vote_count.gte", "200");
   const response = await fetchTmdb(url, { signal: AbortSignal.timeout(6000) });
@@ -74,7 +75,7 @@ async function loadSection([id, type, category, mediaType, source, genres, sortB
       const isAnimation = genreIds.includes(16);
       const isVariety = genreIds.includes(10764) || genreIds.includes(10767);
       if (type === "\u7535\u89c6\u5267") return !isAnimation && !isVariety;
-      if (type === "\u7efc\u827a") return isVariety;
+      if (type === "\u7efc\u827a") return isVariety && (item.origin_country || []).some((country) => country === "CN" || country === "KR");
       return true;
     })
     .slice(0, 60);
