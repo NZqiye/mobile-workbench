@@ -5,12 +5,18 @@ let cache = null;
 const NOISE_TYPES = new Set(["News", "Talk Show", "Panel", "Sports", "Game Show", "Quiz Show", "Award Show", "Variety"]);
 const SHOW_ZH = {"Battle Through the Heavens":"斗破苍穹","Tales of Demons and Gods":"妖神记","Wan Jie Du Zun":"万界独尊","Lian Qi Shi Wan Nian":"炼气十万年","Soul Land 2: The Unrivaled Tang Sect":"斗罗大陆2：绝世唐门","Fanren Xiu Xian Chuan Zhi Fanren Feng Qi Tian Nan":"凡人修仙传·风起天南","Swallowed Star":"吞噬星空","Shrouding the Heavens":"遮天","Xian Ni":"仙逆","Yi Nian Yong Heng":"一念永恒","Wanmei Shijie":"完美世界","Zhu Xian":"诛仙","LINK CLICK":"时光代理人","The Great Ruler":"大主宰","The Eternal Supreme, Li Yunxiao":"万古至尊：李云霄传","Mushen Ji":"牧神记","GuAn":"一斩苍穹","Dongda Gao Wu Xueyuan":"东大高武学院","Legend of Xianwu":"仙武传","Guangyin Zhi Wai":"光阴之外","Ling Jing Xing Zhe":"灵境行者","Zeri Feisheng":"择日飞升","Caishen Dou Zhanlong":"财神窦占龙","Alchemy Supreme":"丹道至尊","Jue Shi Zhan Hun":"绝世战魂","Shixiong A Shixiong":"师兄啊师兄","Under the Gate":"界门之下","Against the Sky Supreme":"逆天至尊","The Underworld":"话事人","Against the Current":"兰香如故","In My Prime":"生逢其时","The Early Spring":"早春晴朗","The Phoenix's Other Self":"凰权之下，她即是我","Prelude of the White Snake":"浮生之白蛇前缘","See You Later... Maybe":"囧徒之预演告别","Blossom through the Cloud":"飞到我心上","The Legendary Chitose-Sama":"驸马小仵作","Ash":"烟灰","Don't Be Too Emotional":"心动禁止","Your Third":"第三心属","Ted Lasso":"足球教练","Dark Matter":"人生复本","Lanterns":"绿灯军团","Conan O'Brien Must Go":"柯南势在必行","Untold":"体坛秘史","Made in Korea":"韩国制造","Las Azules":"女警出更","The Producer":"接招吧！制作人"};
 const PLATFORM_ZH = {"Tencent QQ":"腾讯视频","Youku":"优酷","Mango TV":"芒果TV","Bilibili":"哔哩哔哩","iQIYI":"爱奇艺"};
-const KEEP_PLATFORM = {"Netflix":"Netflix","Disney+":"Disney+","HBO":"HBO","HBO Max":"HBO","Apple TV":"Apple TV","Tencent QQ":"Tencent QQ","iQIYI":"iQIYI","Youku":"Youku","Mango TV":"Mango TV","Bilibili":"Bilibili"};
+const PLATFORM_ALIAS = {"HBO Max":"HBO","Max":"HBO","Apple TV+":"Apple TV","Apple TV":"Apple TV","Amazon Prime Video":"Prime Video","Prime Video":"Prime Video","Tencent QQ":"Tencent QQ","Tencent Video":"Tencent QQ","WeTV":"Tencent QQ","iQiyi":"iQIYI","iQIYI":"iQIYI","Youku":"Youku","YOUKU":"Youku","Mango TV":"Mango TV","Bilibili":"Bilibili"};
 const PLATFORM_CALIBRATION = {
   Netflix: { displayName: "Netflix", level: "高", score: 0.95, note: "全球流媒体，TVMaze 命中通常最稳定。" },
   "Disney+": { displayName: "Disney+", level: "高", score: 0.94, note: "全球流媒体，平台名和排期都较稳。" },
   HBO: { displayName: "HBO", level: "高", score: 0.93, note: "HBO / HBO Max 统一按 HBO 处理。" },
   "Apple TV": { displayName: "Apple TV", level: "高", score: 0.92, note: "官方平台名稳定。" },
+  "Prime Video": { displayName: "Prime Video", level: "高", score: 0.91, note: "全球流媒体，常见网络首播平台。" },
+  Hulu: { displayName: "Hulu", level: "高", score: 0.9, note: "北美流媒体平台，排期可用性较高。" },
+  Peacock: { displayName: "Peacock", level: "高", score: 0.88, note: "NBCUniversal 流媒体平台。" },
+  Paramount: { displayName: "Paramount+", level: "高", score: 0.88, note: "Paramount+ 流媒体平台。" },
+  "BBC iPlayer": { displayName: "BBC iPlayer", level: "中", score: 0.82, note: "英国平台，以 TVMaze 收录为准。" },
+  YouTube: { displayName: "YouTube", level: "中", score: 0.76, note: "可覆盖部分网络剧和动漫更新。" },
   "Tencent QQ": { displayName: "腾讯视频", level: "中", score: 0.82, note: "中文平台别名较多，排期可用但需容忍少量别名。" },
   iQIYI: { displayName: "爱奇艺", level: "中", score: 0.81, note: "中文平台别名较多，适合参考。" },
   Youku: { displayName: "优酷", level: "中", score: 0.8, note: "中文平台名稳定，但别名映射偶尔会变。" },
@@ -75,7 +81,7 @@ function pickChineseAlias(akas = []) {
 }
 
 async function fetchTmdbTitle(show) {
-  if (!tmdbToken || !show?.name) return "";
+  if (!tmdbToken || !show?.name) return { title: "", overview: "" };
   const cacheKey = `${show.name}|${show.premiered || ""}`;
   if (tmdbTitleCache.has(cacheKey)) return tmdbTitleCache.get(cacheKey);
   const promise = (async () => {
@@ -91,48 +97,54 @@ async function fetchTmdbTitle(show) {
         const response = await fetchTmdb(url, { signal: controller.signal });
         const text = await response.text();
         const data = text ? JSON.parse(text) : {};
-        if (!response.ok) return "";
+        if (!response.ok) return { title: "", overview: "" };
         const results = Array.isArray(data.results) ? data.results : [];
         const query = normalizeTitle(show.name);
         const best = results.find((item) => normalizeTitle(item.name) === query || normalizeTitle(item.original_name) === query)
           || results.find((item) => hasChinese(item.name) || hasChinese(item.original_name))
           || results[0];
         const name = best?.name || "";
-        return name && name !== show.name ? name : "";
+        return {
+          title: name && name !== show.name && hasChinese(name) ? name : "",
+          overview: best?.overview || "",
+        };
       } finally {
         clearTimeout(timer);
       }
     } catch {
-      return "";
+      return { title: "", overview: "" };
     }
   })();
   tmdbTitleCache.set(cacheKey, promise);
   return promise;
 }
 
-async function resolveTitleZh(show) {
-  if (!show?.name) return { titleZh: "", titleSource: "original" };
+async function resolveTitleZh(show, compact = false) {
+  if (!show?.name) return { titleZh: "", summaryZh: "", titleSource: "original" };
   if (titleCache.has(show.id || show.name)) return titleCache.get(show.id || show.name);
   const promise = (async () => {
     const manual = SHOW_ZH[show.name];
-    if (manual) return { titleZh: manual, titleSource: "manual" };
-    const akas = await fetchShowAkas(show.id);
+    const akas = compact ? [] : await fetchShowAkas(show.id);
     const akaZh = pickChineseAlias(akas);
-    if (akaZh && akaZh !== show.name) return { titleZh: akaZh, titleSource: "tvmaze-aka" };
     const tmdbZh = await fetchTmdbTitle(show);
-    if (tmdbZh && tmdbZh !== show.name) return { titleZh: tmdbZh, titleSource: "tmdb" };
-    return { titleZh: "", titleSource: "original" };
+    const titleZh = manual || (akaZh && akaZh !== show.name ? akaZh : "") || tmdbZh.title;
+    return {
+      titleZh,
+      summaryZh: tmdbZh.overview || "",
+      titleSource: manual ? "manual" : akaZh && akaZh !== show.name ? "tvmaze-aka" : tmdbZh.title ? "tmdb" : "original",
+    };
   })();
   titleCache.set(show.id || show.name, promise);
   return promise;
 }
 
-async function normalizeEpisode(episode) {
+async function normalizeEpisode(episode, compact = false) {
   const show = episode?.show || episode?._embedded?.show || {};
-  const platform = KEEP_PLATFORM[show.webChannel?.name || show.network?.name] || "";
+  const rawPlatform = show.webChannel?.name || show.network?.name || "";
+  const platform = PLATFORM_ALIAS[rawPlatform] || rawPlatform;
   if (!platform) return null;
   const calibration = getPlatformCalibration(platform);
-  const titleZh = await resolveTitleZh(show);
+  const titleZh = await resolveTitleZh(show, compact);
   return {
     id: episode?.id || "",
     title: show.name || "",
@@ -151,6 +163,7 @@ async function normalizeEpisode(episode) {
     status: show.status || "",
     image: show.image?.medium || "",
     titleZh: titleZh.titleZh,
+    summaryZh: titleZh.summaryZh,
     titleSource: titleZh.titleSource,
   };
 }
@@ -174,18 +187,17 @@ async function fetchJson(url, attempt = 0) {
   }
 }
 
-async function fetchDay(dateKeyValue) {
+async function fetchDay(dateKeyValue, compact = false) {
+  const countryCodes = ["US", "GB", "CA", "AU", "CN", "JP", "KR"];
   const settled = await Promise.allSettled([
-    fetchJson(`${TVMAZE_BASE}/schedule?country=US&date=${dateKeyValue}`),
+    ...countryCodes.map((country) => fetchJson(`${TVMAZE_BASE}/schedule?country=${country}&date=${dateKeyValue}`)),
     fetchJson(`${TVMAZE_BASE}/schedule/web?date=${dateKeyValue}`),
   ]);
   const items = [];
   for (const result of settled) {
     if (result.status !== "fulfilled") continue;
-    for (const episode of result.value || []) {
-      const item = await normalizeEpisode(episode);
-      if (item && item.title && !NOISE_TYPES.has(item.showType)) items.push(item);
-    }
+    const normalized = await Promise.all((result.value || []).map((episode) => normalizeEpisode(episode, compact)));
+    items.push(...normalized.filter((item) => item && item.title && !NOISE_TYPES.has(item.showType)));
   }
   const seen = new Set();
   return items.filter((item) => {
@@ -206,8 +218,9 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const days = Math.min(7, Math.max(1, Number(searchParams.get("days")) || 7));
+    const compact = searchParams.get("compact") === "1";
     const now = Date.now();
-    if (cache && cache.expiresAt > now && cache.days === days) {
+    if (cache && cache.expiresAt > now && cache.days === days && cache.compact === compact) {
       return json(cache.payload);
     }
 
@@ -217,22 +230,22 @@ export async function GET(request) {
       return { key: dateKey(date), offset: index };
     });
 
-    const results = [];
-    for (const day of dayList) {
-      let items = await fetchDay(day.key);
+    const results = await Promise.all(dayList.map(async (day) => {
+      let items = await fetchDay(day.key, compact);
       if (!items.length) {
         await new Promise((resolve) => setTimeout(resolve, 1200));
-        items = await fetchDay(day.key);
+        items = await fetchDay(day.key, compact);
       }
       items.sort((a, b) => String(a.airtime || "99:99").localeCompare(String(b.airtime || "99:99")));
-      results.push({ date: day.key, offset: day.offset, items });
-      await new Promise((resolve) => setTimeout(resolve, 300));
-    }
+      return { date: day.key, offset: day.offset, items };
+    }));
 
     const payload = {
       ok: true,
       source: "TVMaze",
-      sourceNote: tmdbToken ? "TVMaze 排期 · 中文名回填（TVMaze AKAs / TMDB）" : "TVMaze 排期 · 中文名回填（TVMaze AKAs）",
+      sourceNote: compact
+        ? "TVMaze 排期·常见国家电视网 + Web 平台·中文名与简介回填"
+        : tmdbToken ? "TVMaze 排期·常见国家电视网 + Web 平台·中文名回填（AKAs / TMDB）" : "TVMaze 排期·常见国家电视网 + Web 平台·中文名回填（AKAs）",
       generatedAt: new Date().toISOString(),
       platforms: Object.fromEntries((() => {
         const map = new Map();
@@ -252,7 +265,7 @@ export async function GET(request) {
       })()),
       days: results,
     };
-    cache = { expiresAt: Date.now() + 10 * 60 * 1000, days, payload };
+    cache = { expiresAt: Date.now() + 10 * 60 * 1000, days, compact, payload };
     return json(payload);
   } catch (error) {
     return Response.json({ ok: false, error: error.message || "更新日历暂时不可用" }, { status: 500 });
