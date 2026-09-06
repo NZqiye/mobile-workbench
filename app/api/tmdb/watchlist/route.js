@@ -2,12 +2,35 @@ import { fetchTmdb, loadTmdbDetails, mapTmdbResult, tmdbToken } from "../../../.
 
 const tmdbAccountId = process.env.TMDB_ACCOUNT_ID;
 const tmdbSessionId = process.env.TMDB_SESSION_ID;
+const tmdbUserAccessToken = process.env.TMDB_USER_ACCESS_TOKEN || tmdbToken;
+const tmdbWatchingListId = process.env.TMDB_WATCHING_LIST_ID || "8692632";
+const tmdbCompletedListId = process.env.TMDB_COMPLETED_LIST_ID || "8692633";
 
 async function readTmdbJson(url, fallbackMessage) {
   const response = await fetchTmdb(url);
   const text = await response.text();
   const data = text ? JSON.parse(text) : {};
   if (!response.ok) throw new Error(data.status_message || fallbackMessage);
+  return data;
+}
+
+
+async function updateCustomList(listId, mediaId, mediaType, action) {
+  if (!listId) return;
+  if (!tmdbUserAccessToken) throw new Error("缺少 TMDB_USER_ACCESS_TOKEN");
+  const url = new URL(`https://api.themoviedb.org/4/list/${listId}/items`);
+  const response = await fetch(url, {
+    method: action === "add" ? "POST" : "DELETE",
+    headers: {
+      Authorization: `Bearer ${tmdbUserAccessToken}`,
+      accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ items: [{ media_id: mediaId, media_type: mediaType }] }),
+  });
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : {};
+  if (!response.ok) throw new Error(data.status_message || `TMDB ${action} list failed`);
   return data;
 }
 
@@ -101,7 +124,8 @@ export async function POST(request) {
     const data = text ? JSON.parse(text) : {};
     if (!response.ok) throw new Error(data.status_message || "TMDB 待看片单写入失败");
 
-    return Response.json({ ok: true, accountId, result: data });
+    await updateCustomList(tmdbWatchingListId, mediaId, mediaType, "add");
+    return Response.json({ ok: true, accountId, result: data, watchingListId: tmdbWatchingListId });
   } catch (error) {
     const message = String(error.message || "").includes("Authentication failed")
       ? "TMDB_SESSION_ID 没有写入片单权限，请重新生成并确认授权后再填到 Vercel。"
@@ -133,11 +157,45 @@ export async function DELETE(request) {
     const data = text ? JSON.parse(text) : {};
     if (!response.ok) throw new Error(data.status_message || "\u79fb\u9664\u7247\u5355\u5931\u8d25");
 
-    return Response.json({ ok: true, accountId, result: data });
+    await updateCustomList(tmdbWatchingListId, mediaId, mediaType, "remove");
+    return Response.json({ ok: true, accountId, result: data, watchingListId: tmdbWatchingListId });
   } catch (error) {
     const message = String(error.message || "").includes("Authentication failed")
       ? "TMDB_SESSION_ID \u6ca1\u6709\u5199\u5165\u7247\u5355\u6743\u9650\uff0c\u8bf7\u91cd\u65b0\u751f\u6210\u5e76\u786e\u8ba4\u6388\u6743\u540e\u518d\u586b\u5230 Vercel\u3002"
       : error.message || "\u79fb\u9664\u7247\u5355\u5931\u8d25";
+    return Response.json({ error: message }, { status: 500 });
+  }
+}
+
+
+export async function PUT(request) {
+  try {
+    if (!tmdbToken || !tmdbSessionId) {
+      return Response.json({ error: "\u7f3a\u5c11 TMDB_ACCESS_TOKEN \u6216 TMDB_SESSION_ID" }, { status: 500 });
+    }
+    const body = await request.json();
+    const mediaId = Number(body.mediaId);
+    const mediaType = body.mediaType === "movie" ? "movie" : "tv";
+    if (!mediaId) return Response.json({ error: "\u7f3a\u5c11 TMDB mediaId" }, { status: 400 });
+    const accountId = await readAccountId();
+    const watchlistUrl = new URL(`https://api.themoviedb.org/3/account/${accountId}/watchlist`);
+    watchlistUrl.searchParams.set("session_id", tmdbSessionId);
+    const removeWatchlist = await fetchTmdb(watchlistUrl, {
+      method: "POST",
+      body: JSON.stringify({ media_type: mediaType, media_id: mediaId, watchlist: false }),
+    });
+    if (!removeWatchlist.ok) {
+      const text = await removeWatchlist.text();
+      const data = text ? JSON.parse(text) : {};
+      throw new Error(data.status_message || "TMDB watchlist remove failed");
+    }
+    await updateCustomList(tmdbWatchingListId, mediaId, mediaType, "remove");
+    await updateCustomList(tmdbCompletedListId, mediaId, mediaType, "add");
+    return Response.json({ ok: true, accountId, completedListId: tmdbCompletedListId });
+  } catch (error) {
+    const message = String(error.message || "").includes("Authentication failed")
+      ? "TMDB_SESSION_ID \u6ca1\u6709\u5199\u5165\u7247\u5355\u6743\u9650\uff0c\u8bf7\u91cd\u65b0\u751f\u6210\u5e76\u786e\u8ba4\u6388\u6743\u540e\u518d\u586b\u5230 Vercel\u3002"
+      : error.message || "TMDB \u5df2\u770b\u7247\u5355\u540c\u6b65\u5931\u8d25";
     return Response.json({ error: message }, { status: 500 });
   }
 }
