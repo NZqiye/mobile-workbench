@@ -44,8 +44,10 @@ function normalizeTvmazeRecommendation(item) {
     year: airDate.slice(0, 4),
     airDate,
     nextAirDate: airDate,
+    tmdbId: item.tmdbId || "",
     tmdbMediaType: "tv",
-    posterUrl: item.image || "",
+    posterUrl: item.posterUrl || "",
+    backdropUrl: item.backdropUrl || "",
     review: item.summaryZh || (item.number ? `第${item.number}集 · TVMaze 实时排期` : "TVMaze 实时排期"),
     summary: item.summaryZh || (item.number ? `第${item.number}集 · TVMaze 实时排期` : "TVMaze 实时排期"),
     summaryZh: item.summaryZh || "",
@@ -3743,7 +3745,7 @@ function MediaUpdates({ watchItems = [] }) {
                 const meta = [item.airtime || "--:--", item.platformZh || item.platform, item.type === "premiere" ? "首播" : item.type === "finale" ? "季终" : "", item.season ? "S" + item.season + "E" + item.number : ""].filter(Boolean).join(" · ");
                 return (
                   <div className="media-update-row" key={selectedDay.date + "-" + (item.id || item.title) + "-" + item.season + "-" + item.number}>
-                    {item.image ? <img className="media-update-poster" src={item.image} alt="" loading="lazy" /> : <span className="media-update-poster" />}
+                    {item.posterUrl ? <img className="media-update-poster" src={item.posterUrl} alt="" loading="lazy" /> : <span className="media-update-poster" />}
                     <div className="media-update-main">
                       <div className="media-update-title-row">
                         <strong>{itemTitle}</strong>
@@ -3806,7 +3808,7 @@ function AnimeUpdates() {
             const meta = [item.score ? `评分 ${item.score}` : "", item.episodeCount ? `${item.episodeCount} 集` : "", item.startDate ? `开播 ${item.startDate}` : ""].filter(Boolean).join(" · ");
             return (
               <a className="media-update-row anime-update-row" key={item.id || item.title} href={item.url || undefined} target="_blank" rel="noreferrer">
-                {item.image ? <img className="media-update-poster" src={item.image} alt="" loading="lazy" /> : <span className="media-update-poster" />}
+                {item.posterUrl ? <img className="media-update-poster" src={item.posterUrl} alt="" loading="lazy" /> : <span className="media-update-poster" />}
                 <div className="media-update-main">
                   <div className="media-update-title-row">
                     <strong>{mediaTitle(item)}</strong>
@@ -5161,7 +5163,7 @@ export default function Workbench() {
     const mergedItem = {
       ...item,
       title: item.titleZh || item.title,
-      posterUrl: item.posterUrl || item.image || omdbDetails.posterUrl || "",
+      posterUrl: item.posterUrl || omdbDetails.posterUrl || "",
       imdbRating: omdbDetails.imdbRating || item.imdbRating || "",
       imdbVotes: omdbDetails.imdbVotes || item.imdbVotes || "",
       imdbID: omdbDetails.imdbId || item.imdbID || "",
