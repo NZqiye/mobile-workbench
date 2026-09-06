@@ -1,4 +1,4 @@
-import { fetchTmdb, tmdbToken } from "../../../lib/tmdb";
+import { fetchTmdb, imageBase, tmdbToken } from "../../../lib/tmdb";
 
 const TVMAZE_BASE = "https://api.tvmaze.com";
 let cache = null;
@@ -81,7 +81,7 @@ function pickChineseAlias(akas = []) {
 }
 
 async function fetchTmdbTitle(show) {
-  if (!tmdbToken || !show?.name) return { title: "", overview: "" };
+  if (!tmdbToken || !show?.name) return { tmdbId: "", title: "", overview: "", posterUrl: "", backdropUrl: "" };
   const cacheKey = `${show.name}|${show.premiered || ""}`;
   if (tmdbTitleCache.has(cacheKey)) return tmdbTitleCache.get(cacheKey);
   const promise = (async () => {
@@ -97,7 +97,7 @@ async function fetchTmdbTitle(show) {
         const response = await fetchTmdb(url, { signal: controller.signal });
         const text = await response.text();
         const data = text ? JSON.parse(text) : {};
-        if (!response.ok) return { title: "", overview: "" };
+        if (!response.ok) return { tmdbId: "", title: "", overview: "", posterUrl: "", backdropUrl: "" };
         const results = Array.isArray(data.results) ? data.results : [];
         const query = normalizeTitle(show.name);
         const best = results.find((item) => normalizeTitle(item.name) === query || normalizeTitle(item.original_name) === query)
@@ -105,14 +105,17 @@ async function fetchTmdbTitle(show) {
           || results[0];
         const name = best?.name || "";
         return {
+          tmdbId: best?.id || "",
           title: name && name !== show.name && hasChinese(name) ? name : "",
           overview: best?.overview || "",
+          posterUrl: best?.poster_path ? `${imageBase}${best.poster_path}` : "",
+          backdropUrl: best?.backdrop_path ? `https://image.tmdb.org/t/p/w780${best.backdrop_path}` : "",
         };
       } finally {
         clearTimeout(timer);
       }
     } catch {
-      return { title: "", overview: "" };
+      return { tmdbId: "", title: "", overview: "", posterUrl: "", backdropUrl: "" };
     }
   })();
   tmdbTitleCache.set(cacheKey, promise);
@@ -131,6 +134,9 @@ async function resolveTitleZh(show, compact = false) {
     return {
       titleZh,
       summaryZh: tmdbZh.overview || "",
+      tmdbId: tmdbZh.tmdbId || "",
+      posterUrl: tmdbZh.posterUrl || "",
+      backdropUrl: tmdbZh.backdropUrl || "",
       titleSource: manual ? "manual" : akaZh && akaZh !== show.name ? "tvmaze-aka" : tmdbZh.title ? "tmdb" : "original",
     };
   })();
@@ -161,9 +167,11 @@ async function normalizeEpisode(episode, compact = false) {
     platformNote: calibration.note,
     showType: show.type || "",
     status: show.status || "",
-    image: show.image?.medium || "",
     titleZh: titleZh.titleZh,
     summaryZh: titleZh.summaryZh,
+    tmdbId: titleZh.tmdbId,
+    posterUrl: titleZh.posterUrl || "",
+    backdropUrl: titleZh.backdropUrl || "",
     titleSource: titleZh.titleSource,
   };
 }
