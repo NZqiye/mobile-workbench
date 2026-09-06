@@ -104,7 +104,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .module-head p { margin: 5px 0 0; color: rgba(255, 255, 255, 0.82); font-size: 12px; line-height: 1.35; }
 .date-pill { min-width: 66px; height: 34px; padding: 0 12px; border: 0; border-radius: 17px; color: var(--theme-main); background: rgba(255, 248, 238, 0.78); font-size: 12px; font-weight: 900; white-space: nowrap; }
 .module-tabs { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 16px; }
-.module-tabs.consultation-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.module-tabs.consultation-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .module-tabs.market-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .module-tabs button { min-height: 38px; border: 0; border-radius: 19px; color: rgba(255, 255, 255, 0.82); background: rgba(255, 255, 255, 0.22); font-weight: 900; }
 .module-tabs button.active { color: var(--theme-main); background: var(--panel); box-shadow: 0 10px 18px rgba(117, 25, 35, 0.14); }
@@ -732,7 +732,7 @@ select:focus-visible {
 .recommendation-menu-list button:last-child { border-bottom: 0; }
 .recommendation-menu-list button.active { color: var(--theme-main); background: color-mix(in srgb, var(--theme-main) 10%, var(--panel)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-main) 18%, transparent); }
 .recommendation-menu-list button.active::after { content: "✓"; position: absolute; right: 12px; color: var(--theme-main); font-size: 13px; font-weight: 900; }
-.recommendation-count { min-height: 30px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 15px; color: var(--muted); background: rgba(255, 255, 255, 0.72); font-size: 12px; font-weight: 900; }
+.recommendation-count { min-height: 30px; display: inline-flex; align-items: center; padding: 0 10px; border: 1px solid color-mix(in srgb, var(--theme-main) 18%, #fff); border-radius: 15px; color: var(--theme-main); background: color-mix(in srgb, #fff 88%, var(--theme-soft)); font-size: 12px; font-weight: 950; white-space: nowrap; }
 .fund-select-menu { z-index: 2; min-width: 0; }
 .fund-select-trigger { width: 100%; justify-content: space-between; gap: 10px; padding: 0 14px; border-radius: 16px; }
 .fund-select-trigger span { min-width: 0; overflow: hidden; color: var(--theme-main); text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 900; }
@@ -787,6 +787,7 @@ select:focus-visible {
 .tmdb-poster-card strong { font-size: 13px; }
 .tmdb-poster-card small { color: var(--muted); font-size: 11px; }
 .tmdb-feed { display: grid; gap: 20px; }
+.recommendation-expand { justify-self: center; }
 .media-feed-card { display: grid; gap: 8px; width: 100%; min-width: 0; overflow: hidden; padding: 0 0 18px; border: 0; border-bottom: 1px solid rgba(234, 215, 208, 0.82); color: var(--ink); background: transparent; text-align: left; }
 .media-feed-card:last-child { padding-bottom: 0; border-bottom: 0; }
 .media-gallery { display: grid; grid-template-columns: minmax(0, 1fr) 92px; gap: 10px; align-items: stretch; min-width: 0; overflow: hidden; }
@@ -799,6 +800,12 @@ select:focus-visible {
 .media-air { color: #2f73d8; font-size: 16px; font-weight: 900; }
 .media-meta { color: var(--muted); font-size: 14px; line-height: 1.45; }
 .media-summary { margin: 0; color: #59616d; font-size: 15px; line-height: 1.62; }
+.media-summary-details { color: #59616d; font-size: 15px; line-height: 1.62; }
+.media-summary-details summary { width: fit-content; cursor: pointer; color: var(--theme-main); font-size: 13px; font-weight: 800; }
+.media-summary-details .media-summary { margin-top: 5px; }
+.media-feed-card[role="button"] { cursor: pointer; }
+.media-feed-card[role="button"]:focus-visible { outline: 2px solid var(--theme-accent); outline-offset: 3px; }
+
 .diet-shell { display: grid; gap: 16px; padding: 4px 0 12px; background:
     radial-gradient(circle at 88% 6%, rgba(255, 255, 255, 0.24), transparent 28%),
     linear-gradient(180deg, var(--theme-soft), rgba(255, 255, 255, 0)); }
@@ -1510,11 +1517,13 @@ select:focus-visible {
 }
 
 @media (min-width: 431px) {
-  .phone-shell {
+  .phone-shell.mobile-shell {
+    width: min(430px, calc(100vw - 36px));
     height: calc(100dvh - 36px);
     min-height: calc(100dvh - 36px);
     margin-block: 18px;
     border-radius: var(--r-lg);
+    box-shadow: var(--shadow-strong);
   }
 }
 
@@ -4823,3 +4832,72 @@ textarea::placeholder {
 .phone-shell.mobile-shell .media-update-main small { font-size: 10px; }
 .phone-shell.mobile-shell .media-update-tracked { padding-inline: 6px; }
 .phone-shell.mobile-shell .media-update-origin { padding-inline: 5px; font-size: 9px; }
+
+
+.media-feed-card:disabled {
+  cursor: pointer;
+  opacity: 1;
+}
+
+.media-feed-title,
+.media-air,
+.media-meta,
+.media-update-title-row strong,
+.record-head strong,
+.watch-checkin-history-meta strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 960px) {
+  .desktop-shell.page-consultations .module-tabs.consultation-tabs {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .phone-shell.mobile-shell .phone-status strong {
+    grid-column: 2;
+    justify-self: center;
+  }
+
+  .phone-shell.mobile-shell .phone-status > span {
+    grid-column: 3;
+  }
+
+  .phone-shell.mobile-shell .tmdb-recommendations .panel-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .phone-shell.mobile-shell .recommendation-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .phone-shell.mobile-shell .recommendation-menu,
+  .phone-shell.mobile-shell .recommendation-menu-trigger {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+.phone-shell.mobile-shell .phone-status strong {
+  grid-column: 2;
+  justify-self: center;
+}
+
+.phone-shell.mobile-shell .phone-status > span {
+  grid-column: 3;
+  justify-self: end;
+  min-width: 0;
+  max-width: 84px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -5,6 +5,87 @@ import { hasSupabaseConfig, supabase } from "../lib/supabase";
 import { thiingsIconByKey, thiingsIconCategories } from "../lib/thiings-icons";
 
 const storagePrefix = "qiyeworkbench:";
+
+function hasChineseText(value) {
+  return /[㐀-鿿]/.test(String(value || ""));
+}
+
+function mediaTitle(item) {
+  const localized = item?.titleZh || "";
+  const original = item?.originalTitle || item?.title || "";
+  return hasChineseText(localized) ? localized : original || localized || "未命名";
+}
+
+function mediaDescription(item) {
+  return item?.summaryZh || item?.reviewZh || item?.summary || item?.overview || item?.review || "暂无简介";
+}
+
+function normalizeTvmazeRecommendation(item) {
+  const title = item?.title || item?.titleZh || "";
+  if (!title) return null;
+  const showType = String(item?.showType || "").toLowerCase();
+  const category = showType === "animation"
+    ? "anime"
+    : ["reality", "variety", "talk show", "game show", "panel", "award show"].includes(showType)
+      ? "variety"
+      : "tv";
+  const airDate = item?.airdate || "";
+  return {
+    id: `tvmaze-${item.id || title}-${item.season || ""}-${item.number || ""}`,
+    title: item.title || title,
+    titleZh: item.titleZh || "",
+    originalTitle: item.title || title,
+    allowOriginalTitle: true,
+    type: category === "anime" ? "动漫" : category === "variety" ? "综艺" : "电视剧",
+    category,
+    platform: item.platformZh || item.platform || "TVMaze",
+    source: "TVMaze",
+    sourceLabel: "TVMaze",
+    year: airDate.slice(0, 4),
+    airDate,
+    nextAirDate: airDate,
+    tmdbMediaType: "tv",
+    posterUrl: item.image || "",
+    review: item.summaryZh || (item.number ? `第${item.number}集 · TVMaze 实时排期` : "TVMaze 实时排期"),
+    summary: item.summaryZh || (item.number ? `第${item.number}集 · TVMaze 实时排期` : "TVMaze 实时排期"),
+    summaryZh: item.summaryZh || "",
+  };
+}
+
+function mergeRecommendationItems(primary = [], secondary = []) {
+  const seen = new Set();
+  return [...primary, ...secondary].filter((item) => {
+    const key = `${item?.titleZh || item?.title || ""}|${item?.airDate || ""}`.toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function mergeRecommendationSources(baseSections = [], mediaData, animeData) {
+  const sections = baseSections.map((section) => ({ ...section, items: Array.isArray(section.items) ? [...section.items] : [] }));
+  const replaceSectionItems = (id, items) => {
+    if (!items.length) return;
+    const section = sections.find((entry) => entry.id === id);
+    if (section) section.items = mergeRecommendationItems(items, section.items);
+  };
+
+  const days = Array.isArray(mediaData?.days) ? mediaData.days : [];
+  const liveItems = (days[0]?.items || []).map(normalizeTvmazeRecommendation).filter(Boolean);
+  const upcomingItems = days.slice(1).flatMap((day) => day.items || []).map(normalizeTvmazeRecommendation).filter(Boolean);
+  replaceSectionItems("tvHot", liveItems.filter((item) => item.category === "tv"));
+  replaceSectionItems("tvUpcoming", upcomingItems.filter((item) => item.category === "tv"));
+  replaceSectionItems("varietyHot", liveItems.filter((item) => item.category === "variety"));
+  replaceSectionItems("varietyUpcoming", upcomingItems.filter((item) => item.category === "variety"));
+  replaceSectionItems("animeHot", liveItems.filter((item) => item.category === "anime"));
+  replaceSectionItems("animeUpcoming", upcomingItems.filter((item) => item.category === "anime"));
+
+  for (const section of Array.isArray(animeData?.sections) ? animeData.sections : []) {
+    const items = Array.isArray(section.items) ? section.items.filter((item) => item?.title) : [];
+    replaceSectionItems(section.id, items);
+  }
+  return sections;
+}
 const statePage = "app_state";
 const pages = [
   { id: "today", name: "今日速看", icon: "home" },
@@ -404,7 +485,6 @@ function WeatherMotionIcon({ code }) {
           <path className="weather-sun-rays" d="M13 2v4M13 18v4M3 12h4M19 12h4M5.9 4.9l2.8 2.8M17.3 16.3l2.8 2.8M20.1 4.9l-2.8 2.8M8.7 16.3l-2.8 2.8" />
         </>
       )}
-      {type !== "sun" && cloud}
       {type === "rain" && (
         <g className="weather-drops">
           <path d="M10 21v4" />
@@ -3541,7 +3621,7 @@ function WatchCheckin({ items = [], onCheckin, onSyncTmdbRating, onRemoveCheckin
         </form>
       )}
       <div className="watch-checkin-history"><div className="watch-checkin-history-head"><strong>最近打卡</strong><input value={historyQuery} onChange={(event) => setHistoryQuery(event.target.value)} placeholder="搜索标题" />{!historyKeyword && filteredHistory.length > 3 && <button type="button" onClick={() => setHistoryOpen(!historyOpen)}>{historyOpen ? "收起" : "全部"}</button>}</div>
-        {filteredHistory.length === 0 ? <p className="watch-checkin-history-empty">还没有打卡记录。</p> : <div className="watch-checkin-history-list">{visibleHistory.map((record) => <div className="watch-checkin-history-item" key={record.id}>{record.posterUrl ? <img src={record.posterUrl} alt="" /> : <div className="watch-checkin-history-poster">{String(record.title || "")[0]}</div>}<div className="watch-checkin-history-meta"><strong>{record.title}</strong><span>{record.type === "电影" ? "电影" : `剧集 · 第${record.episode || "?"}集`} · {record.date || ""} {record.time || ""}{record.rating ? ` · 评分 ${record.rating}` : ""}{record.tmdbRating ? ` · TMDB ${record.tmdbRating}` : ""}</span></div><button type="button" className="watch-checkin-remove" onClick={() => { if (window.confirm(`移除《${record.title}》这条打卡记录吗？`)) onRemoveCheckin?.(record.id); }}>移除</button></div>)}</div>}
+        {filteredHistory.length === 0 ? <p className="watch-checkin-history-empty">还没有打卡记录。</p> : <div className="watch-checkin-history-list">{visibleHistory.map((record) => <div className="watch-checkin-history-item" key={record.id}>{record.posterUrl ? <img src={record.posterUrl} alt="" /> : <div className="watch-checkin-history-poster">{mediaTitle(record).slice(0, 1)}</div>}<div className="watch-checkin-history-meta"><strong>{mediaTitle(record)}</strong><span>{record.type === "电影" ? "电影" : `剧集 · 第${record.episode || "?"}集`} · {record.date || ""} {record.time || ""}{record.rating ? ` · 评分 ${record.rating}` : ""}{record.tmdbRating ? ` · TMDB ${record.tmdbRating}` : ""}</span></div><button type="button" className="watch-checkin-remove" onClick={() => { if (window.confirm(`移除《${mediaTitle(record)}》这条打卡记录吗？`)) onRemoveCheckin?.(record.id); }}>移除</button></div>)}</div>}
       </div>
     </section>
   );
@@ -3658,9 +3738,9 @@ function MediaUpdates({ watchItems = [] }) {
             <div className="media-updates-list">
               {filteredItems.slice(0, showCount).map((item) => {
                 const tracked = isTracked(item.title);
-                const itemTitle = item.titleZh || item.title;
+                const itemTitle = mediaTitle(item);
                 const titleSource = item.titleSource === "manual" ? "中译" : item.titleSource === "tvmaze-aka" ? "别名" : item.titleSource === "tmdb" ? "TMDB" : "";
-                const meta = [item.titleZh ? `原名 ${item.title}` : "", item.airtime || "--:--", item.platformZh || item.platform, item.type === "premiere" ? "首播" : item.type === "finale" ? "季终" : "", item.season ? "S" + item.season + "E" + item.number : ""].filter(Boolean).join(" · ");
+                const meta = [item.airtime || "--:--", item.platformZh || item.platform, item.type === "premiere" ? "首播" : item.type === "finale" ? "季终" : "", item.season ? "S" + item.season + "E" + item.number : ""].filter(Boolean).join(" · ");
                 return (
                   <div className="media-update-row" key={selectedDay.date + "-" + (item.id || item.title) + "-" + item.season + "-" + item.number}>
                     {item.image ? <img className="media-update-poster" src={item.image} alt="" loading="lazy" /> : <span className="media-update-poster" />}
@@ -3685,6 +3765,64 @@ function MediaUpdates({ watchItems = [] }) {
     </section>
   );
 }
+function AnimeUpdates() {
+  const [data, setData] = useState(null);
+  const [status, setStatus] = useState("loading");
+
+  async function load() {
+    setStatus("loading");
+    try {
+      const response = await fetch("/api/anime-updates");
+      const text = await response.text();
+      const payload = text ? JSON.parse(text) : {};
+      if (!response.ok || !payload.ok) throw new Error(payload.error || "加载失败");
+      setData(payload);
+      setStatus(Array.isArray(payload.items) && payload.items.length ? "ready" : "empty");
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  const items = status === "ready" && Array.isArray(data?.items) ? data.items : [];
+
+  return (
+    <section className="media-updates-panel anime-updates-panel">
+      <div className="panel-head">
+        <div>
+          <h2><MotionIcon name="spark" />动漫资讯</h2>
+          <p>{data?.sourceNote || "Kitsu 当前连载动漫"}{status === "ready" && items.length ? " · " + items.length + " 条" : ""}</p>
+        </div>
+        <button className="chip-button" type="button" onClick={load} disabled={status === "loading"}>刷新</button>
+      </div>
+      {status === "loading" && <p className="empty">正在加载动漫资讯…</p>}
+      {status === "error" && <p className="empty">动漫资讯加载失败，可能是网络或数据源暂时不稳定。<button type="button" onClick={load}>重试</button></p>}
+      {status === "empty" && <p className="empty">暂时没有获取到动漫资讯。</p>}
+      {items.length > 0 && (
+        <div className="media-updates-list">
+          {items.map((item) => {
+            const titleSource = item.titleSource === "manual" ? "中译" : item.titleSource === "tmdb" ? "TMDB" : "Kitsu";
+            const meta = [item.score ? `评分 ${item.score}` : "", item.episodeCount ? `${item.episodeCount} 集` : "", item.startDate ? `开播 ${item.startDate}` : ""].filter(Boolean).join(" · ");
+            return (
+              <a className="media-update-row anime-update-row" key={item.id || item.title} href={item.url || undefined} target="_blank" rel="noreferrer">
+                {item.image ? <img className="media-update-poster" src={item.image} alt="" loading="lazy" /> : <span className="media-update-poster" />}
+                <div className="media-update-main">
+                  <div className="media-update-title-row">
+                    <strong>{mediaTitle(item)}</strong>
+                    <span className="media-update-origin">{titleSource}</span>
+                  </div>
+                  <small>{meta || item.status || "连载中"}</small>
+                </div>
+              </a>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked, onDeleteItem, onWatchCheckin, onSyncTmdbRating, onRemoveCheckin, watchCheckins = [] }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
@@ -3692,9 +3830,12 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
   const [watchListOpen, setWatchListOpen] = useState(false);
   const [watchListQuery, setWatchListQuery] = useState("");
   const [watchListStatus, setWatchListStatus] = useState("all");
-  const [movieSectionId, setMovieSectionId] = useState("movieNowPlaying");
-  const [tvSectionId, setTvSectionId] = useState("tvPopular");
+  const [movieSectionId, setMovieSectionId] = useState("movieHot");
+  const [tvSectionId, setTvSectionId] = useState("tvHot");
+  const [varietySectionId, setVarietySectionId] = useState("varietyHot");
+  const [animeSectionId, setAnimeSectionId] = useState("animeHot");
   const [recommendationMenuOpen, setRecommendationMenuOpen] = useState(false);
+  const [recommendationExpanded, setRecommendationExpanded] = useState(false);
   const allItems = Array.isArray(items) ? items : [];
   const managedWatchItems = allItems.filter((item) => item.status !== "已归档");
   const watchListKeyword = watchListQuery.trim();
@@ -3718,25 +3859,51 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
   const searchResults = Array.isArray(tmdbResults) ? tmdbResults : [];
   const recommendationSections = Array.isArray(tmdbSections) ? tmdbSections : [];
   const visibleRecommendationSections = recommendationSections.length ? recommendationSections : [
-    { id: "movieNowPlaying", title: "正在上映", items: [] },
-    { id: "movieUpcoming", title: "即将上映", items: [] },
-    { id: "tvPopular", title: "热门影视", items: [] },
-    { id: "tvAiringToday", title: "今日播出", items: [] },
+    { id: "movieHot", title: "近期热播", items: [] },
+    { id: "movieUpcoming", title: "即将上线", items: [] },
+    { id: "movieHistory", title: "历史热榜", items: [] },
+    { id: "tvHot", title: "近期热播", items: [] },
+    { id: "tvUpcoming", title: "即将上线", items: [] },
+    { id: "tvHistory", title: "历史热榜", items: [] },
+    { id: "varietyHot", title: "近期热播", items: [] },
+    { id: "varietyUpcoming", title: "即将上线", items: [] },
+    { id: "varietyHistory", title: "历史热榜", items: [] },
+    { id: "animeHot", title: "近期热播", items: [] },
+    { id: "animeUpcoming", title: "即将上线", items: [] },
+    { id: "animeHistory", title: "历史热榜", items: [] },
   ];
   const recommendationGroups = {
-    movies: ["movieNowPlaying", "movieUpcoming"],
-    tv: ["tvPopular", "tvAiringToday"],
+    movies: ["movieHot", "movieUpcoming", "movieHistory"],
+    tv: ["tvHot", "tvUpcoming", "tvHistory"],
+    variety: ["varietyHot", "varietyUpcoming", "varietyHistory"],
+    anime: ["animeHot", "animeUpcoming", "animeHistory"],
   };
   const activeRecommendationOptions = (recommendationGroups[activeView] || [])
     .map((id) => visibleRecommendationSections.find((section) => section.id === id))
     .filter(Boolean);
-  const selectedRecommendationId = activeView === "movies" ? movieSectionId : activeView === "tv" ? tvSectionId : "";
+  const selectedRecommendationId = activeView === "movies"
+    ? movieSectionId
+    : activeView === "tv"
+      ? tvSectionId
+      : activeView === "variety"
+        ? varietySectionId
+        : activeView === "anime"
+          ? animeSectionId
+          : "";
   const selectedRecommendationSection = activeRecommendationOptions.find((section) => section.id === selectedRecommendationId) || activeRecommendationOptions[0];
-  const selectedRecommendationCount = Array.isArray(selectedRecommendationSection?.items) ? selectedRecommendationSection.items.length : 0;
-  const selectedRecommendationIcon = selectedRecommendationSection?.id?.startsWith("movie") ? "movie" : "tv";
+  const selectedRecommendationItems = Array.isArray(selectedRecommendationSection?.items) ? selectedRecommendationSection.items : [];
+  const selectedRecommendationCount = selectedRecommendationItems.length;
+  const visibleRecommendationItems = recommendationExpanded ? selectedRecommendationItems : selectedRecommendationItems.slice(0, 20);
+  const selectedRecommendationIcon = activeView === "anime" ? "spark" : activeView === "variety" ? "screen" : selectedRecommendationSection?.id?.startsWith("movie") ? "movie" : "tv";
+  useEffect(() => {
+    setRecommendationMenuOpen(false);
+    setRecommendationExpanded(false);
+  }, [activeView, selectedRecommendationId]);
   function selectRecommendationSection(id) {
     if (activeView === "movies") setMovieSectionId(id);
     if (activeView === "tv") setTvSectionId(id);
+    if (activeView === "variety") setVarietySectionId(id);
+    if (activeView === "anime") setAnimeSectionId(id);
     setRecommendationMenuOpen(false);
   }
   function removeWatchItem(item) {
@@ -3812,15 +3979,14 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
             </form>
             <div className="tmdb-results">
               {searchResults.map((item) => (
-                <button className="tmdb-result" type="button" key={`${item.type}-${item.tmdbId}`} onClick={() => onImportTmdb(item)}>
-                  {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
-                  <strong>{item.title}</strong>
+                <button className="tmdb-result" type="button" key={`${item.type}-${item.tmdbId}`} onClick={() => onImportTmdb(item)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onImportTmdb(item); } }}>
+                  {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{mediaTitle(item).slice(0, 1)}</span>}
+                  <strong>{mediaTitle(item)}</strong>
                   <small>{[item.year, item.type].filter(Boolean).join(" · ")}</small>
                 </button>
               ))}
             </div>
           </section>
-          <MediaUpdates watchItems={managedWatchItems} />
           <section className="watch-calendar">
             <div className="panel-head">
               <h2>{monthTitle(selected.date)}</h2>
@@ -3856,11 +4022,11 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
                   <div className="watch-time">{weekdayText(selected.date)} {selected.dateKey.slice(5).replace("-", "/")} {item.airTime || "--:--"}</div>
                   <div className="watch-card">
                     <div className="poster-box">
-                      {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+                      {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{mediaTitle(item).slice(0, 1)}</span>}
                     </div>
                     <div className="watch-info">
                       <div className="watch-title-row">
-                        <strong>{item.title}</strong>
+                        <strong>{mediaTitle(item)}</strong>
                         <small>{item.platform || "本地"}</small>
                       </div>
                       <p>{[item.year, item.type || "剧集", ...(item.tags || [])].filter(Boolean).join(" · ")}</p>
@@ -3906,10 +4072,10 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
                 {visibleWatchItems.map((item) => (
                   <article className="watch-list-row" key={item.id}>
                     <div className="watch-list-poster">
-                      {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+                      {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{mediaTitle(item).slice(0, 1)}</span>}
                     </div>
                     <div>
-                      <strong>{item.title}</strong>
+                      <strong>{mediaTitle(item)}</strong>
                       <small>{[item.status, item.year, item.type || "剧集"].filter(Boolean).join(" · ")}</small>
                     </div>
                     <button type="button" onClick={() => removeWatchItem(item)}>移除</button>
@@ -3927,7 +4093,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
           </section>
         </>
       )}
-      {activeView === "checkin" && (
+      {activeView === "rating" && (
         <WatchCheckin items={managedWatchItems} onCheckin={onWatchCheckin} onSyncTmdbRating={onSyncTmdbRating} onRemoveCheckin={onRemoveCheckin} watchCheckins={watchCheckins} />
       )}
       {selectedRecommendationSection && (
@@ -3935,7 +4101,6 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
           <div className="panel-head">
             <div>
               <h2 className="icon-heading"><MotionIcon name={selectedRecommendationIcon} />{selectedRecommendationSection.title}</h2>
-              <p>{tmdbRecommendationStatus}</p>
             </div>
             <div className="recommendation-actions">
               <div className={`recommendation-menu ${recommendationMenuOpen ? "open" : ""}`}>
@@ -3947,7 +4112,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
                   <div className="recommendation-menu-list">
                     {activeRecommendationOptions.map((section) => (
                       <button className={section.id === selectedRecommendationSection.id ? "active" : ""} type="button" key={section.id} onClick={() => selectRecommendationSection(section.id)}>
-                        <MotionIcon name={section.id.startsWith("movie") ? "movie" : "tv"} />
+                        <MotionIcon name={section.id.startsWith("anime") ? "spark" : section.id.startsWith("variety") ? "screen" : section.id.startsWith("movie") ? "movie" : "tv"} />
                         <span>{section.title}</span>
                       </button>
                     ))}
@@ -3961,23 +4126,28 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
           <div className="tmdb-section">
             <div className="tmdb-feed">
               {(Array.isArray(selectedRecommendationSection.items) ? selectedRecommendationSection.items : []).length === 0 && <p className="empty">暂无片单，稍后点刷新片单重试。</p>}
-              {(Array.isArray(selectedRecommendationSection.items) ? selectedRecommendationSection.items : []).map((item) => (
-                <button className="media-feed-card" type="button" key={`${selectedRecommendationSection.id}-${item.tmdbId}`} onClick={() => onImportTmdb(item)}>
+              {visibleRecommendationItems.map((item) => (
+                <div className="media-feed-card" role="button" tabIndex={0} key={`${selectedRecommendationSection.id}-${item.tmdbId || item.id || item.title}`} onClick={() => onImportTmdb(item)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onImportTmdb(item); } }}>
                   <div className="media-gallery">
                     <div className="media-still">
-                      {item.backdropUrl ? <img src={item.backdropUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+                      {item.backdropUrl ? <img src={item.backdropUrl} alt="" /> : <span>{mediaTitle(item).slice(0, 1)}</span>}
                     </div>
                     <div className="media-poster-thumb">
-                      {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{item.title.slice(0, 1)}</span>}
+                      {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{mediaTitle(item).slice(0, 1)}</span>}
                     </div>
                   </div>
-                  <strong className="media-feed-title">{item.title}</strong>
+                  <strong className="media-feed-title">{mediaTitle(item)}</strong>
                   <span className="media-air">{mediaAirText(item)}</span>
                   <small className="media-meta">{[item.year, item.type || "剧集", item.platform || "TMDB"].filter(Boolean).join(" / ")}</small>
-                  <p className="media-summary">{item.summary || item.review || "暂无简介。"}</p>
-                </button>
+                  <details className="media-summary-details" onClick={(event) => event.stopPropagation()}><summary>简介</summary><p className="media-summary">{mediaDescription(item)}</p></details>
+                </div>
               ))}
             </div>
+            {selectedRecommendationCount > 20 && (
+              <button className="recommendation-expand chip-button" type="button" onClick={() => setRecommendationExpanded((value) => !value)}>
+                {recommendationExpanded ? "收起其余" : `展开其余 ${selectedRecommendationCount - 20} 条`}
+              </button>
+            )}
           </div>
         </section>
       )}
@@ -4092,9 +4262,9 @@ function ConsultationList({ consultations, onDelete, onEdit }) {
         {consultations.length > 0 && filteredConsultations.length === 0 && <p className="empty">没有匹配的观影记录。</p>}
         {filteredConsultations.map((item) => (
           <article className="record" key={item.id}>
-            <div className="record-head"><strong>{item.title}</strong><span>{item.status || "想看的剧"}</span></div>
-            <p className="record-meta">{[item.year, item.type || "剧集", item.rating ? `${item.rating} 分` : "", item.tmdbRating ? `TMDB ${item.tmdbRating}` : "", item.platform || item.source, item.nextAirDate ? `更新 ${item.nextAirDate} ${item.airTime || ""}` : "", item.updateEpisodes ? `更新第 ${item.updateEpisodes} 集` : "", item.currentEpisode ? `当前第 ${item.currentEpisode} 集` : "", item.totalEpisodes ? `共 ${item.totalEpisodes} 集` : "", item.watchedDate, ...(item.tags || [])].filter(Boolean).join(" · ")}</p>
-            {(item.review || item.conclusion) && <p><strong>评价：</strong>{item.review || item.conclusion}</p>}
+            <div className="record-head"><strong>{mediaTitle(item)}</strong><span>{item.status || "想看的剧"}</span></div>
+            <p className="record-meta">{[item.year, item.type || "剧集", item.rating ? `${item.rating} 分` : "", item.imdbRating ? `IMDb ${item.imdbRating}` : "", item.tmdbRating ? `TMDB ${item.tmdbRating}` : "", item.platform || item.source, item.nextAirDate ? `更新 ${item.nextAirDate} ${item.airTime || ""}` : "", item.updateEpisodes ? `更新第 ${item.updateEpisodes} 集` : "", item.currentEpisode ? `当前第 ${item.currentEpisode} 集` : "", item.totalEpisodes ? `共 ${item.totalEpisodes} 集` : "", item.watchedDate, ...(item.tags || [])].filter(Boolean).join(" · ")}</p>
+            {(item.review || item.conclusion) && <p><strong>评价：</strong>{mediaDescription(item)}</p>}
             {(item.note || item.nextAction) && <p><strong>后续：</strong>{item.note || item.nextAction}</p>}
             <div className="record-actions">
               <button type="button" onClick={() => onEdit(item)}>编辑</button>
@@ -4769,11 +4939,13 @@ export default function Workbench() {
     setDone(readStorage(`done:${todayKey()}`, {}));
     setPetSupplies({ ...defaultPetSupplies, ...readStorage("petSupplies", defaultPetSupplies) });
     setAssetInput(normalizeSavedAssets(localStorage.getItem(key("assets"))));
-    const savedMode = localStorage.getItem(key("displayMode"));
-    const detectedMode = window.innerWidth >= 960 ? "desktop" : "mobile";
-    const nextMode = window.innerWidth >= 960 && (savedMode === "desktop" || savedMode === "mobile") ? savedMode : detectedMode;
-    setDisplayMode(nextMode);
-    localStorage.setItem(key("displayMode"), nextMode);
+    const applyResponsiveMode = () => {
+      const nextMode = window.innerWidth >= 960 ? "desktop" : "mobile";
+      setDisplayMode(nextMode);
+      localStorage.setItem(key("displayMode"), nextMode);
+    };
+    applyResponsiveMode();
+    window.addEventListener("resize", applyResponsiveMode);
     setPonyTheme(ponyThemes.some((theme) => theme.id === localStorage.getItem(key("ponyTheme"))) ? localStorage.getItem(key("ponyTheme")) : "jade");
     setClock(clockText());
     loadTmdbRecommendations();
@@ -4786,6 +4958,7 @@ export default function Workbench() {
 
     return () => {
       clearInterval(timer);
+      window.removeEventListener("resize", applyResponsiveMode);
     };
   }, []);
 
@@ -4881,14 +5054,44 @@ export default function Workbench() {
   }
 
   async function loadTmdbRecommendations() {
-    setTmdbRecommendationStatus("正在加载电影和电视剧片单...");
+    setTmdbRecommendationStatus("正在加载影视发现片单...");
     try {
       const response = await fetch("/api/tmdb/recommendations");
       const text = await response.text();
       const data = text ? JSON.parse(text) : {};
-      if (!response.ok) throw new Error(data.error || "推荐加载失败");
-      setTmdbSections(Array.isArray(data.sections) ? data.sections : []);
-      setTmdbRecommendationStatus("来自 TMDB 的电影与电视剧片单");
+      const sections = response.ok && Array.isArray(data.sections) ? data.sections : [];
+      if (!sections.length) throw new Error("推荐加载失败");
+      setTmdbSections(sections);
+      setTmdbRecommendationStatus("正在补充 TVMaze 排期和 AniList 动漫数据...");
+
+      const fetchSupplement = (url, timeoutMs = 15000) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+      };
+      const readResult = async (result) => {
+        if (result.status !== "fulfilled" || !result.value.ok) return null;
+        try {
+          return await result.value.json();
+        } catch {
+          return null;
+        }
+      };
+      const attachSupplement = async (url, timeoutMs, kind) => {
+        const [result] = await Promise.allSettled([fetchSupplement(url, timeoutMs)]);
+        const data = await readResult(result);
+        if (data) {
+          setTmdbSections((current) => mergeRecommendationSources(current.length ? current : sections, kind === "media" ? data : null, kind === "anime" ? data : null));
+        }
+        return data;
+      };
+      const mediaPromise = attachSupplement("/api/media-updates?days=7&compact=1", 15000, "media");
+      const animePromise = attachSupplement("/api/anime-updates", 30000, "anime");
+      const [mediaData, animeData] = await Promise.all([mediaPromise, animePromise]);
+      const sources = ["TMDB"];
+      if (mediaData?.ok) sources.push("TVMaze");
+      if (animeData?.ok) sources.push(animeData.source || "AniList");
+      setTmdbRecommendationStatus(`${sources.join(" + ")} 在线片单 · 每组默认展示 20 条`);
     } catch (error) {
       setTmdbRecommendationStatus(error.message || "片单暂时不可用，请点刷新片单重试");
     }
@@ -4911,18 +5114,33 @@ export default function Workbench() {
   }
 
   async function importTmdb(item) {
-    setTmdbStatus(`正在读取《${item.title}》的 TMDB 详情...`);
+    setTmdbStatus(`正在读取《${item.titleZh || item.title}》的详情...`);
     let details = {};
+    let omdbDetails = {};
     let watchlistStatus = "";
     const mediaType = item.tmdbMediaType || (item.type === "电影" ? "movie" : "tv");
-    try {
-      const response = await fetch(`/api/tmdb/details?id=${encodeURIComponent(item.tmdbId)}&type=${encodeURIComponent(mediaType)}`);
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
-      if (!response.ok) throw new Error(data.error || "详情读取失败");
-      details = data;
-    } catch (error) {
-      setTmdbStatus(`详情读取失败，已按搜索结果加入：${error.message || "请稍后重试"}`);
+    if (item.tmdbId) {
+      try {
+        const response = await fetch(`/api/tmdb/details?id=${encodeURIComponent(item.tmdbId)}&type=${encodeURIComponent(mediaType)}`);
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : {};
+        if (!response.ok) throw new Error(data.error || "详情读取失败");
+        details = data;
+      } catch (error) {
+        setTmdbStatus(`详情读取失败，已按搜索结果加入：${error.message || "请稍后重试"}`);
+      }
+    }
+    if (mediaType === "movie" || mediaType === "tv") {
+      try {
+        const response = await fetch(`/api/omdb/details?title=${encodeURIComponent(item.title || item.titleZh || "")}&type=${encodeURIComponent(mediaType === "movie" ? "movie" : "series")}`);
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : {};
+        if (response.ok && !data.error) {
+          omdbDetails = data;
+        }
+      } catch {
+        // ignore OMDb fallback errors
+      }
     }
     if (item.tmdbId) {
       clearDeletedTmdbId(item);
@@ -4940,7 +5158,15 @@ export default function Workbench() {
         watchlistStatus = ` · TMDB 片单未同步：${error.message || "请稍后重试"}`;
       }
     }
-    const mergedItem = { ...item, ...details };
+    const mergedItem = {
+      ...item,
+      title: item.titleZh || item.title,
+      posterUrl: item.posterUrl || item.image || omdbDetails.posterUrl || "",
+      imdbRating: omdbDetails.imdbRating || item.imdbRating || "",
+      imdbVotes: omdbDetails.imdbVotes || item.imdbVotes || "",
+      imdbID: omdbDetails.imdbId || item.imdbID || "",
+      ...details,
+    };
     const nextItem = {
       id: crypto.randomUUID(),
       ...mergedItem,
@@ -5654,9 +5880,11 @@ export default function Workbench() {
                 {activePage === "consultations" ? (
                   <div className="module-tabs consultation-tabs" aria-label="观影内容切换">
                     <button className={consultationView === "today" ? "active" : ""} type="button" onClick={() => setConsultationView("today")}>追剧日历</button>
-                    <button className={consultationView === "movies" ? "active" : ""} type="button" onClick={() => setConsultationView("movies")}>电影</button>
                     <button className={consultationView === "tv" ? "active" : ""} type="button" onClick={() => setConsultationView("tv")}>电视剧</button>
-                    <button className={consultationView === "checkin" ? "active" : ""} type="button" onClick={() => setConsultationView("checkin")}>观影打卡</button>
+                    <button className={consultationView === "movies" ? "active" : ""} type="button" onClick={() => setConsultationView("movies")}>电影</button>
+                    <button className={consultationView === "variety" ? "active" : ""} type="button" onClick={() => setConsultationView("variety")}>综艺</button>
+                    <button className={consultationView === "anime" ? "active" : ""} type="button" onClick={() => setConsultationView("anime")}>动漫</button>
+                    <button className={consultationView === "rating" ? "active" : ""} type="button" onClick={() => setConsultationView("rating")}>观影评分</button>
                   </div>
                 ) : activePage === "market" ? (
                   <div className="module-tabs market-tabs" aria-label="行情内容切换">
@@ -5720,7 +5948,7 @@ export default function Workbench() {
                   {sortedRecent.length === 0 && <p className="empty">还没有动态，先添加一条记录或咨询。</p>}
                   {sortedRecent.map((record) => (
                     <button className="timeline-row" type="button" key={`${record.type}-${record.title}-${record.time}`} onClick={() => switchPage(record.page)}>
-                      <span>{record.type}</span><strong>{record.title}</strong><small>{record.time}</small>
+                      <span>{record.type}</span><strong>{record.page === "consultations" ? mediaTitle(record) : record.title}</strong><small>{record.time}</small>
                     </button>
                   ))}
                 </div>
