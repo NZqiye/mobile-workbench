@@ -3388,6 +3388,7 @@ function mediaAirText(item) {
 }
 
 const assetIconImageMap = {
+  "thiings:badminton-racket": "/assets-icons/thiings/sport/badminton-racket.webp", "thiings:medicine-bottle": "/assets-icons/thiings/health/medicine-bottle.webp",
   smartphone: "/assets-icons/smartphone.png", laptop: "/assets-icons/laptop.png", monitor: "/assets-icons/monitor.png", keyboard: "/assets-icons/keyboard.png", mouse: "/assets-icons/mouse.png",
   headphones: "/assets-icons/headphones.png", camera: "/assets-icons/camera.png", tv: "/assets-icons/tv.png", gamepad: "/assets-icons/gamepad.png", watch: "/assets-icons/watch.png",
   cpu: "/assets-icons/cpu.png", harddrive: "/assets-icons/harddrive.png", printer: "/assets-icons/printer.png", speaker: "/assets-icons/speaker.png", battery: "/assets-icons/battery.png",
@@ -3415,15 +3416,38 @@ function AssetIcon({ name, size = 20 }) {
   return <img className="asset-icon-img" src={src} width={size} height={size} alt="" loading="eager" decoding="async" onError={() => setErr(true)} />;
 }
 
-const assetIconCategories = thiingsIconCategories;
+const assetIconCategories = thiingsIconCategories.map((category) => ({
+  ...category,
+  icons: category.id === "sport"
+    ? ["thiings:badminton-racket", ...category.icons]
+    : category.id === "health"
+      ? ["thiings:medicine-bottle", ...category.icons]
+      : category.icons,
+}));
+const assetCategoryOptions = assetIconCategories.map((category) => category.label);
 
-function AssetBoard({ items = [], onAdd, onUpdate, onDelete }) {
+function assetCategory(item) {
+  if (assetCategoryOptions.includes(item?.category)) return item.category;
+  const iconCategory = assetIconCategories.find((category) => category.icons.includes(item?.icon));
+  if (iconCategory) return iconCategory.label;
+  return {
+    数码: "数码科技",
+    家具: "家居日用",
+    日用: "家居日用",
+    美食: "美食饮品",
+    服饰: "服饰穿戴",
+    出行: "运动出行",
+    其他: "娱乐爱好",
+  }[item?.category] || "数码科技";
+}
+
+function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelete }) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formName, setFormName] = useState("");
   const [formPrice, setFormPrice] = useState("");
   const [formDate, setFormDate] = useState(todayKey());
-  const [formCategory, setFormCategory] = useState("数码");
+  const [formCategory, setFormCategory] = useState("数码科技");
   const [formStatus, setFormStatus] = useState("服役中");
   const [formNotes, setFormNotes] = useState("");
   const [formIcon, setFormIcon] = useState("thiings:box");
@@ -3431,15 +3455,21 @@ function AssetBoard({ items = [], onAdd, onUpdate, onDelete }) {
   const [iconTab, setIconTab] = useState("digital");
   const assetList = Array.isArray(items) ? items : [];
   const activeItems = assetList.filter((item) => item.status === "服役中");
+  const visibleItems = assetList.filter((item) => (item.status || "服役中") === status);
   const totalAmount = activeItems.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
   const today = new Date();
   const avgDaily = activeItems.reduce((sum, item) => {
     const days = Math.max(1, Math.ceil((today - new Date(item.purchaseDate)) / 86400000));
     return sum + (Number(item.price) || 0) / days;
   }, 0);
+  const dailyDrop = activeItems.reduce((sum, item) => {
+    const days = Math.max(1, Math.ceil((today - new Date(item.purchaseDate)) / 86400000));
+    const price = Number(item.price) || 0;
+    return sum + price / days - price / (days + 1);
+  }, 0);
 
   function resetForm() {
-    setFormName(""); setFormPrice(""); setFormDate(todayKey()); setFormCategory("数码"); setFormStatus("服役中"); setFormNotes(""); setFormIcon("thiings:box"); setShowIconPicker(false); setEditingId(null); setShowForm(false);
+    setFormName(""); setFormPrice(""); setFormDate(todayKey()); setFormCategory("数码科技"); setFormStatus(status); setFormNotes(""); setFormIcon("thiings:box"); setShowIconPicker(false); setEditingId(null); setShowForm(false);
   }
 
   function handleSubmit(e) {
@@ -3454,7 +3484,7 @@ function AssetBoard({ items = [], onAdd, onUpdate, onDelete }) {
   }
 
   function startEdit(item) {
-    setEditingId(item.id); setFormName(item.name); setFormPrice(String(item.price || "")); setFormDate(item.purchaseDate || todayKey()); setFormCategory(item.category || "数码"); setFormStatus(item.status || "服役中"); setFormNotes(item.notes || ""); setFormIcon(item.icon || "package"); setShowForm(true);
+    setEditingId(item.id); setFormName(item.name); setFormPrice(String(item.price || "")); setFormDate(item.purchaseDate || todayKey()); setFormCategory(assetCategory(item)); setFormStatus(item.status || "服役中"); setFormNotes(item.notes || ""); setFormIcon(item.icon || "package"); setShowForm(true);
   }
 
   function calcDaily(item) {
@@ -3473,7 +3503,7 @@ function AssetBoard({ items = [], onAdd, onUpdate, onDelete }) {
           <strong>{activeItems.length} 件物品</strong>
           <div className="asset-summary-stats">
             <div><span>总金额</span><strong>¥{totalAmount.toLocaleString()}</strong></div>
-            <div><span>总日均</span><strong>¥{avgDaily.toFixed(2)}<small>/天</small></strong></div>
+            <div><span>总日均</span><strong>¥{avgDaily.toFixed(2)}<small>/天</small></strong><small>每日约降 ¥{dailyDrop.toFixed(2)}</small></div>
           </div>
         </div>
       </div>
@@ -3499,7 +3529,7 @@ function AssetBoard({ items = [], onAdd, onUpdate, onDelete }) {
               </div>
               <div className="asset-icon-tabs">
                 {assetIconCategories.map((cat) => (
-                  <button type="button" key={cat.id} className={iconTab === cat.id ? "active" : ""} onClick={() => setIconTab(cat.id)}>{cat.label}</button>
+                  <button type="button" key={cat.id} className={iconTab === cat.id ? "active" : ""} onClick={() => { setIconTab(cat.id); setFormCategory(cat.label); }}>{cat.label}</button>
                 ))}
               </div>
               <div className="asset-icon-grid">
@@ -3512,8 +3542,8 @@ function AssetBoard({ items = [], onAdd, onUpdate, onDelete }) {
           <input value={formPrice} onChange={(e) => setFormPrice(e.target.value)} type="number" step="0.01" placeholder="价格" required />
           <input value={formDate} onChange={(e) => setFormDate(e.target.value)} type="date" required />
           <div className="asset-form-row">
-            <select value={formCategory} onChange={(e) => setFormCategory(e.target.value)}>
-              <option value="数码">数码</option><option value="服饰">服饰</option><option value="家具">家具</option><option value="美食">美食</option><option value="出行">出行</option><option value="日用">日用</option><option value="其他">其他</option>
+            <select value={formCategory} onChange={(e) => { const category = assetIconCategories.find((item) => item.label === e.target.value); setFormCategory(e.target.value); if (category) setIconTab(category.id); }}>
+              {assetIconCategories.map((category) => <option value={category.label} key={category.id}>{category.label}</option>)}
             </select>
             <select value={formStatus} onChange={(e) => setFormStatus(e.target.value)}>
               <option value="服役中">服役中</option><option value="退役">退役</option><option value="已出售">已出售</option>
@@ -3524,14 +3554,14 @@ function AssetBoard({ items = [], onAdd, onUpdate, onDelete }) {
         </form>
       )}
       <div className="asset-list">
-        {assetList.length === 0 && <p className="empty">还没有资产记录，点击上方添加。</p>}
-        {assetList.map((item) => (
+        {visibleItems.length === 0 && <p className="empty">还没有{status}的资产。</p>}
+        {visibleItems.map((item) => (
           <div className={`asset-row ${item.status !== "服役中" ? "asset-retired" : ""}`} key={item.id}>
             <div className="asset-row-main">
               <div className="asset-row-icon"><AssetIcon name={item.icon} size={36} /></div>
               <div className="asset-row-info">
                 <strong>{item.name}</strong>
-                <small>¥{Number(item.price).toLocaleString()} · {daysSince(item.purchaseDate)}天 · {item.category}</small>
+                <small>¥{Number(item.price).toLocaleString()} · {daysSince(item.purchaseDate)}天 · {assetCategory(item)}</small>
               </div>
               <div className="asset-row-cost">
                 <strong>¥{calcDaily(item)}<small>/天</small></strong>
@@ -4690,6 +4720,7 @@ export default function Workbench() {
   const [tmdbRecommendationStatus, setTmdbRecommendationStatus] = useState("正在准备电影和电视剧片单");
   const [consultationView, setConsultationView] = useState("today");
   const [marketView, setMarketView] = useState("stocks");
+  const [assetView, setAssetView] = useState("服役中");
   const [petSupplies, setPetSupplies] = useState(defaultPetSupplies);
   const [petAction, setPetAction] = useState({ type: "idle", text: "摸着肚子等你投喂。" });
 
@@ -5900,6 +5931,12 @@ export default function Workbench() {
                     <button className={marketView === "funds" ? "active" : ""} type="button" onClick={() => setMarketView("funds")}>基金</button>
                     <button className={marketView === "indexes" ? "active" : ""} type="button" onClick={() => setMarketView("indexes")}>指数追踪</button>
                   </div>
+                ) : activePage === "assets" ? (
+                  <div className="module-tabs asset-tabs" aria-label="资产状态切换">
+                    {["服役中", "退役", "已出售"].map((status) => (
+                      <button className={assetView === status ? "active" : ""} type="button" key={status} onClick={() => setAssetView(status)}>{status}</button>
+                    ))}
+                  </div>
                 ) : (
                   <div className="module-tabs" aria-label="内容切换">
                     <button className="active" type="button">今日内容</button>
@@ -6005,7 +6042,7 @@ export default function Workbench() {
           )}
 
           {activePage === "assets" && (
-            <AssetBoard items={assetItems} onAdd={addAsset} onUpdate={updateAsset} onDelete={deleteAsset} />
+            <AssetBoard items={assetItems} status={assetView} onAdd={addAsset} onUpdate={updateAsset} onDelete={deleteAsset} />
           )}
 
           {activePage === "market" && (
