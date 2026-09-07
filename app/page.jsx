@@ -236,9 +236,10 @@ const marketSymbolNames = {
 const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
 const defaultChineseHolidaysSeedKey = "defaultChineseHolidays2026Seeded";
 const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins", "assetRecords", "exerciseRecords", "weightRecords"];
-const marketCacheVersion = 4;
+const marketCacheVersion = 5;
 const fundCacheVersion = 2;
-const indexTrackerCacheVersion = 1;
+const indexTrackerCacheVersion = 2;
+const marketRefreshInterval = 60 * 60 * 1000;
 const defaultWaterTarget = 2000;
 const cupSize = 250;
 const foodCalories = [
@@ -2001,8 +2002,25 @@ function MarketBoard({ compact = false, onAssetsChange }) {
   const [loading, setLoading] = useState(true);
   const [stockInput, setStockInput] = useState("");
   const [stockMarket, setStockMarket] = useState("a");
+  const [draggingSymbol, setDraggingSymbol] = useState("");
+  const dragSymbolRef = useRef("");
+  const dragOrderRef = useRef([]);
+  const dragTargetRef = useRef("");
+  const marketRequestRef = useRef(0);
+
+  function applyQuotes(nextQuotes) {
+    const quoteMap = new Map(nextQuotes.map(normalizeMarketQuote).map((quote) => [quote.symbol.toLowerCase(), quote]));
+    const symbols = dragSymbolRef.current
+      ? dragOrderRef.current.map((quote) => quote.symbol)
+      : normalizeSavedAssets(localStorage.getItem(key("assets"))).split(",");
+    const ordered = symbols.map((symbol) => quoteMap.get(symbol.toLowerCase())).filter(Boolean);
+    if (dragSymbolRef.current) dragOrderRef.current = ordered;
+    setQuotes(ordered);
+    return ordered;
+  }
 
   async function loadQuotes(force = false) {
+    const requestId = ++marketRequestRef.current;
     const savedAssets = localStorage.getItem(key("assets"));
     const assets = normalizeSavedAssets(savedAssets);
     if (savedAssets !== assets) {
@@ -2016,8 +2034,8 @@ function MarketBoard({ compact = false, onAssetsChange }) {
       return;
     }
     const cache = readStorage("marketCache", null);
-    if (!force && cache?.version === marketCacheVersion && Date.now() - cache.savedAt < 60000) {
-      setQuotes((cache.quotes || []).map(normalizeMarketQuote));
+    if (!force && cache?.version === marketCacheVersion && Date.now() - cache.savedAt < marketRefreshInterval) {
+      applyQuotes(cache.quotes || []);
       setStatus(`缓存行情 · ${nowText(new Date(cache.savedAt))}`);
       setLoading(false);
       return;
@@ -2029,19 +2047,20 @@ function MarketBoard({ compact = false, onAssetsChange }) {
       const response = await fetch(`/api/market-quotes?symbols=${encodeURIComponent(assets)}`);
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "行情读取失败");
-      const nextQuotes = Array.isArray(data.quotes) ? data.quotes.map(normalizeMarketQuote) : [];
-      setQuotes(nextQuotes);
+      if (requestId !== marketRequestRef.current) return;
+      const nextQuotes = applyQuotes(Array.isArray(data.quotes) ? data.quotes : []);
       writeStorage("marketCache", { version: marketCacheVersion, savedAt: Date.now(), quotes: nextQuotes });
-      setStatus(`${data.warning || "实时行情已更新"} · ${nowText()}`);
+      setStatus(`${data.warning || "行情已更新"} · ${nowText()}`);
     } catch {
+      if (requestId !== marketRequestRef.current) return;
       if (cache?.quotes) {
-        setQuotes(cache.quotes.map(normalizeMarketQuote));
+        applyQuotes(cache.quotes);
         setStatus(`行情更新失败，显示上次数据 · ${nowText(new Date(cache.savedAt))}`);
       } else {
         setStatus("行情暂时不可用");
       }
     } finally {
-      setLoading(false);
+      if (requestId === marketRequestRef.current) setLoading(false);
     }
   }
 
@@ -2081,10 +2100,80 @@ function MarketBoard({ compact = false, onAssetsChange }) {
     loadQuotes(true);
   }
 
+  function persistQuoteOrder(nextQuotes) {
+    const orderedSymbols = nextQuotes.map((quote) => quote.symbol);
+    const orderedSet = new Set(orderedSymbols.map((symbol) => symbol.toLowerCase()));
+    const unavailableSymbols = normalizeSavedAssets(localStorage.getItem(key("assets")))
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item && !orderedSet.has(item.toLowerCase()));
+    const nextAssets = [...orderedSymbols, ...unavailableSymbols].join(",");
+    localStorage.setItem(key("assets"), nextAssets);
+    const cache = readStorage("marketCache", null);
+    if (cache?.quotes) writeStorage("marketCache", { ...cache, quotes: nextQuotes });
+    onAssetsChange?.(nextAssets);
+    setStatus(`已保存自选顺序 · ${nowText()}`);
+  }
+
+  function reorderQuote(sourceSymbol, targetSymbol) {
+    if (!sourceSymbol || !targetSymbol || sourceSymbol === targetSymbol) return;
+    const current = dragOrderRef.current.length ? dragOrderRef.current : quotes;
+    const sourceIndex = current.findIndex((quote) => quote.symbol === sourceSymbol);
+    const targetIndex = current.findIndex((quote) => quote.symbol === targetSymbol);
+    if (sourceIndex < 0 || targetIndex < 0) return;
+    const next = [...current];
+    const [moved] = next.splice(sourceIndex, 1);
+    next.splice(targetIndex, 0, moved);
+    dragOrderRef.current = next;
+    setQuotes(next);
+  }
+
+  function startQuoteDrag(event, symbol) {
+    if (event.button !== 0 || event.isPrimary === false || dragSymbolRef.current) return;
+    dragOrderRef.current = [...quotes];
+    dragSymbolRef.current = symbol;
+    dragTargetRef.current = symbol;
+    setDraggingSymbol(symbol);
+    event.currentTarget.closest(".quote-list").setPointerCapture(event.pointerId);
+  }
+
+  function moveDraggedQuote(event) {
+    if (!dragSymbolRef.current) return;
+    event.preventDefault();
+    const targetRow = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-market-symbol]");
+    const targetSymbol = targetRow?.dataset.marketSymbol || "";
+    if (!targetSymbol || targetSymbol === dragTargetRef.current) return;
+    dragTargetRef.current = targetSymbol;
+    reorderQuote(dragSymbolRef.current, targetSymbol);
+  }
+
+  function finishQuoteDrag(event) {
+    if (!dragSymbolRef.current) return;
+    dragSymbolRef.current = "";
+    dragTargetRef.current = "";
+    setDraggingSymbol("");
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    persistQuoteOrder(dragOrderRef.current.length ? dragOrderRef.current : quotes);
+  }
+
+  function moveQuoteWithKeyboard(symbol, direction) {
+    const sourceIndex = quotes.findIndex((quote) => quote.symbol === symbol);
+    const targetIndex = sourceIndex + direction;
+    if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= quotes.length) return;
+    const next = [...quotes];
+    [next[sourceIndex], next[targetIndex]] = [next[targetIndex], next[sourceIndex]];
+    setQuotes(next);
+    dragOrderRef.current = next;
+    persistQuoteOrder(next);
+  }
+
   useEffect(() => {
     loadQuotes();
-    const timer = setInterval(() => loadQuotes(), 60000);
-    return () => clearInterval(timer);
+    const timer = setInterval(() => loadQuotes(true), marketRefreshInterval);
+    return () => {
+      clearInterval(timer);
+      marketRequestRef.current += 1;
+    };
   }, []);
 
   const risingCount = quotes.filter((quote) => quote.changePercent > 0).length;
@@ -2108,24 +2197,46 @@ function MarketBoard({ compact = false, onAssetsChange }) {
         </div>
       )}
       {!compact && (
-        <form className="market-add-form" onSubmit={addStock}>
-          <select value={stockMarket} onChange={(event) => setStockMarket(event.target.value)} aria-label="股票类型">
-            <option value="a">A股</option>
-            <option value="hk">港股</option>
-            <option value="us">美股</option>
-          </select>
-          <input value={stockInput} onChange={(event) => setStockInput(event.target.value)} placeholder={stockMarket === "hk" ? "例如 00700" : stockMarket === "us" ? "例如 AAPL" : "例如 600584"} />
-          <button className="chip-button" type="submit">添加</button>
-        </form>
+        <>
+          <p className="market-refresh-note">每小时自动更新，也可以随时手动刷新；拖动左侧把手调整自选顺序。</p>
+          <form className="market-add-form" onSubmit={addStock}>
+            <select value={stockMarket} onChange={(event) => setStockMarket(event.target.value)} aria-label="股票类型">
+              <option value="a">A股</option>
+              <option value="hk">港股</option>
+              <option value="us">美股</option>
+            </select>
+            <input value={stockInput} onChange={(event) => setStockInput(event.target.value)} placeholder={stockMarket === "hk" ? "例如 00700" : stockMarket === "us" ? "例如 AAPL" : "例如 600584"} />
+            <button className="chip-button" type="submit">添加</button>
+          </form>
+        </>
       )}
-      <div className="quote-list">
+      <div className="quote-list" onPointerMove={moveDraggedQuote} onPointerUp={finishQuoteDrag} onPointerCancel={finishQuoteDrag} onLostPointerCapture={finishQuoteDrag}>
         {quotes.length === 0 && <p className="empty">还没有行情数据。</p>}
-        {quotes.map((quote, index) => {
+        {quotes.map((quote) => {
           const changeClass = quote.changePercent > 0 ? "up" : quote.changePercent < 0 ? "down" : "flat";
           const sign = quote.changePercent > 0 ? "+" : "";
           return (
-            <div className="quote-row" key={quote.symbol}>
-              <div className="quote-identity"><span className="quote-market">{quote.market || (quote.symbol.startsWith("sh") || quote.symbol.startsWith("sz") || quote.symbol.startsWith("bj") ? "A股" : "行情")}</span><strong>{quote.name || quote.symbol}</strong><span>{quote.symbol.toUpperCase()} · {quote.source || "实时"}</span></div>
+            <div className={`quote-row ${draggingSymbol === quote.symbol ? "dragging" : ""}`} data-market-symbol={quote.symbol} key={quote.symbol}>
+              <div className={compact ? "quote-identity" : "quote-identity quote-identity-sortable"}>
+                {!compact && (
+                  <button
+                    className="quote-drag-handle"
+                    type="button"
+                    aria-label={`拖动调整 ${quote.name || quote.symbol} 的顺序，或使用上下方向键`}
+                    aria-keyshortcuts="ArrowUp ArrowDown"
+                    onKeyDown={(event) => {
+                      if (event.key === "ArrowUp" || event.key === "ArrowDown") {
+                        event.preventDefault();
+                        moveQuoteWithKeyboard(quote.symbol, event.key === "ArrowUp" ? -1 : 1);
+                      }
+                    }}
+                    onPointerDown={(event) => startQuoteDrag(event, quote.symbol)}
+                  >
+                    <svg viewBox="0 0 16 20" aria-hidden="true"><circle cx="5" cy="4" r="1.2" /><circle cx="11" cy="4" r="1.2" /><circle cx="5" cy="10" r="1.2" /><circle cx="11" cy="10" r="1.2" /><circle cx="5" cy="16" r="1.2" /><circle cx="11" cy="16" r="1.2" /></svg>
+                  </button>
+                )}
+                <span className="quote-market">{quote.market || (quote.symbol.startsWith("sh") || quote.symbol.startsWith("sz") || quote.symbol.startsWith("bj") ? "A股" : "行情")}</span><strong>{quote.name || quote.symbol}</strong><span>{quote.symbol.toUpperCase()} · {quote.source || "行情"}</span>
+              </div>
               <div className="quote-price"><strong>{quote.currency || ""}{Number(quote.price || 0).toFixed(2)}</strong><span className={changeClass}>{sign}{Number(quote.change || 0).toFixed(2)} · {sign}{Number(quote.changePercent || 0).toFixed(2)}%</span></div>
               {!compact && (
                 <div className="quote-metrics">
@@ -2153,6 +2264,44 @@ function indexLevelFromPrice(item, price) {
   return { level: "低位", levelTone: "low", note: item.lowNote };
 }
 
+function quoteNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function buildDynamicMarketSignal(market, fund) {
+  const changePercent = quoteNumber(market?.changePercent ?? fund?.estimateRate);
+  if (changePercent === null) {
+    return { trend: "等待行情", trendTone: "flat", position: "区间未知", volatility: "波动未知", summary: "暂时没有足够数据，等待下次更新后再判断。" };
+  }
+
+  let trend = "窄幅震荡";
+  let trendTone = "flat";
+  if (changePercent >= 1.5) [trend, trendTone] = ["明显走强", "up"];
+  else if (changePercent >= 0.3) [trend, trendTone] = ["震荡偏强", "up"];
+  else if (changePercent <= -1.5) [trend, trendTone] = ["明显走弱", "down"];
+  else if (changePercent <= -0.3) [trend, trendTone] = ["震荡偏弱", "down"];
+
+  const price = quoteNumber(market?.price ?? fund?.estimate ?? fund?.nav);
+  const high = quoteNumber(market?.high);
+  const low = quoteNumber(market?.low);
+  const previousClose = quoteNumber(market?.previousClose);
+  const range = high !== null && low !== null ? high - low : null;
+  const positionRatio = price !== null && range > 0 ? (price - low) / range : null;
+  const position = positionRatio === null ? "区间待补充" : positionRatio >= 0.7 ? "日内高位" : positionRatio <= 0.3 ? "日内低位" : "日内中部";
+  const amplitude = previousClose > 0 && range !== null ? Math.max(0, (range / previousClose) * 100) : Math.abs(changePercent);
+  const volatility = amplitude >= 2 ? "波动较高" : amplitude >= 0.8 ? "波动正常" : "波动较低";
+
+  let summary = `当前${trend}，${position}，${volatility}。`;
+  if (trendTone === "up" && position === "日内高位") summary += "短线动能偏强，同时留意冲高后的回落。";
+  else if (trendTone === "up") summary += "走势偏强，继续观察强度能否维持。";
+  else if (trendTone === "down" && position === "日内低位") summary += "短线承压，重点观察能否止跌企稳。";
+  else if (trendTone === "down") summary += "走势偏弱，关注下行压力是否扩大。";
+  else summary += "方向尚未明确，等待价格脱离震荡区间。";
+  return { trend, trendTone, position, volatility, summary };
+}
+
 function formatIndexPrice(item, market, fund) {
   if (fund) return `${Number(fund.estimate || fund.nav || 0).toFixed(4)}${Number.isFinite(Number(fund.estimateRate)) ? `（${Number(fund.estimateRate) > 0 ? "+" : ""}${Number(fund.estimateRate).toFixed(2)}%）` : ""}`;
   if (!market) return "--";
@@ -2168,6 +2317,7 @@ function buildIndexTrackerRows(items, trackerData) {
     const fund = funds.get(item.fundCode);
     const levelPrice = Number(market?.price || fund?.estimate || fund?.nav || 0);
     const level = indexLevelFromPrice(item, levelPrice);
+    const signal = buildDynamicMarketSignal(market, fund);
     const dynamicMetrics = [
       item.marketSymbol ? ["最新行情", formatIndexPrice(item, market, null)] : null,
       item.fundCode ? ["代理基金", formatIndexPrice(item, null, fund)] : null,
@@ -2176,6 +2326,7 @@ function buildIndexTrackerRows(items, trackerData) {
     return {
       ...item,
       ...level,
+      signal,
       metrics: [...dynamicMetrics, ...item.metrics],
     };
   });
@@ -2236,11 +2387,14 @@ function IndexTrackerBoard({ onItemsChange }) {
   const [addOpen, setAddOpen] = useState(false);
   const [draft, setDraft] = useState(defaultIndexTrackerDraft);
   const [status, setStatus] = useState("正在读取指数追踪...");
+  const itemsRef = useRef(items);
+  const trackerRequestRef = useRef(0);
 
-  async function loadTracker(force = false, targetItems = items) {
+  async function loadTracker(force = false, targetItems = itemsRef.current) {
+    const requestId = ++trackerRequestRef.current;
     const requestUrl = buildIndexTrackerUrl(targetItems);
     const cache = readStorage("indexTrackerCache", null);
-    if (!force && cache?.version === indexTrackerCacheVersion && cache?.requestUrl === requestUrl && Date.now() - cache.savedAt < 60000) {
+    if (!force && cache?.version === indexTrackerCacheVersion && cache?.requestUrl === requestUrl && Date.now() - cache.savedAt < marketRefreshInterval) {
       setTrackerData(cache.data);
       setStatus(`缓存追踪 · ${nowText(new Date(cache.savedAt))}`);
       return;
@@ -2250,11 +2404,13 @@ function IndexTrackerBoard({ onItemsChange }) {
     try {
       const response = await fetch(requestUrl);
       const data = await response.json();
+      if (requestId !== trackerRequestRef.current) return;
       setTrackerData(data);
       writeStorage("indexTrackerCache", { version: indexTrackerCacheVersion, requestUrl, savedAt: Date.now(), data });
       const hasError = Array.isArray(data.errors) && data.errors.length > 0;
       setStatus(`${hasError ? "部分数据已更新" : "指数追踪已更新"} · ${nowText()}`);
     } catch {
+      if (requestId !== trackerRequestRef.current) return;
       if (cache?.data) {
         setTrackerData(cache.data);
         setStatus(`追踪更新失败，显示上次数据 · ${nowText(new Date(cache.savedAt))}`);
@@ -2266,12 +2422,16 @@ function IndexTrackerBoard({ onItemsChange }) {
 
   useEffect(() => {
     loadTracker();
-    const timer = setInterval(() => loadTracker(), 60000);
-    return () => clearInterval(timer);
+    const timer = setInterval(() => loadTracker(true, itemsRef.current), marketRefreshInterval);
+    return () => {
+      clearInterval(timer);
+      trackerRequestRef.current += 1;
+    };
   }, []);
 
   function saveIndexItems(nextItems) {
     const normalized = normalizeIndexTrackerItems(touchItems(nextItems));
+    itemsRef.current = normalized;
     setItems(normalized);
     writeStorage("indexTrackerItems", normalized);
     localStorage.removeItem(key("indexTrackerCache"));
@@ -2396,7 +2556,7 @@ function IndexTrackerBoard({ onItemsChange }) {
 
       <div className="index-note">
         <strong>自动维护口径</strong>
-        <span>行情和代理基金自动更新；高位/中位/低位按预设阈值计算，PE 分位、股息率、溢价等仍作为手动判断口径保留。</span>
+        <span>行情和代理基金每小时自动更新，也可手动刷新；趋势、日内位置和波动状态根据最新行情动态计算，PE 分位等低频指标仍保留为手动判断口径。</span>
       </div>
 
       <div className="index-track-list">
@@ -2419,6 +2579,12 @@ function IndexTrackerBoard({ onItemsChange }) {
                 </div>
               </div>
             </div>
+            <div className="index-signal-row" aria-label={`${item.name}动态状态`}>
+              <span className={item.signal.trendTone}><b>趋势</b>{item.signal.trend}</span>
+              <span><b>位置</b>{item.signal.position}</span>
+              <span><b>波动</b>{item.signal.volatility}</span>
+            </div>
+            <p className="index-dynamic-note"><strong>动态观察：</strong>{item.signal.summary}</p>
             <p className="index-track-note">{item.note}</p>
             <small>数据来源：{item.source}</small>
           </article>
@@ -2571,6 +2737,7 @@ function FundBoard({ onPortfolioChange }) {
   const [tradeProfit, setTradeProfit] = useState("");
   const [tradeNote, setTradeNote] = useState("");
   const [fundMenuOpen, setFundMenuOpen] = useState(false);
+  const fundRequestRef = useRef(0);
 
   const summary = useMemo(() => funds.reduce((acc, fund) => ({
     positionValue: acc.positionValue + Number(fund.positionValue || 0),
@@ -2598,6 +2765,7 @@ function FundBoard({ onPortfolioChange }) {
   }
 
   async function loadFunds(force = false, portfolioOverride = null) {
+    const requestId = ++fundRequestRef.current;
     const storedPortfolio = portfolioOverride || readStorage("fundPortfolio", null);
     const savedPortfolio = Array.isArray(storedPortfolio)
       ? normalizeFundPortfolio(storedPortfolio)
@@ -2612,7 +2780,7 @@ function FundBoard({ onPortfolioChange }) {
 
     const codes = savedPortfolio.map((item) => item.code).filter(Boolean).join(",");
     const cache = readStorage("fundCache", null);
-    if (!force && cache?.version === fundCacheVersion && Date.now() - cache.savedAt < 60000) {
+    if (!force && cache?.version === fundCacheVersion && Date.now() - cache.savedAt < marketRefreshInterval) {
       const nextFunds = mergeFundBoardData(cache.quotes || [], savedPortfolio);
       setFunds(nextFunds);
       setStatus(`缓存持仓 · ${nowText(new Date(cache.savedAt))}`);
@@ -2630,10 +2798,12 @@ function FundBoard({ onPortfolioChange }) {
       const data = await response.json();
       const quotes = Array.isArray(data.quotes) ? data.quotes : [];
       const nextFunds = mergeFundBoardData(quotes, savedPortfolio);
+      if (requestId !== fundRequestRef.current) return;
       setFunds(nextFunds);
       writeStorage("fundCache", { version: fundCacheVersion, savedAt: Date.now(), quotes });
       setStatus(`${nextFunds.length ? "基金持仓已更新" : "还没有基金持仓"} · ${nowText()}`);
     } catch {
+      if (requestId !== fundRequestRef.current) return;
       if (cache?.quotes) {
         setFunds(mergeFundBoardData(cache.quotes, savedPortfolio));
         setStatus(`估值更新失败，显示上次数据 · ${nowText(new Date(cache.savedAt))}`);
@@ -2777,8 +2947,11 @@ function FundBoard({ onPortfolioChange }) {
 
   useEffect(() => {
     loadFunds();
-    const timer = setInterval(() => loadFunds(), 60000);
-    return () => clearInterval(timer);
+    const timer = setInterval(() => loadFunds(true), marketRefreshInterval);
+    return () => {
+      clearInterval(timer);
+      fundRequestRef.current += 1;
+    };
   }, []);
 
   const tradeOptions = funds.length ? funds : portfolio.map((item) => ({
@@ -4792,11 +4965,11 @@ export default function Workbench() {
   }
 
   async function syncAssetsToCloud(nextAssets) {
+    const normalized = normalizeSavedAssets(nextAssets);
+    setAssetInput(normalized);
+    localStorage.setItem(key("assets"), normalized);
     if (!session) return;
     try {
-      const normalized = normalizeSavedAssets(nextAssets);
-      localStorage.setItem(key("assets"), normalized);
-      localStorage.removeItem(key("marketCache"));
       await saveCloudItem(session, "assets", normalized);
       setSyncStatus(`自选资产已同步 · ${nowText()}`);
     } catch (error) {
