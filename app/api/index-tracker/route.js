@@ -11,27 +11,56 @@ function splitQueryList(value, fallback) {
   return list.length ? [...new Set(list)] : fallback;
 }
 
+function marketNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function parseSina(text, symbol) {
   const match = text.match(new RegExp(`hq_str_${symbol}="([^"]*)"`));
   if (!match || !match[1]) return null;
   const fields = match[1].split(",");
-  if (symbol.startsWith("gb_")) {
+  if (symbol.startsWith("s_")) {
     return {
       symbol,
       name: fields[0] || symbol,
-      price: Number(fields[1]),
-      changePercent: Number(fields[2] || 0),
+      price: marketNumber(fields[1]),
+      change: marketNumber(fields[2]),
+      changePercent: marketNumber(fields[3]) || 0,
+      updatedAt: new Date().toISOString(),
+      source: "新浪财经",
+    };
+  }
+  if (symbol.startsWith("gb_")) {
+    const price = marketNumber(fields[1]);
+    const change = marketNumber(fields[4]);
+    return {
+      symbol,
+      name: fields[0] || symbol,
+      price,
+      change,
+      changePercent: marketNumber(fields[2]) || 0,
+      open: marketNumber(fields[5]),
+      high: marketNumber(fields[6]),
+      low: marketNumber(fields[7]),
+      previousClose: price !== null && change !== null ? price - change : null,
       updatedAt: fields[3] || new Date().toISOString(),
       source: "新浪财经",
     };
   }
-  const current = Number(fields[0]);
-  const previousClose = Number(fields[7]);
+  const current = marketNumber(fields[0]);
+  const previousClose = marketNumber(fields[7]);
   return {
     symbol,
     name: fields[13] || symbol,
     price: current,
-    changePercent: previousClose ? ((current - previousClose) / previousClose) * 100 : 0,
+    change: current !== null && previousClose !== null ? current - previousClose : null,
+    changePercent: previousClose && current !== null ? ((current - previousClose) / previousClose) * 100 : 0,
+    open: marketNumber(fields[8]),
+    high: marketNumber(fields[4]),
+    low: marketNumber(fields[5]),
+    previousClose,
     updatedAt: fields[12] && fields[6] ? `${fields[12]} ${fields[6]}` : new Date().toISOString(),
     source: "新浪财经",
   };
