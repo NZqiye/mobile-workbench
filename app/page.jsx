@@ -3449,6 +3449,9 @@ function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelet
   const [formDate, setFormDate] = useState(todayKey());
   const [formCategory, setFormCategory] = useState("数码科技");
   const [formStatus, setFormStatus] = useState("服役中");
+  const [formSaleDate, setFormSaleDate] = useState("");
+  const [formSalePrice, setFormSalePrice] = useState("");
+  const [formRetirementDate, setFormRetirementDate] = useState("");
   const [formNotes, setFormNotes] = useState("");
   const [formIcon, setFormIcon] = useState("thiings:box");
   const [showIconPicker, setShowIconPicker] = useState(false);
@@ -3469,22 +3472,23 @@ function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelet
   }, 0);
 
   function resetForm() {
-    setFormName(""); setFormPrice(""); setFormDate(todayKey()); setFormCategory("数码科技"); setFormStatus(status); setFormNotes(""); setFormIcon("thiings:box"); setShowIconPicker(false); setEditingId(null); setShowForm(false);
+    setFormName(""); setFormPrice(""); setFormDate(todayKey()); setFormCategory("数码科技"); setFormStatus(status); setFormSaleDate(""); setFormSalePrice(""); setFormRetirementDate(""); setFormNotes(""); setFormIcon("thiings:box"); setShowIconPicker(false); setEditingId(null); setShowForm(false);
   }
 
   function handleSubmit(e) {
     e.preventDefault();
     if (!formName.trim()) return;
+    const values = { name: formName.trim(), price: Number(formPrice) || 0, purchaseDate: formDate, category: formCategory, status: formStatus, saleDate: formSaleDate, salePrice: formSalePrice === "" ? "" : Number(formSalePrice), retirementDate: formRetirementDate, notes: formNotes, icon: formIcon };
     if (editingId) {
-      onUpdate(editingId, { name: formName.trim(), price: Number(formPrice) || 0, purchaseDate: formDate, category: formCategory, status: formStatus, notes: formNotes, icon: formIcon });
+      onUpdate(editingId, values);
     } else {
-      onAdd({ name: formName.trim(), price: Number(formPrice) || 0, purchaseDate: formDate, category: formCategory, status: formStatus, notes: formNotes, icon: formIcon });
+      onAdd(values);
     }
     resetForm();
   }
 
   function startEdit(item) {
-    setEditingId(item.id); setFormName(item.name); setFormPrice(String(item.price || "")); setFormDate(item.purchaseDate || todayKey()); setFormCategory(assetCategory(item)); setFormStatus(item.status || "服役中"); setFormNotes(item.notes || ""); setFormIcon(item.icon || "package"); setShowForm(true);
+    setEditingId(item.id); setFormName(item.name); setFormPrice(String(item.price || "")); setFormDate(item.purchaseDate || todayKey()); setFormCategory(assetCategory(item)); setFormStatus(item.status || "服役中"); setFormSaleDate(item.saleDate || ""); setFormSalePrice(item.salePrice == null ? "" : String(item.salePrice)); setFormRetirementDate(item.retirementDate || ""); setFormNotes(item.notes || ""); setFormIcon(item.icon || "package"); setShowForm(true);
   }
 
   function calcDaily(item) {
@@ -3549,6 +3553,15 @@ function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelet
               <option value="服役中">服役中</option><option value="退役">退役</option><option value="已出售">已出售</option>
             </select>
           </div>
+          {formStatus === "已出售" && (
+            <div className="asset-form-row">
+              <label className="asset-field"><span>出售日期</span><input value={formSaleDate} onChange={(e) => setFormSaleDate(e.target.value)} type="date" /></label>
+              <label className="asset-field"><span>出售价格</span><input value={formSalePrice} onChange={(e) => setFormSalePrice(e.target.value)} type="number" min="0" step="0.01" placeholder="出售价格" /></label>
+            </div>
+          )}
+          {formStatus === "退役" && (
+            <label className="asset-field"><span>退役时间</span><input value={formRetirementDate} onChange={(e) => setFormRetirementDate(e.target.value)} type="date" /></label>
+          )}
           <input value={formNotes} onChange={(e) => setFormNotes(e.target.value)} placeholder="备注（选填）" />
           <button type="submit" className="asset-submit">{editingId ? "保存修改" : "添加"}</button>
         </form>
@@ -3562,6 +3575,8 @@ function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelet
               <div className="asset-row-info">
                 <strong>{item.name}</strong>
                 <small>¥{Number(item.price).toLocaleString()} · {daysSince(item.purchaseDate)}天 · {assetCategory(item)}</small>
+                {item.status === "已出售" && <small>出售日期：{item.saleDate || "未记录"} · 出售价格：{item.salePrice !== "" && item.salePrice != null ? `¥${Number(item.salePrice).toLocaleString()}` : "未记录"}</small>}
+                {item.status === "退役" && <small>退役时间：{item.retirementDate || "未记录"}</small>}
               </div>
               <div className="asset-row-cost">
                 <strong>¥{calcDaily(item)}<small>/天</small></strong>
@@ -5648,7 +5663,7 @@ export default function Workbench() {
     });
   }
 
-  function addAsset({ name, price, purchaseDate, category, status, notes, icon }) {
+  function addAsset({ name, price, purchaseDate, category, status, saleDate, salePrice, retirementDate, notes, icon }) {
     const item = {
       id: crypto.randomUUID(),
       name: String(name || "").trim(),
@@ -5656,6 +5671,9 @@ export default function Workbench() {
       purchaseDate: purchaseDate || todayKey(),
       category: category || "",
       status: status || "服役中",
+      saleDate: saleDate || "",
+      salePrice: salePrice === "" ? "" : Number(salePrice),
+      retirementDate: retirementDate || "",
       notes: notes || "",
       icon: icon || "thiings:box",
     };
