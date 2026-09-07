@@ -236,7 +236,7 @@ const marketSymbolNames = {
 const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
 const defaultChineseHolidaysSeedKey = "defaultChineseHolidays2026Seeded";
 const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins", "assetRecords", "exerciseRecords", "weightRecords"];
-const marketCacheVersion = 3;
+const marketCacheVersion = 4;
 const fundCacheVersion = 2;
 const indexTrackerCacheVersion = 1;
 const defaultWaterTarget = 2000;
@@ -1677,97 +1677,6 @@ function ClothingAssistant() {
   );
 }
 
-function PomodoroTimer() {
-  const FOCUS_MINUTES = 25;
-  const BREAK_MINUTES = 5;
-
-  const [mode, setMode] = useState("focus");
-  const [secondsLeft, setSecondsLeft] = useState(FOCUS_MINUTES * 60);
-  const [running, setRunning] = useState(false);
-  const [todaySessions, setTodaySessions] = useState(0);
-  const [status, setStatus] = useState("点击开始专注");
-
-  useEffect(() => {
-    setTodaySessions(Number(readStorage(`pomodoroSessions:${todayKey()}`, 0)));
-  }, []);
-
-  useEffect(() => {
-    if (!running) return;
-    const timer = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          if (mode === "focus") {
-            const next = todaySessions + 1;
-            setTodaySessions(next);
-            writeStorage(`pomodoroSessions:${todayKey()}`, next);
-            setMode("break");
-            setStatus(`第 ${next} 轮完成 · 休息一下`);
-            return BREAK_MINUTES * 60;
-          }
-          setMode("focus");
-          setStatus("休息结束 · 开始新一轮");
-          return FOCUS_MINUTES * 60;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [running, mode, todaySessions]);
-
-  const minutes = Math.floor(secondsLeft / 60);
-  const secs = secondsLeft % 60;
-  const totalSeconds = mode === "focus" ? FOCUS_MINUTES * 60 : BREAK_MINUTES * 60;
-  const progress = ((totalSeconds - secondsLeft) / totalSeconds) * 100;
-
-  function toggle() {
-    if (!running) setStatus(mode === "focus" ? "专注中..." : "休息中...");
-    setRunning(!running);
-  }
-
-  function reset() {
-    setRunning(false);
-    setMode("focus");
-    setSecondsLeft(FOCUS_MINUTES * 60);
-    setStatus("已重置");
-  }
-
-  function switchMode(nextMode) {
-    setRunning(false);
-    setMode(nextMode);
-    setSecondsLeft(nextMode === "focus" ? FOCUS_MINUTES * 60 : BREAK_MINUTES * 60);
-    setStatus(nextMode === "focus" ? "准备专注" : "准备休息");
-  }
-
-  return (
-    <section className="panel pomodoro-panel">
-      <div className="panel-head">
-        <div>
-          <h2>{mode === "focus" ? "番茄钟" : "休息"}</h2>
-          <p>{status}</p>
-        </div>
-        <span className="tag">今日 {todaySessions} 轮</span>
-      </div>
-      <div className="pomodoro-body">
-        <svg className="pomodoro-ring-svg" viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r="52" fill="none" stroke="var(--border-color, #e5e7eb)" strokeWidth="6" />
-          <circle cx="60" cy="60" r="52" fill="none" stroke={mode === "focus" ? "var(--theme-main, #b4232c)" : "var(--theme-accent, #c98a2c)"} strokeWidth="6" strokeDasharray={327 * progress / 100 + " 327"} strokeLinecap="round" transform="rotate(-90 60 60)" />
-          <text x="60" y="56" textAnchor="middle" dominantBaseline="middle" fontSize="24" fontWeight="800" fill="currentColor">{String(minutes).padStart(2, "0")}:{String(secs).padStart(2, "0")}</text>
-          <text x="60" y="78" textAnchor="middle" dominantBaseline="middle" fontSize="9" fill="var(--muted-color, #888)">{mode === "focus" ? "专注" : "放松"}</text>
-        </svg>
-        <div className="pomodoro-controls">
-          <button className="chip-button" type="button" onClick={toggle}>{running ? "暂停" : "开始"}</button>
-          <button className="chip-button chip-button-ghost" type="button" onClick={reset}>重置</button>
-        </div>
-        <div className="pomodoro-modes">
-          <button className={"mini-chip" + (mode === "focus" ? " active" : "")} type="button" onClick={() => switchMode("focus")}>专注 25</button>
-          <button className={"mini-chip" + (mode === "break" ? " active" : "")} type="button" onClick={() => switchMode("break")}>休息 5</button>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-
 const newsTabs = [
   { id: "weibo", label: "微博热搜", icon: "flame" },
   { id: "bilibili", label: "B站热搜", icon: "screen" },
@@ -1974,6 +1883,14 @@ function normalizeMarketQuote(quote) {
   return { ...quote, name: mappedName || (brokenName ? quote.symbol : name) };
 }
 
+function formatMarketAmount(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return "--";
+  if (amount >= 100000000) return `${(amount / 100000000).toFixed(1)}亿`;
+  if (amount >= 10000) return `${(amount / 10000).toFixed(1)}万`;
+  return amount.toLocaleString();
+}
+
 function tmdbMediaType(item) {
   if (item.tmdbMediaType) return String(item.tmdbMediaType).toLowerCase().startsWith("movie") ? "movie" : "tv";
   if (item.media_type) return String(item.media_type).toLowerCase().startsWith("movie") ? "movie" : "tv";
@@ -2081,6 +1998,7 @@ function clearDeletedTmdbId(item) {
 function MarketBoard({ compact = false, onAssetsChange }) {
   const [quotes, setQuotes] = useState([]);
   const [status, setStatus] = useState("正在读取行情...");
+  const [loading, setLoading] = useState(true);
   const [stockInput, setStockInput] = useState("");
   const [stockMarket, setStockMarket] = useState("a");
 
@@ -2094,23 +2012,27 @@ function MarketBoard({ compact = false, onAssetsChange }) {
     if (!assets) {
       setQuotes([]);
       setStatus("暂无自选股票，添加后会显示在这里");
+      setLoading(false);
       return;
     }
     const cache = readStorage("marketCache", null);
     if (!force && cache?.version === marketCacheVersion && Date.now() - cache.savedAt < 60000) {
       setQuotes((cache.quotes || []).map(normalizeMarketQuote));
       setStatus(`缓存行情 · ${nowText(new Date(cache.savedAt))}`);
+      setLoading(false);
       return;
     }
 
+    setLoading(true);
     setStatus(force ? "正在刷新行情..." : "正在读取行情...");
     try {
       const response = await fetch(`/api/market-quotes?symbols=${encodeURIComponent(assets)}`);
       const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "行情读取失败");
       const nextQuotes = Array.isArray(data.quotes) ? data.quotes.map(normalizeMarketQuote) : [];
       setQuotes(nextQuotes);
       writeStorage("marketCache", { version: marketCacheVersion, savedAt: Date.now(), quotes: nextQuotes });
-      setStatus(`${nextQuotes.some((quote) => quote.source === "示例") ? "示例行情" : "行情已更新"} · ${nowText()}`);
+      setStatus(`${data.warning || "实时行情已更新"} · ${nowText()}`);
     } catch {
       if (cache?.quotes) {
         setQuotes(cache.quotes.map(normalizeMarketQuote));
@@ -2118,6 +2040,8 @@ function MarketBoard({ compact = false, onAssetsChange }) {
       } else {
         setStatus("行情暂时不可用");
       }
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -2163,15 +2087,26 @@ function MarketBoard({ compact = false, onAssetsChange }) {
     return () => clearInterval(timer);
   }, []);
 
+  const risingCount = quotes.filter((quote) => quote.changePercent > 0).length;
+  const fallingCount = quotes.filter((quote) => quote.changePercent < 0).length;
+  const averageChange = quotes.length ? quotes.reduce((sum, quote) => sum + Number(quote.changePercent || 0), 0) / quotes.length : 0;
+
   return (
     <section className={compact ? "market-panel compact" : "market-panel"}>
       <div className="panel-head">
         <div>
-          <h2>行情速览</h2>
-          <p>{status}</p>
+          <h2>自选行情</h2>
+          <p aria-live="polite">{status}</p>
         </div>
-        <button className="chip-button" type="button" onClick={() => loadQuotes(true)}>刷新</button>
+        <button className="chip-button" type="button" disabled={loading} onClick={() => loadQuotes(true)}>{loading ? "更新中" : "刷新行情"}</button>
       </div>
+      {!compact && quotes.length > 0 && (
+        <div className="market-breadth" aria-label={`自选股 ${quotes.length} 只，${risingCount} 只上涨，${fallingCount} 只下跌`}>
+          <div><span>自选</span><strong>{quotes.length}</strong><small>只</small></div>
+          <div><span>上涨 / 下跌</span><strong><b className="up">{risingCount}</b> / <b className="down">{fallingCount}</b></strong><small>平盘 {quotes.length - risingCount - fallingCount}</small></div>
+          <div><span>平均涨跌</span><strong className={averageChange > 0 ? "up" : averageChange < 0 ? "down" : "flat"}>{averageChange > 0 ? "+" : ""}{averageChange.toFixed(2)}%</strong><small>当前自选</small></div>
+        </div>
+      )}
       {!compact && (
         <form className="market-add-form" onSubmit={addStock}>
           <select value={stockMarket} onChange={(event) => setStockMarket(event.target.value)} aria-label="股票类型">
@@ -2189,10 +2124,19 @@ function MarketBoard({ compact = false, onAssetsChange }) {
           const changeClass = quote.changePercent > 0 ? "up" : quote.changePercent < 0 ? "down" : "flat";
           const sign = quote.changePercent > 0 ? "+" : "";
           return (
-            <div className={index === 0 ? "quote-row featured" : "quote-row"} key={quote.symbol}>
-              <div><strong>{quote.name || quote.symbol}</strong><span>{quote.symbol} · {quote.source || "实时"}</span></div>
-              <div className="quote-price"><strong>{quote.currency || ""}{Number(quote.price || 0).toFixed(2)}</strong><span className={changeClass}>{sign}{Number(quote.changePercent || 0).toFixed(2)}%</span></div>
-              {!compact && <button className="quote-delete market-delete" type="button" onClick={() => deleteStock(quote.symbol)}>删除</button>}
+            <div className="quote-row" key={quote.symbol}>
+              <div className="quote-identity"><span className="quote-market">{quote.market || (quote.symbol.startsWith("sh") || quote.symbol.startsWith("sz") || quote.symbol.startsWith("bj") ? "A股" : "行情")}</span><strong>{quote.name || quote.symbol}</strong><span>{quote.symbol.toUpperCase()} · {quote.source || "实时"}</span></div>
+              <div className="quote-price"><strong>{quote.currency || ""}{Number(quote.price || 0).toFixed(2)}</strong><span className={changeClass}>{sign}{Number(quote.change || 0).toFixed(2)} · {sign}{Number(quote.changePercent || 0).toFixed(2)}%</span></div>
+              {!compact && (
+                <div className="quote-metrics">
+                  <span><small>今开</small><b>{Number.isFinite(Number(quote.open)) ? Number(quote.open).toFixed(2) : "--"}</b></span>
+                  <span><small>最高</small><b>{Number.isFinite(Number(quote.high)) ? Number(quote.high).toFixed(2) : "--"}</b></span>
+                  <span><small>最低</small><b>{Number.isFinite(Number(quote.low)) ? Number(quote.low).toFixed(2) : "--"}</b></span>
+                  <span><small>成交额</small><b>{formatMarketAmount(quote.amount)}</b></span>
+                  <span><small>换手</small><b>{Number.isFinite(Number(quote.turnoverRate)) ? `${Number(quote.turnoverRate).toFixed(2)}%` : "--"}</b></span>
+                </div>
+              )}
+              {!compact && <button className="quote-delete market-delete" type="button" aria-label={`删除 ${quote.name || quote.symbol}`} onClick={() => deleteStock(quote.symbol)}>移除</button>}
             </div>
           );
         })}
@@ -3110,8 +3054,6 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
           ))}
         </div>
       </section>
-
-      <PomodoroTimer />
 
       <section className="arrange-card">
         <div className="panel-head">
