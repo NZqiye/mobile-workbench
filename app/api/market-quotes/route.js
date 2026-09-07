@@ -90,7 +90,12 @@ function parseGlobalFuture(symbol, fields) {
     name: symbolNames[symbol] || fields[13] || symbol,
     price: current,
     currency: "$",
+    change: current - previousClose,
     changePercent,
+    open: Number(fields[8]),
+    high: Number(fields[4]),
+    low: Number(fields[5]),
+    previousClose,
     updatedAt: fields[12] && fields[6] ? `${fields[12]}T${fields[6]}+08:00` : new Date().toISOString(),
     source: "新浪财经",
   };
