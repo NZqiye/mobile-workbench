@@ -13,7 +13,8 @@
     "@supabase/supabase-js": "^2.111.0",
     "next": "latest",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "stock-sdk": "^2.4.2"
   },
   "devDependencies": {
     "eslint": "latest",
