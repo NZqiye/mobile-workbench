@@ -919,7 +919,7 @@ select:focus-visible {
 .page-exercise .exercise-card .panel-head h2 { color: #8f1f2a; }
 .page-exercise .exercise-card .tag { color: #9f2630; background: #fff0ed; }
 .page-exercise .exercise-card .empty { color: #b33643; background: rgba(255, 248, 244, 0.92); }
-.exercise-type-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.exercise-type-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
 .exercise-type-grid button { display: grid; gap: 6px; justify-items: center; min-height: 72px; padding: 10px 6px; border: 0; border-radius: 14px; color: var(--muted); background: rgba(246, 239, 232, 0.88); font-weight: 900; }
 .exercise-type-grid button.active { color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); }
 .exercise-type-grid span { display: grid; place-items: center; width: 30px; height: 30px; font-size: 22px; line-height: 1; }
@@ -929,7 +929,56 @@ select:focus-visible {
 .exercise-form label { display: grid; gap: 5px; min-width: 0; }
 .exercise-form span { color: var(--muted); font-size: 12px; font-weight: 900; }
 .exercise-form input { height: 38px; padding: 0 10px; background: rgba(255, 255, 255, 0.9); }
+.exercise-form > small { grid-column: 1 / -1; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.exercise-calorie-preview { display: grid; align-content: center; gap: 3px; min-height: 38px; padding: 6px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.62); }
+.exercise-calorie-preview span { color: var(--muted); font-size: 12px; font-weight: 800; }
+.exercise-calorie-preview strong { color: var(--theme-main); font-size: 15px; }
+.exercise-calorie-preview small { color: var(--muted); font-size: 10px; line-height: 1.3; }
+.exercise-form-hint { grid-column: 1 / -1; }
 .exercise-form button { grid-column: span 2; min-height: 44px; border: 0; border-radius: 14px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-weight: 900; }
+.table-tennis-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 12px; border-radius: 12px; background: color-mix(in srgb, var(--theme-soft) 78%, #fff); font-size: 13px; }
+.table-tennis-summary strong { margin-right: auto; color: var(--theme-main); }
+.table-tennis-summary .win { color: #16845a; font-weight: 900; }
+.table-tennis-summary .loss { color: #bd3b46; font-weight: 900; }
+.table-tennis-card-note { margin: 4px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.table-tennis-scoreline { display: flex; align-items: baseline; gap: 7px; margin-right: auto; }
+.table-tennis-scoreline strong { margin: 0; font-size: 21px; line-height: 1; }
+.table-tennis-scoreline strong:first-child { color: #16845a; }
+.table-tennis-scoreline strong:last-child { color: #bd3b46; }
+.table-tennis-scoreline span { color: var(--muted); font-size: 14px; }
+.table-tennis-stat-item { display: grid; gap: 2px; min-width: 58px; padding-left: 12px; border-left: 1px solid rgba(117, 25, 35, 0.16); }
+.table-tennis-stat-item small { color: var(--muted); font-size: 10px; font-weight: 800; }
+.table-tennis-stat-item b { color: var(--theme-main); font-size: 15px; font-weight: 950; }
+.table-tennis-stat-item em { font-size: 10px; font-style: normal; font-weight: 800; }
+.table-tennis-week-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.table-tennis-week-head strong { color: var(--theme-main); font-size: 13px; }
+.table-tennis-week-head span { color: var(--muted); font-size: 11px; text-align: right; }
+.table-tennis-daily { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.table-tennis-daily > span { display: grid; gap: 3px; justify-items: center; min-width: 0; padding: 7px 2px; border-radius: 10px; background: color-mix(in srgb, var(--theme-soft) 64%, #fff); }
+.table-tennis-daily small { overflow: hidden; width: 100%; color: var(--muted); font-size: 9px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.table-tennis-daily strong,
+.table-tennis-daily em { font-size: 10px; font-style: normal; font-weight: 900; }
+.table-tennis-daily strong { color: #16845a; }
+.table-tennis-daily em { color: #bd3b46; }
+.table-tennis-match-list { display: grid; gap: 8px; }
+.table-tennis-list-label { color: var(--muted); font-size: 11px; font-weight: 900; }
+.table-tennis-match-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid rgba(234, 215, 208, 0.78); }
+.table-tennis-result-badge { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; font-size: 13px; font-weight: 950; }
+.table-tennis-match-row.result-win .table-tennis-result-badge { color: #176b4b; background: rgba(23, 107, 75, 0.12); }
+.table-tennis-match-row.result-loss .table-tennis-result-badge { color: #a02b36; background: rgba(160, 43, 54, 0.12); }
+.table-tennis-match-row.result-unknown .table-tennis-result-badge { color: var(--muted); background: rgba(107, 98, 94, 0.12); }
+.table-tennis-match-main { display: grid; gap: 3px; min-width: 0; }
+.table-tennis-match-main strong { overflow: hidden; color: #3d3530; font-size: 14px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+.table-tennis-match-main small { overflow: hidden; color: var(--muted); font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.table-tennis-match-row button { min-width: 48px; min-height: 30px; border: 0; border-radius: 15px; color: var(--theme-main); background: rgba(180, 35, 44, 0.1); font-size: 11px; font-weight: 900; }
+.table-tennis-entry-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 14px; background: color-mix(in srgb, var(--theme-soft) 74%, #fff); }
+.table-tennis-entry-head > div { display: grid; gap: 3px; }
+.table-tennis-entry-head strong { color: var(--theme-main); font-size: 14px; }
+.table-tennis-entry-head span { color: var(--muted); font-size: 11px; }
+.table-tennis-entry-mark { flex: 0 0 auto; padding: 5px 8px; border-radius: 999px; color: var(--theme-main); background: rgba(180, 35, 44, 0.1); font-size: 11px; font-weight: 900; }
+.table-tennis-score-preview { grid-column: 1 / -1; min-height: 28px; padding: 6px 10px; border-radius: 10px; color: var(--muted); background: rgba(246, 239, 232, 0.72); font-size: 11px; font-weight: 800; }
+.table-tennis-score-preview.is-win { color: #176b4b; background: rgba(23, 107, 75, 0.12); }
+.table-tennis-score-preview.is-loss { color: #a02b36; background: rgba(160, 43, 54, 0.12); }
 .exercise-log-list { display: grid; gap: 10px; }
 .exercise-log-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid rgba(234, 215, 208, 0.78); }
 .exercise-log-icon { display: grid; place-items: center; width: 34px; height: 34px; font-size: 28px; line-height: 1; flex-shrink: 0; }
@@ -1039,10 +1088,67 @@ select:focus-visible {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.18));
 }
 
-.page-exercise .exercise-form input {
+.page-exercise .exercise-form input,
+.page-exercise .exercise-calorie-preview {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.08);
+}
+
+.page-exercise .exercise-calorie-preview span,
+.page-exercise .exercise-calorie-preview small,
+.page-exercise .exercise-form-hint {
+  color: color-mix(in srgb, #fff 62%, var(--theme-main));
+}
+
+.page-exercise .exercise-calorie-preview strong,
+.page-exercise .table-tennis-summary strong {
+  color: color-mix(in srgb, #fff 92%, var(--theme-accent));
+}
+
+.page-exercise .table-tennis-summary {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.page-exercise .table-tennis-daily > span {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.page-exercise .table-tennis-daily small {
+  color: color-mix(in srgb, #fff 62%, var(--theme-main));
+}
+
+.page-exercise .table-tennis-card-note,
+.page-exercise .table-tennis-week-head span,
+.page-exercise .table-tennis-match-main small,
+.page-exercise .table-tennis-stat-item small,
+.page-exercise .table-tennis-scoreline span {
+  color: color-mix(in srgb, #fff 62%, var(--theme-main));
+}
+
+.page-exercise .table-tennis-match-row,
+.page-exercise .table-tennis-stat-item {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.page-exercise .table-tennis-match-main strong,
+.page-exercise .table-tennis-entry-head strong {
+  color: color-mix(in srgb, #fff 90%, var(--theme-main));
+}
+
+.page-exercise .table-tennis-list-label {
+  color: color-mix(in srgb, #fff 62%, var(--theme-main));
+}
+
+.page-exercise .table-tennis-entry-head,
+.page-exercise .table-tennis-score-preview {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.page-exercise .table-tennis-entry-head span,
+.page-exercise .table-tennis-entry-mark {
+  color: color-mix(in srgb, #fff 68%, var(--theme-main));
 }
 
 .page-exercise .exercise-form input::placeholder {
@@ -1468,6 +1574,14 @@ select:focus-visible {
   .weight-form { grid-template-columns: 1fr; }
   .weight-form button { width: 100%; }
   .weight-trend { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .exercise-type-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .exercise-form { grid-template-columns: 1fr; }
+  .exercise-form button,
+  .exercise-form > small { grid-column: 1; }
+  .table-tennis-summary { display: grid; grid-template-columns: minmax(0, 1fr) repeat(2, auto); gap: 8px; }
+  .table-tennis-daily { overflow-x: auto; grid-template-columns: repeat(7, minmax(56px, 1fr)); padding-bottom: 2px; }
+  .table-tennis-week-head { align-items: start; }
+  .table-tennis-week-head span { max-width: 62%; }
   .quick-form, .filter-panel, .quote-row, .timeline-row { grid-template-columns: 1fr; }
   .market-add-form { grid-template-columns: 1fr; }
   .market-delete { justify-self: start; }
@@ -4894,6 +5008,8 @@ textarea::placeholder {
 }
 
 @media (max-width: 520px) {
+  .phone-shell.mobile-shell .exercise-type-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
   .phone-shell.mobile-shell .phone-status strong {
     grid-column: 2;
     justify-self: center;

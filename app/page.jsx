@@ -114,7 +114,7 @@ const pageDescriptions = {
   diet: "每日喝水、饮食热量和最近趋势",
   news: "微博、B站、抖音等热榜集中查看",
   consultations: "观影清单、想法和资料整理",
-  exercise: "记录每日运动项目、时长和消耗",
+  exercise: "记录跑步、球类训练与每日对战战绩",
   settings: "账号同步、备份恢复和自选配置",
 };
 const defaultPetSupplies = { bone: 0, water: 0, toy: 0, stick: 0 };
@@ -4654,14 +4654,83 @@ function DietTracker({ records, waterTarget, onAddWater, onAddMeal, onDelete, on
 
 const exerciseTypes = [
   { id: 'running', label: '跑步', icon: '/assets-icons/thiings/sport/treadmill.webp', calPerMin: 12 },
-  { id: 'badminton', label: '羽毛球', icon: '/assets-icons/thiings/sport/badminton-shuttlecock.webp', calPerMin: 8 },
-  { id: 'swimming', label: '游泳', icon: '/assets-icons/thiings/sport/swimming.webp', calPerMin: 10 },
-  { id: 'cycling', label: '骑行', icon: '/assets-icons/thiings/sport/bicycle.webp', calPerMin: 9 },
-  { id: 'yoga', label: '瑜伽', icon: '/assets-icons/thiings/sport/yoga-mat.webp', calPerMin: 5 },
-  { id: 'gym', label: '健身', icon: '/assets-icons/thiings/sport/dumbbell.webp', calPerMin: 8 },
   { id: 'walking', label: '散步', icon: '/assets-icons/thiings/sport/walking.webp', calPerMin: 4 },
-  { id: 'other', label: '乒乓球', icon: '/assets-icons/thiings/sport/table-tennis-paddle.webp', calPerMin: 6 },
+  { id: 'gym', label: '健身', icon: '/assets-icons/thiings/sport/dumbbell.webp', calPerMin: 8 },
+  { id: 'table-tennis', label: '乒乓球', icon: '/assets-icons/thiings/sport/table-tennis-paddle.webp', calPerMin: 6 },
+  { id: 'badminton', label: '羽毛球', icon: '/assets-icons/thiings/sport/badminton-shuttlecock.webp', calPerMin: 8 },
 ];
+
+const legacyExerciseTypes = {
+  swimming: { id: 'swimming', label: '游泳', icon: '/assets-icons/thiings/sport/swimming.webp', calPerMin: 10 },
+  cycling: { id: 'cycling', label: '骑行', icon: '/assets-icons/thiings/sport/bicycle.webp', calPerMin: 9 },
+  yoga: { id: 'yoga', label: '瑜伽', icon: '/assets-icons/thiings/sport/yoga-mat.webp', calPerMin: 5 },
+};
+
+function exerciseTypeForRecord(record) {
+  if (record?.type === 'other') return exerciseTypes.find((item) => item.id === 'table-tennis');
+  const type = exerciseTypes.find((item) => item.id === record?.type);
+  if (type) return type;
+  return legacyExerciseTypes[record?.type] || {
+    id: record?.type || 'legacy',
+    label: record?.label || '其他运动',
+    icon: record?.icon || '/assets-icons/thiings/sport/gold-medal.webp',
+    calPerMin: 6,
+  };
+}
+
+function isTableTennisRecord(record) {
+  return record?.type === 'other' || record?.type === 'table-tennis';
+}
+
+function isTableTennisType(type) {
+  return type === 'other' || type === 'table-tennis';
+}
+
+function parseTableTennisScore(value) {
+  const match = String(value || '').trim().match(/^(\d+)\s*[:：-]\s*(\d+)$/);
+  if (!match) return null;
+  const own = Number(match[1]);
+  const opponent = Number(match[2]);
+  if (!Number.isFinite(own) || !Number.isFinite(opponent)) return null;
+  if (own === opponent) return null;
+  return {
+    own,
+    opponent,
+    result: own > opponent ? 'win' : 'loss',
+    score: `${own}:${opponent}`,
+  };
+}
+
+function exerciseResultLabel(result) {
+  return result === 'win' ? '胜' : result === 'loss' ? '负' : '';
+}
+
+function tableTennisStats(records) {
+  return (Array.isArray(records) ? records : []).reduce((stats, item) => {
+    if (!isTableTennisRecord(item)) return stats;
+    const result = item.result || parseTableTennisScore(item.score)?.result;
+    if (result === 'win') stats.wins += 1;
+    if (result === 'loss') stats.losses += 1;
+    return stats;
+  }, { wins: 0, losses: 0 });
+}
+
+function exerciseRecordMeta(item) {
+  const type = exerciseTypeForRecord(item);
+  const parts = [];
+  if (Number(item?.distanceKm) > 0) parts.push(`${item.distanceKm} km`);
+  if (Number(item?.duration) > 0) parts.push(`${item.duration} 分钟`);
+  if (isTableTennisRecord(item)) {
+    if (item.opponent) parts.push(`对手：${item.opponent}`);
+    if (item.score) {
+      const result = item.result || parseTableTennisScore(item.score)?.result;
+      parts.push(`比分：${item.score}${exerciseResultLabel(result) ? `（${exerciseResultLabel(result)}）` : ''}`);
+    }
+  }
+  if (item?.calories != null && item.calories !== '') parts.push(`${item.calories} kcal`);
+  if (item?.time) parts.push(item.time);
+  return parts.join(' · ') || type.label;
+}
 
 function ExerciseIcon({ src }) {
   return String(src || "").startsWith("/") ? <img src={src} alt="" loading="lazy" /> : src;
@@ -4674,11 +4743,29 @@ function formatWeight(value) {
 
 function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight, onDeleteWeight }) {
   const [exerciseType, setExerciseType] = useState('running');
+  const [distanceKm, setDistanceKm] = useState('');
   const [duration, setDuration] = useState('');
   const [calories, setCalories] = useState('');
+  const [opponent, setOpponent] = useState('');
+  const [score, setScore] = useState('');
+  const [exerciseDate, setExerciseDate] = useState(todayKey());
   const [weightInput, setWeightInput] = useState('');
   const [weightDate, setWeightDate] = useState(todayKey());
+  const selectedExerciseType = exerciseTypes.find((item) => item.id === exerciseType) || legacyExerciseTypes[exerciseType];
+  const distanceValue = Number(distanceKm);
+  const durationValue = Number(duration);
+  const estimatedCalories = Number.isFinite(durationValue) && durationValue > 0
+    ? Math.round(durationValue * (selectedExerciseType?.calPerMin || 6))
+    : 0;
+  const liveTableTennisScore = isTableTennisType(exerciseType) ? parseTableTennisScore(score) : null;
   const todayRecords = records.filter((item) => item.date === todayKey());
+  const todayTableTennisRecords = todayRecords.filter(isTableTennisRecord);
+  const todayOtherExerciseRecords = todayRecords.filter((item) => !isTableTennisRecord(item));
+  const todayMatchStats = tableTennisStats(todayRecords);
+  const todayMatchCount = todayTableTennisRecords.length;
+  const todayMatchMinutes = todayTableTennisRecords.reduce((sum, item) => sum + Number(item.duration || 0), 0);
+  const todayDecidedMatches = todayMatchStats.wins + todayMatchStats.losses;
+  const todayWinRate = todayDecidedMatches ? Math.round((todayMatchStats.wins / todayDecidedMatches) * 100) : 0;
   const selectedWeightRecord = [...weightRecords]
     .filter((item) => item.date === weightDate)
     .sort((a, b) => itemUpdatedAt(b) - itemUpdatedAt(a))[0];
@@ -4692,15 +4779,27 @@ function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight,
     const dk = todayKey(date);
     const dayRecords = records.filter((item) => item.date === dk);
     const dayWeightRecords = weightRecords.filter((item) => item.date === dk);
+    const matchStats = tableTennisStats(dayRecords);
     return {
       dateKey: dk,
       label: index === 6 ? '今天' : `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`,
       minutes: dayRecords.reduce((s, i) => s + Number(i.duration || 0), 0),
       calories: dayRecords.reduce((s, i) => s + Number(i.calories || 0), 0),
       count: dayRecords.length,
+      matchWins: matchStats.wins,
+      matchLosses: matchStats.losses,
+      matchCount: dayRecords.filter(isTableTennisRecord).length,
       weightRecord: [...dayWeightRecords].sort((a, b) => itemUpdatedAt(b) - itemUpdatedAt(a))[0],
     };
   });
+  const weekDateKeys = new Set(days.map((day) => day.dateKey));
+  const weekTableTennisRecords = records
+    .filter((item) => weekDateKeys.has(item.date) && isTableTennisRecord(item))
+    .sort((a, b) => `${b.date} ${b.time || ''}`.localeCompare(`${a.date} ${a.time || ''}`));
+  const weekMatchStats = tableTennisStats(weekTableTennisRecords);
+  const weekMatchCount = weekTableTennisRecords.length;
+  const weekDecidedMatches = weekMatchStats.wins + weekMatchStats.losses;
+  const weekWinRate = weekDecidedMatches ? Math.round((weekMatchStats.wins / weekDecidedMatches) * 100) : 0;
   const maxMinutes = Math.max(1, ...days.map((d) => d.minutes));
   const weekWeights = days.map((day) => Number(day.weightRecord?.weight)).filter((weight) => Number.isFinite(weight) && weight > 0);
   const minWeekWeight = Math.min(...weekWeights);
@@ -4715,13 +4814,52 @@ function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight,
 
   function submitExercise(event) {
     event.preventDefault();
-    const type = exerciseTypes.find((t) => t.id === exerciseType);
+    const type = selectedExerciseType || exerciseTypes[0];
     const dur = Number(duration) || 0;
     if (dur <= 0) return;
-    const cal = Number(calories) || Math.round(dur * (type?.calPerMin || 6));
-    onAdd({ type: exerciseType, label: type?.label || exerciseType, icon: type?.icon || '/assets-icons/thiings/sport/gold-medal.webp', duration: dur, calories: cal });
+    if ((exerciseType === 'running' || exerciseType === 'walking') && (!Number.isFinite(distanceValue) || distanceValue <= 0)) return;
+    const parsedScore = isTableTennisType(exerciseType) ? parseTableTennisScore(score) : null;
+    if (isTableTennisType(exerciseType) && !parsedScore) {
+      const scoreInput = event.currentTarget.elements.score;
+      scoreInput?.setCustomValidity('请填写不同的双方比分，例如 3:1');
+      scoreInput?.reportValidity();
+      return;
+    }
+    const cal = exerciseType === 'badminton'
+      ? Math.round(dur * (type?.calPerMin || 8))
+      : Number(calories) > 0 ? Number(calories) : estimatedCalories || Math.round(dur * (type?.calPerMin || 6));
+    const item = {
+      type: exerciseType,
+      label: type?.label || exerciseType,
+      icon: type?.icon || '/assets-icons/thiings/sport/gold-medal.webp',
+      duration: dur,
+      calories: cal,
+    };
+    if (isTableTennisType(exerciseType)) item.date = exerciseDate || todayKey();
+    if (exerciseType === 'running' || exerciseType === 'walking') {
+      if (Number.isFinite(distanceValue) && distanceValue > 0) item.distanceKm = Math.round(distanceValue * 10) / 10;
+    }
+    if (isTableTennisType(exerciseType)) {
+      item.opponent = String(opponent || '').trim();
+      item.score = parsedScore.score;
+      item.result = parsedScore.result;
+    }
+    onAdd(item);
+    setDistanceKm('');
     setDuration('');
     setCalories('');
+    setOpponent('');
+    setScore('');
+    setExerciseDate(todayKey());
+  }
+
+  function selectExerciseType(typeId) {
+    setExerciseType(typeId);
+    setDistanceKm('');
+    setDuration('');
+    setCalories('');
+    setOpponent('');
+    setScore('');
   }
 
   function submitWeight(event) {
@@ -4814,48 +4952,140 @@ function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight,
         </div>
       </section>
 
-      <section className="exercise-card">
+      <section className={`exercise-card exercise-entry-card ${isTableTennisType(exerciseType) ? 'table-tennis-entry-card' : ''}`}>
         <div className="panel-head">
           <h2>{'记录运动'}</h2>
           <span className="tag">{'每次运动获得一个小蛋糕'} {'🍰'}</span>
         </div>
         <div className="exercise-type-grid">
           {exerciseTypes.map((t) => (
-            <button className={exerciseType === t.id ? 'active' : ''} type="button" key={t.id} onClick={() => setExerciseType(t.id)}>
+            <button className={exerciseType === t.id ? 'active' : ''} type="button" key={t.id} onClick={() => selectExerciseType(t.id)}>
               <span><ExerciseIcon src={t.icon} /></span>
               <strong>{t.label}</strong>
             </button>
           ))}
         </div>
+        {isTableTennisType(exerciseType) && (
+          <div className="table-tennis-entry-head">
+            <div>
+              <strong>记录一场对局</strong>
+              <span>填对手、比分和时长，系统自动归类胜负。</span>
+            </div>
+            <span className="table-tennis-entry-mark">乒乓球</span>
+          </div>
+        )}
         <form className="exercise-form" onSubmit={submitExercise}>
+          {isTableTennisType(exerciseType) && (
+            <label>
+              <span>对战日期</span>
+              <input name="exerciseDate" type="date" value={exerciseDate} max={todayKey()} onChange={(e) => setExerciseDate(e.target.value)} required />
+            </label>
+          )}
+          {(exerciseType === 'running' || exerciseType === 'walking') && (
+            <label>
+              <span>{`${selectedExerciseType.label}公里`}</span>
+              <input name="distanceKm" type="number" min="0.1" step="0.1" inputMode="decimal" value={distanceKm} onChange={(e) => setDistanceKm(e.target.value)} placeholder="如 5.0" required />
+            </label>
+          )}
           <label>
-            <span>{'运动时长(分钟)'}</span>
-            <input name="duration" type="number" min="1" inputMode="numeric" value={duration} onChange={(e) => setDuration(e.target.value)} placeholder={'如 30'} />
+            <span>{exerciseType === 'badminton' ? '打羽毛球时间(分钟)' : isTableTennisType(exerciseType) ? '乒乓球时间(分钟)' : '运动时长(分钟)'}</span>
+            <input name="duration" type="number" min="1" inputMode="numeric" value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="如 30" required />
           </label>
-          <label>
-            <span>{'消耗热量(kcal)，可选'}</span>
-            <input name="calories" type="number" min="0" inputMode="numeric" value={calories} onChange={(e) => setCalories(e.target.value)} placeholder={'自动估算'} />
-          </label>
+          {exerciseType === 'badminton' ? (
+            <div className="exercise-calorie-preview" aria-live="polite">
+              <span>自动消耗热量</span>
+              <strong>{estimatedCalories || '--'} kcal</strong>
+              <small>按 {selectedExerciseType.calPerMin} kcal/分钟估算</small>
+            </div>
+          ) : isTableTennisType(exerciseType) ? (
+            <>
+              <label>
+                <span>和谁对打</span>
+                <input name="opponent" type="text" value={opponent} onChange={(e) => setOpponent(e.target.value)} placeholder="如：小王" required />
+              </label>
+              <label>
+                <span>比分（我方:对方）</span>
+                <input name="score" type="text" value={score} onChange={(e) => { e.target.setCustomValidity(''); setScore(e.target.value); }} placeholder="如 3:1" pattern="^\s*\d+\s*[:：-]\s*\d+\s*$" required />
+              </label>
+              <div className={`table-tennis-score-preview ${liveTableTennisScore ? `is-${liveTableTennisScore.result}` : ''}`} aria-live="polite">
+                {liveTableTennisScore ? `本场记为：${exerciseResultLabel(liveTableTennisScore.result)}` : '比分示例：3:1（前者填我方）'}
+              </div>
+            </>
+          ) : (
+            <label>
+              <span>{'消耗热量(kcal)，可选'}</span>
+              <input name="calories" type="number" min="0" inputMode="numeric" value={calories} onChange={(e) => setCalories(e.target.value)} placeholder={estimatedCalories ? `自动估算 ${estimatedCalories}` : '自动估算'} />
+            </label>
+          )}
+          {isTableTennisType(exerciseType) && <small className="exercise-form-hint">输入比分后自动判断胜负，记录会计入今日战绩。</small>}
           <button type="submit">{'记录今日运动'}</button>
         </form>
       </section>
 
-      <section className="exercise-card">
+      <section className="exercise-card table-tennis-card">
         <div className="panel-head">
-          <h2>{'今日运动记录'}</h2>
-          <span className="tag">{todayRecords.length} {'条'}</span>
+          <div>
+            <h2>乒乓球战绩</h2>
+            <p className="table-tennis-card-note">每场记一条，自动汇总当天战绩。</p>
+          </div>
+          <span className="tag">今日 {todayMatchCount} 场</span>
+        </div>
+        <div className="table-tennis-summary" aria-label="今日乒乓球战绩">
+          <div className="table-tennis-scoreline">
+            <strong>{todayMatchStats.wins} 胜</strong>
+            <span>/</span>
+            <strong>{todayMatchStats.losses} 负</strong>
+          </div>
+          <div className="table-tennis-stat-item"><small>胜率</small><b>{todayDecidedMatches ? `${todayWinRate}%` : '—'}</b></div>
+          <div className="table-tennis-stat-item"><small>总时长</small><b>{todayMatchMinutes}<em> 分钟</em></b></div>
+        </div>
+        <div className="table-tennis-week-head">
+          <strong>近 7 天</strong>
+          <span>{weekMatchCount} 场 · {weekMatchStats.wins} 胜 {weekMatchStats.losses} 负 · 胜率 {weekDecidedMatches ? `${weekWinRate}%` : '—'}</span>
+        </div>
+        <div className="table-tennis-daily" aria-label="最近七天乒乓球胜负">
+          {days.map((day) => (
+            <span key={day.dateKey}>
+              <small>{day.label}</small>
+              <strong>{day.matchCount}场</strong>
+              <em>{day.matchWins}胜 · {day.matchLosses}负</em>
+            </span>
+          ))}
+        </div>
+        <div className="table-tennis-match-list">
+          <div className="table-tennis-list-label">近 7 天对局明细</div>
+          {weekTableTennisRecords.length === 0 && <p className="empty">近 7 天还没有对战记录，记下第一场吧。</p>}
+          {weekTableTennisRecords.map((item) => {
+            const result = item.result || parseTableTennisScore(item.score)?.result;
+            return (
+              <div className={`table-tennis-match-row result-${result || 'unknown'}`} key={item.id}>
+                <span className="table-tennis-result-badge">{exerciseResultLabel(result) || '—'}</span>
+                <div className="table-tennis-match-main">
+                  <strong>{item.opponent ? `对 ${item.opponent}` : '未填写对手'}</strong>
+                  <small>{item.date === todayKey() ? '今天' : String(item.date || '').slice(5).replace('-', '/')} · {item.score ? `比分 ${item.score}` : '未填写比分'} · {item.duration || 0} 分钟 · {item.time || ''}</small>
+                </div>
+                <button type="button" onClick={() => onDelete(item.id)}>删除</button>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="exercise-card exercise-other-log-card">
+        <div className="panel-head">
+          <h2>今日其他运动</h2>
+          <span className="tag">{todayOtherExerciseRecords.length} 条</span>
         </div>
         <div className="exercise-log-list">
-          {todayRecords.length === 0 && <p className="empty">{'今天还没有运动记录，快去动起来！'}</p>}
-          {todayRecords.map((item) => (
+          {todayOtherExerciseRecords.length === 0 && <p className="empty">跑步、散步、健身和羽毛球会显示在这里。</p>}
+          {todayOtherExerciseRecords.map((item) => (
             <div className="exercise-log-row" key={item.id}>
               <span className="exercise-log-icon"><ExerciseIcon src={item.icon} /></span>
               <div className="exercise-log-info">
-                <strong>{item.label}</strong>
-                <small>{item.duration} {'分钟'} {'·'} {item.calories} kcal {'·'} {item.time}</small>
+                <strong>{exerciseTypeForRecord(item).label}</strong>
+                <small>{exerciseRecordMeta(item)}</small>
               </div>
-              <span className="exercise-log-cake">{'🍰'}</span>
-              <button type="button" onClick={() => onDelete(item.id)}>{'删除'}</button>
+              <button type="button" onClick={() => onDelete(item.id)}>删除</button>
             </div>
           ))}
         </div>
@@ -5563,8 +5793,8 @@ export default function Workbench() {
   function addExercise(item) {
     const next = [{
       id: crypto.randomUUID(),
-      date: todayKey(),
-      time: clock.slice(0, 5),
+      date: item.date || todayKey(),
+      time: item.time || clock.slice(0, 5),
       ...item,
     }, ...exerciseRecords];
     saveExerciseRecords(next);
