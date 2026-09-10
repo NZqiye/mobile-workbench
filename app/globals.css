@@ -5072,10 +5072,58 @@ textarea::placeholder {
     justify-content: stretch;
   }
 
-  .phone-shell.mobile-shell .recommendation-menu,
-  .phone-shell.mobile-shell .recommendation-menu-trigger {
+.phone-shell.mobile-shell .recommendation-menu,
+.phone-shell.mobile-shell .recommendation-menu-trigger {
+  min-width: 0;
+  width: 100%;
+}
+}
+
+@media (max-width: 520px) {
+  .phone-shell.mobile-shell .table-tennis-summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 6px;
+    padding: 8px 9px;
+    align-items: center;
+  }
+
+  .phone-shell.mobile-shell .table-tennis-scoreline {
     min-width: 0;
-    width: 100%;
+    gap: 4px;
+  }
+
+  .phone-shell.mobile-shell .table-tennis-scoreline strong {
+    font-size: 18px;
+    white-space: nowrap;
+  }
+
+  .phone-shell.mobile-shell .table-tennis-scoreline span { font-size: 12px; }
+
+  .phone-shell.mobile-shell .table-tennis-stat-item {
+    min-width: 42px;
+    padding-left: 6px;
+  }
+
+  .phone-shell.mobile-shell .table-tennis-stat-item small {
+    font-size: 9px;
+    white-space: nowrap;
+  }
+
+  .phone-shell.mobile-shell .table-tennis-stat-item b {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .phone-shell.mobile-shell .table-tennis-stat-item em { font-size: 8px; }
+  .phone-shell.mobile-shell .table-tennis-daily { gap: 4px; }
+  .phone-shell.mobile-shell .table-tennis-daily > span { gap: 2px; padding: 6px 1px; }
+  .phone-shell.mobile-shell .table-tennis-daily small { font-size: 8px; }
+  .phone-shell.mobile-shell .table-tennis-daily strong,
+  .phone-shell.mobile-shell .table-tennis-daily em {
+    font-size: 8px;
+    letter-spacing: -0.2px;
+    white-space: nowrap;
   }
 }
 

@@ -5188,7 +5188,7 @@ function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight,
             <span key={day.dateKey}>
               <small>{day.label}</small>
               <strong>{day.matchCount}场</strong>
-              <em>{day.matchWins}胜 · {day.matchLosses}负</em>
+              <em>胜{day.matchWins}负{day.matchLosses}</em>
             </span>
           ))}
         </div>
