@@ -114,6 +114,7 @@ const pageDescriptions = {
   diet: "每日喝水、饮食热量和最近趋势",
   news: "微博、B站、抖音等热榜集中查看",
   consultations: "观影清单、想法和资料整理",
+  assets: "管理个人物品、会员订阅和使用周期",
   exercise: "记录跑步、球类训练与每日对战战绩",
   settings: "账号同步、备份恢复和自选配置",
 };
@@ -235,7 +236,7 @@ const marketSymbolNames = {
 };
 const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
 const defaultChineseHolidaysSeedKey = "defaultChineseHolidays2026Seeded";
-const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins", "assetRecords", "exerciseRecords", "weightRecords"];
+const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins", "assetRecords", "subscriptionRecords", "exerciseRecords", "weightRecords"];
 const marketCacheVersion = 5;
 const fundCacheVersion = 2;
 const indexTrackerCacheVersion = 2;
@@ -946,7 +947,7 @@ function touchItems(items, updatedAt = Date.now()) {
   ));
 }
 
-function mergeById(localItems, cloudItems) {
+function mergeById(localItems, cloudItems, preferCloudOnTie = false) {
   const merged = new Map();
   if (Array.isArray(cloudItems)) {
     cloudItems.forEach((item) => {
@@ -958,7 +959,9 @@ function mergeById(localItems, cloudItems) {
     localItems.forEach((item) => {
       const id = item.id || crypto.randomUUID();
       const current = merged.get(id);
-      if (!current || itemUpdatedAt(item) >= itemUpdatedAt(current)) {
+      const localUpdatedAt = itemUpdatedAt(item);
+      const currentUpdatedAt = itemUpdatedAt(current);
+      if (!current || localUpdatedAt > currentUpdatedAt || (!preferCloudOnTie && localUpdatedAt === currentUpdatedAt)) {
         merged.set(id, { ...item, id });
       }
     });
@@ -987,7 +990,7 @@ function mergeDeletedIds(name, cloud) {
 
 function mergeSyncedItems(name, localItems, cloudItems, cloud) {
   const deletedIds = new Set(mergeDeletedIds(name, cloud));
-  return mergeById(localItems, cloudItems)
+  return mergeById(localItems, cloudItems, name === "assetRecords")
     .filter((item) => !deletedIds.has(item.id))
     .map((item) => ({ ...item, updatedAt: itemUpdatedAt(item) }));
 }
@@ -1061,6 +1064,7 @@ function mergeCloudWithLocal(cloud) {
     consultations: dedupeConsultations(mergeSyncedItems("consultations", readStorage("consultations", []), cloud.consultations, cloud)),
     watchCheckins: mergeSyncedItems("watchCheckins", readStorage("watchCheckins", []), cloud.watchCheckins, cloud),
     assetRecords: mergeSyncedItems("assetRecords", readAssetRecords(), cloudAssetRecords(cloud), cloud),
+    subscriptionRecords: mergeSyncedItems("subscriptionRecords", readStorage("subscriptionRecords", []), cloud.subscriptionRecords, cloud),
     dietRecords: mergeSyncedItems("dietRecords", readStorage("dietRecords", []), cloud.dietRecords, cloud),
     exerciseRecords: mergeSyncedItems("exerciseRecords", readStorage("exerciseRecords", []), cloud.exerciseRecords, cloud),
     weightRecords: mergeSyncedItems("weightRecords", readStorage("weightRecords", []), cloud.weightRecords, cloud),
@@ -3521,6 +3525,7 @@ const assetIconImageMap = {
 function AssetIcon({ name, size = 20 }) {
   const [err, setErr] = useState(false);
   const src = thiingsIconByKey[name] || assetIconImageMap[name];
+  useEffect(() => setErr(false), [name]);
   if (!src || err) {
     return (
       <span className="asset-icon-fallback" style={{ width: size, height: size, fontSize: Math.max(12, Math.floor(size * 0.55)) }}>
@@ -4678,6 +4683,141 @@ function exerciseTypeForRecord(record) {
   };
 }
 
+function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [title, setTitle] = useState("");
+  const [price, setPrice] = useState("");
+  const [purchaseType, setPurchaseType] = useState("订阅会员");
+  const [purchaseDate, setPurchaseDate] = useState(todayKey());
+  const [billingCycle, setBillingCycle] = useState("每月");
+  const [endDate, setEndDate] = useState("");
+  const records = Array.isArray(items) ? items : [];
+  const subscriptionCount = records.filter((item) => item.purchaseType === "订阅会员").length;
+  const permanentCount = records.filter((item) => item.purchaseType === "永久会员").length;
+
+  function resetForm() {
+    setShowForm(false);
+    setEditingId(null);
+    setTitle("");
+    setPrice("");
+    setPurchaseType("订阅会员");
+    setPurchaseDate(todayKey());
+    setBillingCycle("每月");
+    setEndDate("");
+  }
+
+  function startEdit(item) {
+    setEditingId(item.id);
+    setTitle(item.title || "");
+    setPrice(item.price == null ? "" : String(item.price));
+    setPurchaseType(item.purchaseType || "订阅会员");
+    setPurchaseDate(item.purchaseDate || todayKey());
+    setBillingCycle(item.billingCycle || "每月");
+    setEndDate(item.endDate || "");
+    setShowForm(true);
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    const values = {
+      title: title.trim(),
+      price: Number(price) || 0,
+      purchaseType,
+      purchaseDate,
+      billingCycle: purchaseType === "订阅会员" ? billingCycle : "",
+      endDate: purchaseType === "订阅会员" ? endDate : "",
+    };
+    if (editingId) onUpdate(editingId, values);
+    else onAdd(values);
+    resetForm();
+  }
+
+  function subscriptionStatus(item) {
+    if (item.purchaseType === "永久会员") return "永久有效";
+    if (!item.endDate) return "未设置结束日期";
+    const days = Math.ceil((new Date(`${item.endDate}T23:59:59`) - new Date()) / 86400000);
+    if (days < 0) return "已结束";
+    if (days === 0) return "今天结束";
+    return `剩余 ${days} 天`;
+  }
+
+  return (
+    <section className="subscription-board">
+      <div className="subscription-summary">
+        <div><span>订阅会员</span><strong>{subscriptionCount}</strong><small>项</small></div>
+        <div><span>永久会员</span><strong>{permanentCount}</strong><small>项</small></div>
+        <div><span>累计记录</span><strong>{records.length}</strong><small>项</small></div>
+      </div>
+      <button className="asset-add-btn" type="button" onClick={() => { resetForm(); setShowForm(true); }}>+ 添加订阅记录</button>
+      {showForm && (
+        <form className="asset-form subscription-form" onSubmit={handleSubmit}>
+          <div className="asset-form-head">
+            <h3>{editingId ? "编辑订阅" : "添加订阅"}</h3>
+            <button type="button" onClick={resetForm}>取消</button>
+          </div>
+          <label className="subscription-field">
+            <span>标题</span>
+            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：视频会员" required />
+          </label>
+          <label className="subscription-field">
+            <span>价格</span>
+            <input value={price} onChange={(event) => setPrice(event.target.value)} type="number" min="0" step="0.01" inputMode="decimal" placeholder="请输入价格" required />
+          </label>
+          <div className="asset-form-row">
+            <label className="subscription-field">
+              <span>购买类型</span>
+              <select value={purchaseType} onChange={(event) => setPurchaseType(event.target.value)}>
+                <option value="订阅会员">订阅会员</option>
+                <option value="永久会员">永久会员</option>
+              </select>
+            </label>
+            <label className="subscription-field">
+              <span>购买日期</span>
+              <input value={purchaseDate} onChange={(event) => setPurchaseDate(event.target.value)} type="date" required />
+            </label>
+          </div>
+          {purchaseType === "订阅会员" && (
+            <div className="asset-form-row">
+              <label className="subscription-field">
+                <span>购买周期</span>
+                <select value={billingCycle} onChange={(event) => setBillingCycle(event.target.value)}>
+                  <option value="每月">每月</option>
+                  <option value="每季">每季</option>
+                  <option value="每年">每年</option>
+                </select>
+              </label>
+              <label className="subscription-field">
+                <span>订阅结束日期</span>
+                <input value={endDate} onChange={(event) => setEndDate(event.target.value)} type="date" min={purchaseDate} required />
+              </label>
+            </div>
+          )}
+          <button type="submit" className="asset-submit">{editingId ? "保存修改" : "保存订阅"}</button>
+        </form>
+      )}
+      <div className="subscription-list">
+        {records.length === 0 && <p className="empty">还没有订阅记录，添加后可以集中查看购买周期和结束日期。</p>}
+        {records.map((item) => (
+          <div className="subscription-row" key={item.id}>
+            <span className="subscription-icon"><AssetIcon name="thiings:credit-card" size={32} /></span>
+            <div className="subscription-info">
+              <strong>{item.title}</strong>
+              <small>{item.purchaseType}{item.billingCycle ? ` · ${item.billingCycle}` : ""} · 购买于 {item.purchaseDate}</small>
+              <span>{subscriptionStatus(item)}{item.endDate ? ` · ${item.endDate}` : ""}</span>
+            </div>
+            <div className="subscription-price">¥{Number(item.price || 0).toLocaleString()}</div>
+            <div className="subscription-actions">
+              <button type="button" onClick={() => startEdit(item)}>编辑</button>
+              <button type="button" onClick={() => { if (window.confirm(`确定删除${item.title}？`)) onDelete(item.id); }}>删除</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function isTableTennisRecord(record) {
   return record?.type === 'other' || record?.type === 'table-tennis';
 }
@@ -5117,6 +5257,7 @@ export default function Workbench() {
   const [consultations, setConsultations] = useState([]);
   const [watchCheckins, setWatchCheckins] = useState([]);
   const [assetItems, setAssetItems] = useState([]);
+  const [subscriptionRecords, setSubscriptionRecords] = useState([]);
   const [dietRecords, setDietRecords] = useState([]);
   const [exerciseRecords, setExerciseRecords] = useState([]);
   const [weightRecords, setWeightRecords] = useState([]);
@@ -5139,6 +5280,7 @@ export default function Workbench() {
   const [tmdbRecommendationStatus, setTmdbRecommendationStatus] = useState("正在准备电影和电视剧片单");
   const [consultationView, setConsultationView] = useState("today");
   const [marketView, setMarketView] = useState("stocks");
+  const [assetSection, setAssetSection] = useState("assets");
   const [assetView, setAssetView] = useState("服役中");
   const [petSupplies, setPetSupplies] = useState(defaultPetSupplies);
   const [petAction, setPetAction] = useState({ type: "idle", text: "摸着肚子等你投喂。" });
@@ -5243,6 +5385,10 @@ export default function Workbench() {
       setAssetItems(cloud.assetRecords);
       writeStorage("assetRecords", cloud.assetRecords);
     }
+    if (Array.isArray(cloud.subscriptionRecords)) {
+      setSubscriptionRecords(cloud.subscriptionRecords);
+      writeStorage("subscriptionRecords", cloud.subscriptionRecords);
+    }
     if (Array.isArray(cloud.anniversaries)) {
       setAnniversaries(cloud.anniversaries);
       writeStorage("anniversaries", cloud.anniversaries);
@@ -5320,6 +5466,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "deletedHabitIds", merged.deletedHabitIds),
         saveCloudItem(nextSession, `done:${todayKey()}`, merged[`done:${todayKey()}`]),
         saveCloudItem(nextSession, "assetRecords", merged.assetRecords),
+        saveCloudItem(nextSession, "subscriptionRecords", merged.subscriptionRecords),
         saveCloudItem(nextSession, "assets", merged.assets),
         saveCloudItem(nextSession, "fundPortfolio", merged.fundPortfolio),
         saveCloudItem(nextSession, "fundCodes", merged.fundCodes),
@@ -5355,6 +5502,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "deletedHabitIds", merged.deletedHabitIds),
         saveCloudItem(nextSession, `done:${todayKey()}`, merged[`done:${todayKey()}`]),
         saveCloudItem(nextSession, "assetRecords", merged.assetRecords),
+        saveCloudItem(nextSession, "subscriptionRecords", merged.subscriptionRecords),
         saveCloudItem(nextSession, "assets", merged.assets),
         saveCloudItem(nextSession, "fundPortfolio", merged.fundPortfolio),
         saveCloudItem(nextSession, "fundCodes", merged.fundCodes),
@@ -5385,6 +5533,7 @@ export default function Workbench() {
     setWatchCheckins(savedWatchCheckins);
     writeStorage("watchCheckins", savedWatchCheckins);
     setAssetItems(readAssetRecords());
+    setSubscriptionRecords(readStorage("subscriptionRecords", []));
     let nextAnniversaries = readStorage("anniversaries", []);
     if (localStorage.getItem(key(defaultChineseHolidaysSeedKey)) !== "true") {
       nextAnniversaries = withDefaultChineseHolidays(nextAnniversaries);
@@ -6009,7 +6158,7 @@ export default function Workbench() {
   }
 
   function addAsset({ name, price, purchaseDate, category, status, saleDate, salePrice, retirementDate, notes, icon }) {
-    const item = {
+    const item = stampItem({
       id: crypto.randomUUID(),
       name: String(name || "").trim(),
       price: Number(price) || 0,
@@ -6021,22 +6170,43 @@ export default function Workbench() {
       retirementDate: retirementDate || "",
       notes: notes || "",
       icon: icon || "thiings:box",
-    };
+    });
     const next = [...assetItems, item];
     setAssetItems(next);
     persist("assetRecords", next);
   }
 
   function updateAsset(id, updates) {
-    const next = assetItems.map((item) => item.id === id ? { ...item, ...updates, time: nowText() } : item);
+    const next = assetItems.map((item) => item.id === id ? stampItem({ ...item, ...updates, time: nowText() }) : item);
     setAssetItems(next);
     persist("assetRecords", next);
   }
 
   function deleteAsset(id) {
+    markDeleted("assetRecords", id);
     const next = assetItems.filter((item) => item.id !== id);
     setAssetItems(next);
     persist("assetRecords", next);
+  }
+
+  function addSubscription(values) {
+    const item = stampItem({ id: crypto.randomUUID(), ...values });
+    const next = [item, ...subscriptionRecords];
+    setSubscriptionRecords(next);
+    persist("subscriptionRecords", next);
+  }
+
+  function updateSubscription(id, updates) {
+    const next = subscriptionRecords.map((item) => item.id === id ? stampItem({ ...item, ...updates }) : item);
+    setSubscriptionRecords(next);
+    persist("subscriptionRecords", next);
+  }
+
+  function deleteSubscription(id) {
+    markDeleted("subscriptionRecords", id);
+    const next = subscriptionRecords.filter((item) => item.id !== id);
+    setSubscriptionRecords(next);
+    persist("subscriptionRecords", next);
   }
 
   function deleteWatchCheckin(recordId) {
@@ -6110,6 +6280,9 @@ export default function Workbench() {
       "## 运动记录",
       ...exerciseRecords.map((item) => `- ${item.date} ${item.time} ${item.label} ${item.duration}分钟 ${item.calories}kcal`),
       "",
+      "## 订阅记录",
+      ...subscriptionRecords.map((item) => `- ${item.title} ¥${item.price} · ${item.purchaseType}${item.billingCycle ? ` · ${item.billingCycle}` : ""} · 购买日期 ${item.purchaseDate}${item.endDate ? ` · 结束日期 ${item.endDate}` : ""}`),
+      "",
       "## 体重记录",
       ...weightRecords.map((item) => `- ${item.date} ${item.time} ${formatWeight(item.weight)}kg`),
     ];
@@ -6131,6 +6304,7 @@ export default function Workbench() {
       consultations,
       watchCheckins,
       assetRecords: assetItems,
+      subscriptionRecords,
       dietRecords,
       exerciseRecords,
       weightRecords,
@@ -6186,6 +6360,10 @@ export default function Workbench() {
       if (nextAssetRecords) {
         setAssetItems(nextAssetRecords);
         persist("assetRecords", nextAssetRecords);
+      }
+      if (Array.isArray(payload.subscriptionRecords)) {
+        setSubscriptionRecords(payload.subscriptionRecords);
+        persist("subscriptionRecords", payload.subscriptionRecords);
       }
       if (Array.isArray(payload.dietRecords)) {
         setDietRecords(payload.dietRecords);
@@ -6360,13 +6538,7 @@ export default function Workbench() {
                     <button className={marketView === "funds" ? "active" : ""} type="button" onClick={() => setMarketView("funds")}>基金</button>
                     <button className={marketView === "indexes" ? "active" : ""} type="button" onClick={() => setMarketView("indexes")}>指数追踪</button>
                   </div>
-                ) : activePage === "assets" ? (
-                  <div className="module-tabs asset-tabs" aria-label="资产状态切换">
-                    {["服役中", "退役", "已出售"].map((status) => (
-                      <button className={assetView === status ? "active" : ""} type="button" key={status} onClick={() => setAssetView(status)}>{status}</button>
-                    ))}
-                  </div>
-                ) : (
+                ) : activePage === "assets" ? null : (
                   <div className="module-tabs" aria-label="内容切换">
                     <button className="active" type="button">今日内容</button>
                   </div>
@@ -6471,7 +6643,24 @@ export default function Workbench() {
           )}
 
           {activePage === "assets" && (
-            <AssetBoard items={assetItems} status={assetView} onAdd={addAsset} onUpdate={updateAsset} onDelete={deleteAsset} />
+            <section className="asset-workspace">
+              <div className="asset-section-tabs" aria-label="资产内容切换">
+                <button className={assetSection === "assets" ? "active" : ""} type="button" onClick={() => setAssetSection("assets")}>我的资产</button>
+                <button className={assetSection === "subscriptions" ? "active" : ""} type="button" onClick={() => setAssetSection("subscriptions")}>我的订阅</button>
+              </div>
+              {assetSection === "assets" ? (
+                <>
+                  <div className="asset-status-tabs" aria-label="资产状态切换">
+                    {["服役中", "退役", "已出售"].map((status) => (
+                      <button className={assetView === status ? "active" : ""} type="button" key={status} onClick={() => setAssetView(status)}>{status}</button>
+                    ))}
+                  </div>
+                  <AssetBoard items={assetItems} status={assetView} onAdd={addAsset} onUpdate={updateAsset} onDelete={deleteAsset} />
+                </>
+              ) : (
+                <SubscriptionBoard items={subscriptionRecords} onAdd={addSubscription} onUpdate={updateSubscription} onDelete={deleteSubscription} />
+              )}
+            </section>
           )}
 
           {activePage === "market" && (

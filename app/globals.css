@@ -1413,6 +1413,32 @@ select:focus-visible {
 .asset-icon-cell { width: 100%; aspect-ratio: 1; border: 2px solid transparent; border-radius: 8px; background: rgba(0, 0, 0, 0.02); font-size: 22px; display: grid; place-items: center; cursor: pointer; }
 .asset-icon-cell.selected { border-color: var(--theme-main); background: rgba(0, 0, 0, 0.06); }
 .asset-row-icon { width: 40px; height: 40px; border-radius: 8px; background: rgba(0, 0, 0, 0.04); display: grid; place-items: center; font-size: 22px; flex-shrink: 0; }
+.asset-workspace { display: grid; gap: 12px; }
+.asset-section-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 5px; border: 1px solid rgba(234, 215, 208, 0.72); border-radius: 12px; background: rgba(255, 255, 255, 0.82); }
+.asset-section-tabs button, .asset-status-tabs button { min-height: 42px; border: 0; border-radius: 8px; color: var(--muted); background: transparent; font-size: 13px; font-weight: 900; }
+.asset-section-tabs button.active { color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); }
+.asset-status-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.asset-status-tabs button { min-height: 36px; border: 1px solid rgba(234, 215, 208, 0.72); background: rgba(255, 252, 250, 0.72); }
+.asset-status-tabs button.active { color: var(--theme-main); border-color: color-mix(in srgb, var(--theme-main) 40%, transparent); background: color-mix(in srgb, var(--theme-soft) 78%, #fff); }
+.subscription-board { display: grid; gap: 14px; padding: 16px 14px; border: 1px solid rgba(234, 215, 208, 0.82); border-radius: 8px; background: rgba(255, 255, 255, 0.9); box-shadow: var(--shadow); }
+.subscription-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; overflow: hidden; border-radius: 12px; color: #fff; background: rgba(255, 255, 255, 0.18); }
+.subscription-summary > div { display: grid; grid-template-columns: auto auto; justify-content: center; align-items: baseline; gap: 4px; padding: 14px 8px; text-align: center; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); }
+.subscription-summary span { grid-column: 1 / -1; font-size: 11px; opacity: 0.82; }
+.subscription-summary strong { font-size: 21px; line-height: 1; }
+.subscription-summary small { font-size: 10px; opacity: 0.82; }
+.subscription-form { gap: 12px; }
+.subscription-field { display: grid; gap: 5px; color: var(--muted); font-size: 12px; font-weight: 800; }
+.subscription-field input, .subscription-field select { width: 100%; }
+.subscription-list { display: grid; gap: 8px; }
+.subscription-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px; border: 1px solid rgba(234, 215, 208, 0.7); border-radius: 8px; background: rgba(255, 252, 250, 0.82); }
+.subscription-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 9px; background: rgba(0, 0, 0, 0.04); }
+.subscription-info { display: grid; gap: 3px; min-width: 0; }
+.subscription-info strong { overflow: hidden; color: #26262c; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.subscription-info small, .subscription-info span { color: var(--muted); font-size: 11px; line-height: 1.4; }
+.subscription-info span { color: var(--theme-main); font-weight: 800; }
+.subscription-price { color: #26262c; font-size: 16px; font-weight: 950; }
+.subscription-actions { display: flex; grid-column: 2 / -1; justify-content: flex-end; gap: 8px; }
+.subscription-actions button { min-height: 30px; padding: 0 10px; border: 0; border-radius: 6px; color: var(--muted); background: rgba(0, 0, 0, 0.04); font-size: 12px; font-weight: 800; }
 .watch-list-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
 .watch-list-tools input { min-width: 0; height: 38px; padding: 0 12px; border-radius: 8px; }
 .watch-list-tools button { min-height: 38px; padding: 0 12px; border: 0; border-radius: 8px; color: #9f2630; background: #fff0ed; font-size: 12px; font-weight: 900; }
@@ -1982,6 +2008,9 @@ select:focus-visible {
   .watch-checkin-history-head { grid-template-columns: 1fr; }
   .watch-checkin-history-head button { width: fit-content; }
   .asset-form-row { grid-template-columns: 1fr; }
+  .subscription-row { grid-template-columns: 38px minmax(0, 1fr); }
+  .subscription-price { grid-column: 2; }
+  .subscription-actions { grid-column: 2; justify-content: flex-start; }
   .asset-summary-stats { gap: 8px; }
   .asset-summary-stats strong { font-size: 18px; }
   .index-panel .panel-head { display: grid; align-items: start; }
@@ -3119,11 +3148,16 @@ select option {
 .watch-checkin-history-item { border-color: rgba(255, 255, 255, 0.14); background: color-mix(in srgb, var(--theme-deep) 78%, #050806); }
 .watch-checkin-history-meta strong { color: color-mix(in srgb, #fff 92%, var(--theme-main)); }
 .watch-checkin-history-meta span { color: color-mix(in srgb, #fff 66%, var(--theme-main)); }
-.asset-board {
+.asset-board,
+.subscription-board {
   border-color: rgba(255, 255, 255, 0.14);
   color: color-mix(in srgb, #fff 88%, var(--theme-main));
   background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606));
 }
+.asset-section-tabs { border-color: rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.06); }
+.asset-section-tabs button, .asset-status-tabs button { color: color-mix(in srgb, #fff 64%, var(--theme-main)); }
+.asset-status-tabs button { border-color: rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); }
+.asset-status-tabs button.active { color: color-mix(in srgb, var(--theme-accent) 88%, #fff); border-color: color-mix(in srgb, var(--theme-accent) 44%, transparent); background: rgba(224, 189, 113, 0.12); }
 .asset-add-btn { border-color: rgba(255, 255, 255, 0.14); color: color-mix(in srgb, #fff 80%, var(--theme-main)); }
 .asset-form { border-color: rgba(255, 255, 255, 0.14); background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)); }
 .asset-form-head h3 { color: color-mix(in srgb, var(--theme-accent) 82%, #fff); }
@@ -3149,6 +3183,12 @@ select option {
 .asset-icon-cell { background: rgba(255, 255, 255, 0.04); }
 .asset-icon-cell.selected { border-color: var(--theme-accent); background: rgba(224, 189, 113, 0.12); }
 .asset-row-icon { background: rgba(255, 255, 255, 0.06); }
+.subscription-row { border-color: rgba(255, 255, 255, 0.14); background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 86%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)); }
+.subscription-icon { background: rgba(255, 255, 255, 0.06); }
+.subscription-info strong, .subscription-price { color: color-mix(in srgb, #fff 90%, var(--theme-main)); }
+.subscription-info small { color: color-mix(in srgb, #fff 64%, var(--theme-main)); }
+.subscription-info span { color: color-mix(in srgb, var(--theme-accent) 86%, #fff); }
+.subscription-actions button { color: color-mix(in srgb, #fff 80%, var(--theme-main)); background: rgba(255, 255, 255, 0.06); }
 .page-consultations .empty {
   color: color-mix(in srgb, #fff 76%, var(--theme-main));
 }
