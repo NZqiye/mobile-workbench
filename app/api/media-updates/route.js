@@ -3,6 +3,8 @@ import { fetchTmdb, imageBase, tmdbToken } from "../../../lib/tmdb";
 const TVMAZE_BASE = "https://api.tvmaze.com";
 let cache = null;
 const NOISE_TYPES = new Set(["News", "Talk Show", "Panel", "Sports", "Game Show", "Quiz Show", "Award Show", "Variety", "Documentary"]);
+const INDIA_COUNTRY_CODE = "IN";
+const INDIA_LANGUAGES = new Set(["Hindi", "Bengali", "Tamil", "Telugu", "Malayalam", "Kannada", "Marathi", "Punjabi", "Gujarati", "Urdu"]);
 const SHOW_ZH = {"Battle Through the Heavens":"斗破苍穹","Tales of Demons and Gods":"妖神记","Wan Jie Du Zun":"万界独尊","Lian Qi Shi Wan Nian":"炼气十万年","Soul Land 2: The Unrivaled Tang Sect":"斗罗大陆2：绝世唐门","Fanren Xiu Xian Chuan Zhi Fanren Feng Qi Tian Nan":"凡人修仙传·风起天南","Swallowed Star":"吞噬星空","Shrouding the Heavens":"遮天","Xian Ni":"仙逆","Yi Nian Yong Heng":"一念永恒","Wanmei Shijie":"完美世界","Zhu Xian":"诛仙","LINK CLICK":"时光代理人","The Great Ruler":"大主宰","The Eternal Supreme, Li Yunxiao":"万古至尊：李云霄传","Mushen Ji":"牧神记","GuAn":"一斩苍穹","Dongda Gao Wu Xueyuan":"东大高武学院","Legend of Xianwu":"仙武传","Guangyin Zhi Wai":"光阴之外","Ling Jing Xing Zhe":"灵境行者","Zeri Feisheng":"择日飞升","Caishen Dou Zhanlong":"财神窦占龙","Alchemy Supreme":"丹道至尊","Jue Shi Zhan Hun":"绝世战魂","Shixiong A Shixiong":"师兄啊师兄","Under the Gate":"界门之下","Against the Sky Supreme":"逆天至尊","The Underworld":"话事人","Against the Current":"兰香如故","In My Prime":"生逢其时","The Early Spring":"早春晴朗","The Phoenix's Other Self":"凰权之下，她即是我","Prelude of the White Snake":"浮生之白蛇前缘","See You Later... Maybe":"囧徒之预演告别","Blossom through the Cloud":"飞到我心上","The Legendary Chitose-Sama":"驸马小仵作","Ash":"烟灰","Don't Be Too Emotional":"心动禁止","Your Third":"第三心属","Ted Lasso":"足球教练","Dark Matter":"人生复本","Lanterns":"绿灯军团","Conan O'Brien Must Go":"柯南势在必行","Untold":"体坛秘史","Made in Korea":"韩国制造","Las Azules":"女警出更","The Producer":"接招吧！制作人"};
 const PLATFORM_ZH = {"Tencent QQ":"腾讯视频","Youku":"优酷","Mango TV":"芒果TV","Bilibili":"哔哩哔哩","iQIYI":"爱奇艺"};
 const PLATFORM_ALIAS = {"HBO Max":"HBO","Max":"HBO","Apple TV+":"Apple TV","Apple TV":"Apple TV","Amazon Prime Video":"Prime Video","Prime Video":"Prime Video","Tencent QQ":"Tencent QQ","Tencent Video":"Tencent QQ","WeTV":"Tencent QQ","iQiyi":"iQIYI","iQIYI":"iQIYI","Youku":"Youku","YOUKU":"Youku","Mango TV":"Mango TV","Bilibili":"Bilibili"};
@@ -104,7 +106,7 @@ async function fetchTmdbTitle(show) {
         if (!best?.id) return { tmdbId: "", title: "", overview: "", posterUrl: "", backdropUrl: "" };
         const detailUrl = new URL(`https://api.themoviedb.org/3/tv/${best.id}`);
         detailUrl.searchParams.set("language", "zh-CN");
-        detailUrl.searchParams.set("append_to_response", "images");
+        detailUrl.searchParams.set("append_to_response", "images,translations");
         detailUrl.searchParams.set("include_image_language", "zh-CN,en,null");
         const detailResponse = await fetchTmdb(detailUrl, { signal: controller.signal });
         const detailText = await detailResponse.text();
@@ -116,13 +118,16 @@ async function fetchTmdbTitle(show) {
             || list.find((image) => !image.iso_639_1)?.file_path
             || "";
         };
-        const name = details.name || best.name || "";
+        const translation = (details.translations?.translations || []).find((entry) => ["CN", "TW", "HK"].includes(entry.iso_3166_1) && entry.data);
+        const translatedName = translation?.data?.name || "";
+        const translatedOverview = translation?.data?.overview || "";
+        const name = translatedName || details.name || best.name || "";
         const posterPath = details.poster_path || imagePath(details.images?.posters) || best.poster_path || "";
         const backdropPath = details.backdrop_path || imagePath(details.images?.backdrops) || best.backdrop_path || "";
         return {
           tmdbId: best?.id || "",
           title: name && name !== show.name && hasChinese(name) ? name : "",
-          overview: details.overview || best.overview || "",
+          overview: details.overview || translatedOverview || best.overview || "",
           posterUrl: posterPath ? `${imageBase}${posterPath}` : "",
           backdropUrl: backdropPath ? `https://image.tmdb.org/t/p/w780${backdropPath}` : "",
         };
@@ -145,7 +150,7 @@ async function resolveTitleZh(show, compact = false) {
     const akas = compact ? [] : await fetchShowAkas(show.id);
     const akaZh = pickChineseAlias(akas);
     const tmdbZh = await fetchTmdbTitle(show);
-    const titleZh = manual || (akaZh && akaZh !== show.name ? akaZh : "") || tmdbZh.title;
+    const titleZh = tmdbZh.title || manual || (akaZh && akaZh !== show.name ? akaZh : "");
     return {
       titleZh,
       summaryZh: tmdbZh.overview || "",
@@ -164,6 +169,8 @@ async function normalizeEpisode(episode, compact = false) {
   const rawPlatform = show.webChannel?.name || show.network?.name || "";
   const platform = PLATFORM_ALIAS[rawPlatform] || rawPlatform;
   if (!platform) return null;
+  const originCountry = show.network?.country?.code || show.webChannel?.country?.code || show.country?.code || "";
+  if (originCountry === INDIA_COUNTRY_CODE || INDIA_LANGUAGES.has(show.language)) return null;
   const calibration = getPlatformCalibration(platform);
   const titleZh = await resolveTitleZh(show, compact);
   return {
@@ -181,7 +188,7 @@ async function normalizeEpisode(episode, compact = false) {
     platformScore: calibration.score,
     platformNote: calibration.note,
     showType: show.type || "",
-    originCountry: show.network?.country?.code || show.webChannel?.country?.code || show.country?.code || "",
+    originCountry,
     status: show.status || "",
     titleZh: titleZh.titleZh,
     summaryZh: titleZh.summaryZh,
