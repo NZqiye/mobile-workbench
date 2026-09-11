@@ -1888,6 +1888,33 @@ function normalizeMarketQuote(quote) {
   return { ...quote, name: mappedName || (brokenName ? quote.symbol : name) };
 }
 
+function mediaKind(item) {
+  const type = String(item?.type || "").trim();
+  if (type === "电影") return "movie";
+  if (["电视剧", "剧集", "动漫", "综艺", "纪录片"].includes(type)) return "tv";
+  return String(item?.tmdbMediaType || item?.media_type || item?.mediaType || "tv").toLowerCase().startsWith("movie") ? "movie" : "tv";
+}
+
+function recommendationKind(sectionId) {
+  if (String(sectionId || "").startsWith("movie")) return "movie";
+  return "tv";
+}
+
+function normalizeRecommendationItem(item, sectionId) {
+  const kind = recommendationKind(sectionId);
+  const category = String(sectionId || "").startsWith("anime")
+    ? "anime"
+    : String(sectionId || "").startsWith("variety")
+      ? "variety"
+      : kind;
+  return {
+    ...item,
+    tmdbMediaType: kind,
+    type: category === "movie" ? "电影" : category === "anime" ? "动漫" : category === "variety" ? "综艺" : "电视剧",
+    category,
+  };
+}
+
 function formatMarketAmount(value) {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return "--";
@@ -1897,9 +1924,7 @@ function formatMarketAmount(value) {
 }
 
 function tmdbMediaType(item) {
-  if (item.tmdbMediaType) return String(item.tmdbMediaType).toLowerCase().startsWith("movie") ? "movie" : "tv";
-  if (item.media_type) return String(item.media_type).toLowerCase().startsWith("movie") ? "movie" : "tv";
-  return item.type === "电影" ? "movie" : "tv";
+  return mediaKind(item);
 }
 
 function tmdbItemKey(item) {
@@ -4035,7 +4060,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
   const watchedIds = new Set(
     allItems
       .filter((item) => item.status === "看过的剧")
-      .map((item) => String(item.tmdbId || "").trim())
+      .map((item) => tmdbItemKey(item))
       .filter(Boolean),
   );
   const watchedTitles = new Set(
@@ -4047,13 +4072,15 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
       .filter(Boolean),
   );
   const isAlreadyWatched = (item) => {
-    const itemId = String(item?.tmdbId || "").trim();
+    const itemId = tmdbItemKey(item);
     const itemTitle = mediaTitle(item).trim().toLowerCase();
     return (itemId && watchedIds.has(itemId)) || (itemTitle && watchedTitles.has(itemTitle));
   };
   const filterRecommendationSections = (sections) => sections.map((section) => ({
     ...section,
-    items: (Array.isArray(section.items) ? section.items : []).filter((item) => !isAlreadyWatched(item)),
+    items: (Array.isArray(section.items) ? section.items : [])
+      .map((item) => normalizeRecommendationItem(item, section.id))
+      .filter((item) => mediaKind(item) === recommendationKind(section.id) && !isAlreadyWatched(item)),
   }));
   const visibleRecommendationSections = filterRecommendationSections(recommendationSections.length ? recommendationSections : [
     { id: "movieHot", title: "近期热播", items: [] },
@@ -5661,13 +5688,14 @@ export default function Workbench() {
   }
 
   async function loadTmdbRecommendations() {
+    setTmdbSections([]);
     setTmdbRecommendationStatus("正在加载影视发现片单...");
     try {
       const response = await fetch("/api/tmdb/recommendations");
       const text = await response.text();
       const data = text ? JSON.parse(text) : {};
-      const sections = response.ok && Array.isArray(data.sections) ? data.sections : [];
-      if (!sections.length) throw new Error("推荐加载失败");
+      const sections = response.ok && data.ok === true && Array.isArray(data.sections) ? data.sections : [];
+      if (!sections.length) throw new Error(data.error || "TMDB 没有返回真实影视数据");
       setTmdbSections(sections);
       setTmdbRecommendationStatus("正在补充 TVMaze 排期和 AniList 动漫数据...");
 
@@ -5700,6 +5728,7 @@ export default function Workbench() {
       if (animeData?.ok) sources.push(animeData.source || "AniList");
       setTmdbRecommendationStatus(`${sources.join(" + ")} 在线片单 · 每组默认展示 20 条`);
     } catch (error) {
+      setTmdbSections([]);
       setTmdbRecommendationStatus(error.message || "片单暂时不可用，请点刷新片单重试");
     }
   }
@@ -5725,7 +5754,7 @@ export default function Workbench() {
     let details = {};
     let omdbDetails = {};
     let watchlistStatus = "";
-    const mediaType = item.tmdbMediaType || (item.type === "电影" ? "movie" : "tv");
+    const mediaType = tmdbMediaType(item);
     if (item.tmdbId) {
       try {
         const response = await fetch(`/api/tmdb/details?id=${encodeURIComponent(item.tmdbId)}&type=${encodeURIComponent(mediaType)}`);
@@ -5800,7 +5829,7 @@ export default function Workbench() {
       const response = await fetch("/api/tmdb/rating", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mediaId: item.tmdbId, mediaType: item.tmdbMediaType || (item.type === "电影" ? "movie" : "tv"), rating: value }),
+        body: JSON.stringify({ mediaId: item.tmdbId, mediaType: tmdbMediaType(item), rating: value }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "TMDB 评分同步失败");
@@ -5847,7 +5876,7 @@ export default function Workbench() {
         await Promise.all(removed.map((item) => fetch("/api/tmdb/watchlist", {
           method: "DELETE",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mediaId: item.tmdbId, mediaType: item.tmdbMediaType || (item.media_type === "movie" ? "movie" : "tv") }),
+          body: JSON.stringify({ mediaId: item.tmdbId, mediaType: tmdbMediaType(item) }),
         }).catch(() => {})));
       }
       const refreshedCount = keptIncoming.length - nextItems.length;
@@ -5862,7 +5891,7 @@ export default function Workbench() {
 
   async function refreshTmdbTrackedItems(options = {}) {
     const automatic = options.automatic === true;
-    const tracked = consultations.filter((item) => item.tmdbId && (item.tmdbMediaType || "tv") !== "movie");
+    const tracked = consultations.filter((item) => item.tmdbId && tmdbMediaType(item) !== "movie");
     if (automatic && !tracked.length) return;
     if (!tracked.length) {
       setTmdbStatus("当前没有可刷新的 TMDB 剧集。");
@@ -5871,7 +5900,7 @@ export default function Workbench() {
     setTmdbStatus(`正在刷新 ${tracked.length} 部剧集更新...`);
     try {
       const settled = await Promise.allSettled(tracked.map(async (item) => {
-        const response = await fetch(`/api/tmdb/details?id=${encodeURIComponent(item.tmdbId)}&type=${encodeURIComponent(item.tmdbMediaType || "tv")}`);
+        const response = await fetch(`/api/tmdb/details?id=${encodeURIComponent(item.tmdbId)}&type=${encodeURIComponent(tmdbMediaType(item))}`);
         const text = await response.text();
         const data = text ? JSON.parse(text) : {};
         if (!response.ok) throw new Error(data.error || `${item.title} 更新失败`);
@@ -6128,7 +6157,7 @@ export default function Workbench() {
   function checkinWatchItem({ id, episode, rating, date }) {
     const item = consultations.find((record) => record.id === id);
     if (!item) return;
-    const isMovie = (item.tmdbMediaType || "").includes("movie") || item.type === "电影";
+    const isMovie = tmdbMediaType(item) === "movie";
     const currentEpisode = Number(item.currentEpisode || 0);
     const episodes = isMovie ? [] : parseEpisodeList(episode, currentEpisode + 1);
     const maxEpisode = isMovie ? currentEpisode : Math.max(...episodes);
@@ -6148,7 +6177,7 @@ export default function Workbench() {
       fetch("/api/tmdb/watchlist", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mediaId: item.tmdbId, mediaType: item.tmdbMediaType || (isMovie ? "movie" : "tv") }),
+        body: JSON.stringify({ mediaId: item.tmdbId, mediaType: tmdbMediaType(item) }),
       }).catch(() => {});
     }
     checkedEpisodes.forEach((checkedEpisode) => {
@@ -6234,7 +6263,7 @@ export default function Workbench() {
     fetch("/api/tmdb/watchlist", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mediaId: item.tmdbId, mediaType: item.tmdbMediaType || (item.type === "电影" ? "movie" : "tv") }),
+      body: JSON.stringify({ mediaId: item.tmdbId, mediaType: tmdbMediaType(item) }),
     }).catch(() => {});
   }
 
