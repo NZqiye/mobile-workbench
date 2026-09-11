@@ -64,7 +64,7 @@ function isPreferredVarietyCountry(item) {
 function mergeRecommendationItems(primary = [], secondary = []) {
   const seen = new Set();
   return [...primary, ...secondary].filter((item) => {
-    const key = `${item?.titleZh || item?.title || ""}|${item?.airDate || ""}`.toLowerCase();
+    const key = recommendationItemKey(item);
     if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -1901,6 +1901,12 @@ function sourceMediaKind(item) {
   if (sourceType.startsWith("movie")) return "movie";
   if (sourceType.startsWith("tv")) return "tv";
   return mediaKind(item);
+}
+
+function recommendationItemKey(item) {
+  const tmdbId = String(item?.tmdbId || "").trim();
+  if (tmdbId) return `tmdb:${sourceMediaKind(item)}:${tmdbId}`;
+  return `${String(item?.source || "").toLowerCase()}:${String(item?.titleZh || item?.title || "").trim().toLowerCase()}:${item?.airDate || ""}`;
 }
 
 function recommendationKind(sectionId) {
@@ -4121,7 +4127,11 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
   const filterRecommendationSections = (sections) => sections.map((section) => ({
     ...section,
     items: (Array.isArray(section.items) ? section.items : [])
-      .filter((item) => sourceMediaKind(item) === recommendationKind(section.id) && !isAlreadyWatched(item))
+      .filter((item) => {
+        const expectedKind = recommendationKind(section.id);
+        const isTmdbMovie = expectedKind === "movie" && item?.source === "TMDB";
+        return sourceMediaKind(item) === expectedKind && (expectedKind !== "movie" || isTmdbMovie) && !isAlreadyWatched(item);
+      })
       .map((item) => normalizeRecommendationItem(item, section.id)),
   }));
   const visibleRecommendationSections = filterRecommendationSections(recommendationSections.length ? recommendationSections : [
@@ -4174,7 +4184,10 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
   const modeItems = Array.isArray(modeSourceSection?.items) ? modeSourceSection.items : [];
   const personalItems = recommendationMode === "personal"
     ? [...modeItems, ...activeRecommendationOptions.flatMap((section) => Array.isArray(section.items) ? section.items : [])]
-      .filter((item, index, list) => (item.tmdbId || item.id || item.title) && list.findIndex((candidate) => (candidate.tmdbId || candidate.id || candidate.title) === (item.tmdbId || item.id || item.title)) === index)
+      .filter((item, index, list) => {
+        const key = recommendationItemKey(item);
+        return key && list.findIndex((candidate) => recommendationItemKey(candidate) === key) === index;
+      })
       .sort((a, b) => Number(b.tmdbRating || b.voteAverage || 0) - Number(a.tmdbRating || a.voteAverage || 0))
     : modeItems;
   const selectedRecommendationSection = modeSourceSection ? {
