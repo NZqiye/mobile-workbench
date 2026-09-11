@@ -100,16 +100,31 @@ async function fetchTmdbTitle(show) {
         if (!response.ok) return { tmdbId: "", title: "", overview: "", posterUrl: "", backdropUrl: "" };
         const results = Array.isArray(data.results) ? data.results : [];
         const query = normalizeTitle(show.name);
-        const best = results.find((item) => normalizeTitle(item.name) === query || normalizeTitle(item.original_name) === query)
-          || results.find((item) => hasChinese(item.name) || hasChinese(item.original_name))
-          || results[0];
-        const name = best?.name || "";
+        const best = results.find((item) => normalizeTitle(item.name) === query || normalizeTitle(item.original_name) === query);
+        if (!best?.id) return { tmdbId: "", title: "", overview: "", posterUrl: "", backdropUrl: "" };
+        const detailUrl = new URL(`https://api.themoviedb.org/3/tv/${best.id}`);
+        detailUrl.searchParams.set("language", "zh-CN");
+        detailUrl.searchParams.set("append_to_response", "images");
+        detailUrl.searchParams.set("include_image_language", "zh-CN,en,null");
+        const detailResponse = await fetchTmdb(detailUrl, { signal: controller.signal });
+        const detailText = await detailResponse.text();
+        const details = detailText ? JSON.parse(detailText) : {};
+        const imagePath = (images = []) => {
+          const list = Array.isArray(images) ? images.filter((image) => image?.file_path) : [];
+          return list.find((image) => image.iso_639_1 === "zh")?.file_path
+            || list.find((image) => image.iso_639_1 === "en")?.file_path
+            || list.find((image) => !image.iso_639_1)?.file_path
+            || "";
+        };
+        const name = details.name || best.name || "";
+        const posterPath = details.poster_path || imagePath(details.images?.posters) || best.poster_path || "";
+        const backdropPath = details.backdrop_path || imagePath(details.images?.backdrops) || best.backdrop_path || "";
         return {
           tmdbId: best?.id || "",
           title: name && name !== show.name && hasChinese(name) ? name : "",
-          overview: best?.overview || "",
-          posterUrl: best?.poster_path ? `${imageBase}${best.poster_path}` : "",
-          backdropUrl: best?.backdrop_path ? `https://image.tmdb.org/t/p/w780${best.backdrop_path}` : "",
+          overview: details.overview || best.overview || "",
+          posterUrl: posterPath ? `${imageBase}${posterPath}` : "",
+          backdropUrl: backdropPath ? `https://image.tmdb.org/t/p/w780${backdropPath}` : "",
         };
       } finally {
         clearTimeout(timer);
