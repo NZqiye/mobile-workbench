@@ -1,5 +1,14 @@
 import { fetchTmdb, mapTmdbResult, tmdbToken } from "../../../../lib/tmdb";
 
+function classifyResult(item) {
+  const mapped = mapTmdbResult(item);
+  if (item.media_type === "movie") return { ...mapped, category: "movie", type: "电影" };
+  const genreIds = Array.isArray(item.genre_ids) ? item.genre_ids : [];
+  if (genreIds.includes(16)) return { ...mapped, category: "anime", type: "动漫" };
+  if (genreIds.includes(10764) || genreIds.includes(10767)) return { ...mapped, category: "variety", type: "综艺" };
+  return { ...mapped, category: "tv", type: "电视剧" };
+}
+
 export async function GET(request) {
   try {
     if (!tmdbToken) {
@@ -28,7 +37,7 @@ export async function GET(request) {
     const results = (data.results || [])
       .filter((item) => item.media_type === "tv" || item.media_type === "movie")
       .slice(0, 8)
-      .map(mapTmdbResult);
+      .map(classifyResult);
 
     return Response.json({ results });
   } catch (error) {
