@@ -1,4 +1,4 @@
-import { loadTmdbDetails, tmdbToken } from "../../../../lib/tmdb";
+import { loadTmdbDetails, loadTmdbSeasonDetails, tmdbToken } from "../../../../lib/tmdb";
 
 export async function GET(request) {
   try {
@@ -9,7 +9,13 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     const type = searchParams.get("type") || "tv";
+    const season = searchParams.get("season");
     if (!id) return Response.json({ error: "缺少 TMDB id" }, { status: 400 });
+    if (type !== "movie" && type !== "tv") return Response.json({ error: "TMDB 类型无效" }, { status: 400 });
+    if (season !== null) {
+      if (type !== "tv" || !/^\d+$/.test(season) || Number(season) < 1) return Response.json({ error: "TMDB 季数无效" }, { status: 400 });
+      return Response.json(await loadTmdbSeasonDetails(id, Number(season)));
+    }
 
     return Response.json(await loadTmdbDetails(id, type));
   } catch (error) {
