@@ -5142,3 +5142,105 @@ textarea::placeholder {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.watch-rating-panel { display: grid; gap: 16px; min-width: 0; padding: 18px 16px; border: 1px solid rgba(234, 215, 208, 0.82); border-radius: 14px; background: rgba(255, 255, 255, 0.92); box-shadow: var(--shadow); }
+.watch-rating-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-width: 0; }
+.watch-rating-heading h2 { margin: 0; color: var(--ink); font-size: 20px; }
+.watch-rating-heading p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.watch-rating-heading > strong { flex: 0 0 auto; color: var(--theme-main); font-size: 16px; }
+.watch-rating-tmdb-search { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; min-width: 0; }
+.watch-rating-tmdb-search input { min-width: 0; height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: #fffdf9; }
+.watch-rating-tmdb-search button { min-height: 40px; padding: 0 13px; border: 0; border-radius: 9px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 12px; font-weight: 900; white-space: nowrap; }
+.watch-rating-tmdb-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; min-width: 0; }
+.watch-rating-tmdb-results button { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 7px; align-items: center; min-width: 0; padding: 6px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: rgba(255, 255, 255, 0.68); text-align: left; }
+.watch-rating-tmdb-results button:hover { border-color: color-mix(in srgb, var(--theme-main) 30%, var(--line)); background: color-mix(in srgb, var(--theme-soft) 55%, #fff); }
+.watch-rating-tmdb-results img, .watch-rating-tmdb-results button > span { grid-row: span 2; display: grid; place-items: center; width: 42px; height: 58px; overflow: hidden; border-radius: 6px; object-fit: cover; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-weight: 900; }
+.watch-rating-tmdb-results strong, .watch-rating-tmdb-results small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.watch-rating-tmdb-results strong { font-size: 12px; }
+.watch-rating-tmdb-results small { color: var(--muted); font-size: 10px; }
+.watch-rating-search-status { margin: -5px 0 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.watch-rating-toolbar { display: grid; gap: 10px; min-width: 0; }
+.watch-rating-toolbar > input { width: 100%; min-width: 0; height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: #fffdf9; }
+.watch-rating-categories { display: flex; gap: 6px; min-width: 0; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.watch-rating-categories::-webkit-scrollbar { display: none; }
+.watch-rating-categories button { flex: 0 0 auto; min-height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); background: transparent; font-size: 12px; font-weight: 800; white-space: nowrap; }
+.watch-rating-categories button.active { color: #fff; border-color: transparent; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); }
+.watch-rating-layout { display: grid; grid-template-columns: minmax(220px, 0.82fr) minmax(0, 1.55fr); gap: 16px; align-items: start; min-width: 0; }
+.watch-rating-library, .watch-rating-detail { display: grid; gap: 12px; min-width: 0; padding: 12px; border: 1px solid rgba(234, 215, 208, 0.72); border-radius: 12px; background: rgba(255, 252, 250, 0.84); }
+.watch-rating-library-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.watch-rating-library-head strong { color: var(--ink); font-size: 14px; }
+.watch-rating-library-head span { color: var(--muted); font-size: 11px; }
+.watch-rating-library-grid { display: grid; gap: 7px; max-height: 660px; overflow: auto; padding-right: 2px; scrollbar-width: thin; }
+.watch-rating-media-card { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 9px; align-items: center; min-width: 0; padding: 7px; border: 1px solid transparent; border-radius: 9px; color: var(--ink); background: rgba(255, 255, 255, 0.72); text-align: left; }
+.watch-rating-media-card:hover { border-color: color-mix(in srgb, var(--theme-main) 28%, var(--line)); background: color-mix(in srgb, var(--theme-soft) 48%, #fff); }
+.watch-rating-media-card.active { border-color: color-mix(in srgb, var(--theme-main) 46%, transparent); background: color-mix(in srgb, var(--theme-soft) 80%, #fff); box-shadow: inset 3px 0 0 var(--theme-main); }
+.watch-rating-media-card img, .watch-rating-media-poster { display: grid; place-items: center; width: 48px; height: 68px; overflow: hidden; border-radius: 7px; object-fit: cover; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 18px; font-weight: 900; }
+.watch-rating-media-copy { display: grid; gap: 4px; min-width: 0; }
+.watch-rating-media-copy strong { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 13px; line-height: 1.3; }
+.watch-rating-media-copy small { min-width: 0; overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.watch-rating-detail-head { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; align-items: center; min-width: 0; }
+.watch-rating-detail-head img, .watch-rating-detail-poster { display: grid; place-items: center; width: 92px; height: 138px; overflow: hidden; border-radius: 8px; object-fit: cover; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 26px; font-weight: 900; }
+.watch-rating-detail-head > div { display: grid; gap: 5px; min-width: 0; }
+.watch-rating-type { width: fit-content; padding: 2px 7px; border-radius: 999px; color: var(--theme-main); background: color-mix(in srgb, var(--theme-soft) 80%, #fff); font-size: 10px; font-weight: 900; }
+.watch-rating-detail-head h3 { margin: 0; color: var(--ink); font-size: 22px; line-height: 1.2; overflow-wrap: anywhere; }
+.watch-rating-detail-head p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.watch-rating-summary { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.watch-rating-status { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.watch-rating-status.error { color: var(--red); }
+.watch-rating-status.success { color: var(--green); }
+.watch-rating-season-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 9px; align-items: end; min-width: 0; }
+.watch-rating-season-head label, .watch-rating-season-footer label { display: grid; gap: 5px; min-width: 0; color: var(--muted); font-size: 11px; font-weight: 800; }
+.watch-rating-season-head select, .watch-rating-season-footer input, .watch-rating-movie-form input { width: 100%; min-width: 0; height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: #fffdf9; }
+.watch-rating-season-stats { display: grid; gap: 2px; min-width: 65px; padding-bottom: 2px; text-align: right; }
+.watch-rating-season-stats strong { color: var(--theme-main); font-size: 15px; }
+.watch-rating-season-stats small { color: var(--muted); font-size: 10px; }
+.watch-rating-actions { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+.watch-rating-actions button, .watch-rating-season-head > .secondary { min-height: 36px; padding: 0 11px; border: 0; border-radius: 8px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 12px; font-weight: 900; }
+.watch-rating-actions button.secondary, .watch-rating-season-head > .secondary { color: var(--theme-main); border: 1px solid color-mix(in srgb, var(--theme-main) 24%, var(--line)); background: transparent; }
+.watch-rating-actions button:disabled, .watch-rating-season-head > .secondary:disabled { cursor: not-allowed; opacity: 0.5; }
+.watch-rating-episodes { display: grid; gap: 7px; max-height: 560px; overflow: auto; padding-right: 2px; scrollbar-width: thin; }
+.watch-rating-episode { display: grid; grid-template-columns: 20px 88px minmax(0, 1fr); gap: 9px; align-items: start; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255, 255, 255, 0.68); cursor: pointer; }
+.watch-rating-episode.checked { border-color: color-mix(in srgb, var(--theme-main) 38%, var(--line)); background: color-mix(in srgb, var(--theme-soft) 62%, #fff); }
+.watch-rating-episode > input { width: 16px; height: 16px; margin: 3px 0 0; accent-color: var(--theme-main); }
+.watch-rating-episode img, .watch-rating-episode-placeholder { display: grid; place-items: center; width: 88px; height: 50px; overflow: hidden; border-radius: 6px; object-fit: cover; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 11px; font-weight: 900; }
+.watch-rating-episode > span:last-child { display: grid; gap: 3px; min-width: 0; }
+.watch-rating-episode strong { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: var(--ink); font-size: 12px; line-height: 1.35; }
+.watch-rating-episode small { color: var(--muted); font-size: 10px; }
+.watch-rating-episode p { margin: 2px 0 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.watch-rating-season-footer { display: grid; grid-template-columns: minmax(110px, 0.6fr) minmax(0, 1fr); gap: 10px; align-items: end; }
+.watch-rating-movie-form { display: grid; grid-template-columns: minmax(0, 1fr) 120px; gap: 10px; align-items: end; }
+.watch-rating-movie-form > div:first-child { display: grid; gap: 4px; min-width: 0; }
+.watch-rating-movie-form strong { color: var(--ink); font-size: 14px; }
+.watch-rating-movie-form small { color: var(--muted); font-size: 11px; }
+.watch-rating-movie-form .watch-rating-actions { grid-column: 1 / -1; }
+.page-consultations .watch-rating-panel { border-color: rgba(255, 255, 255, 0.14); color: #fff5f0; background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)); }
+.page-consultations .watch-rating-heading h2, .page-consultations .watch-rating-library-head strong, .page-consultations .watch-rating-detail-head h3, .page-consultations .watch-rating-media-copy strong, .page-consultations .watch-rating-episode strong, .page-consultations .watch-rating-movie-form strong { color: #fff5f0; }
+.page-consultations .watch-rating-heading p, .page-consultations .watch-rating-library-head span, .page-consultations .watch-rating-detail-head p, .page-consultations .watch-rating-summary, .page-consultations .watch-rating-status, .page-consultations .watch-rating-media-copy small, .page-consultations .watch-rating-episode small, .page-consultations .watch-rating-episode p, .page-consultations .watch-rating-movie-form small { color: rgba(255, 233, 224, 0.72); }
+.page-consultations .watch-rating-library, .page-consultations .watch-rating-detail { border-color: rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.055); }
+.page-consultations .watch-rating-toolbar > input, .page-consultations .watch-rating-season-head select, .page-consultations .watch-rating-season-footer input, .page-consultations .watch-rating-movie-form input { color: #fff5f0; border-color: rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.08); }
+.page-consultations .watch-rating-tmdb-search input { color: #fff5f0; border-color: rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.08); }
+.page-consultations .watch-rating-media-card, .page-consultations .watch-rating-episode { color: #fff5f0; border-color: rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.055); }
+.page-consultations .watch-rating-tmdb-results button { color: #fff5f0; border-color: rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.055); }
+.page-consultations .watch-rating-tmdb-results small, .page-consultations .watch-rating-search-status { color: rgba(255, 233, 224, 0.72); }
+.page-consultations .watch-rating-media-card.active, .page-consultations .watch-rating-episode.checked { border-color: rgba(255, 206, 167, 0.42); background: rgba(255, 206, 167, 0.1); }
+.page-consultations .watch-rating-categories button { color: rgba(255, 233, 224, 0.72); border-color: rgba(255, 255, 255, 0.14); }
+.page-consultations .watch-rating-categories button.active { color: #fff; border-color: transparent; }
+
+@media (max-width: 959px) {
+  .watch-rating-layout { grid-template-columns: minmax(0, 1fr); }
+  .watch-rating-library-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: none; }
+}
+
+@media (max-width: 520px) {
+  .watch-rating-panel { gap: 12px; padding: 14px 12px; }
+  .watch-rating-detail-head { grid-template-columns: 72px minmax(0, 1fr); gap: 10px; }
+  .watch-rating-detail-head img, .watch-rating-detail-poster { width: 72px; height: 108px; }
+  .watch-rating-detail-head h3 { font-size: 18px; }
+  .watch-rating-season-head { grid-template-columns: minmax(0, 1fr) auto; }
+  .watch-rating-season-head > .secondary { grid-column: 1 / -1; justify-self: start; }
+  .watch-rating-season-footer, .watch-rating-movie-form { grid-template-columns: minmax(0, 1fr); }
+  .watch-rating-tmdb-search { grid-template-columns: minmax(0, 1fr); }
+  .watch-rating-episode { grid-template-columns: 20px 72px minmax(0, 1fr); gap: 7px; padding: 7px; }
+  .watch-rating-episode img, .watch-rating-episode-placeholder { width: 72px; height: 44px; }
+  .watch-rating-movie-form .watch-rating-actions { grid-column: auto; }
+}
