@@ -22,7 +22,7 @@ function mediaDescription(item) {
 
 function normalizeTvmazeRecommendation(item) {
   const title = item?.title || item?.titleZh || "";
-  if (!title) return null;
+  if (!title || !item?.tmdbId) return null;
   const showType = String(item?.showType || "").toLowerCase();
   if (showType === "documentary") return null;
   const category = showType === "animation"
@@ -4029,6 +4029,40 @@ function AnimeUpdates() {
   );
 }
 
+function MediaGallery({ item }) {
+  const [backdropUrl, setBackdropUrl] = useState(item?.backdropUrl || "");
+  const [posterUrl, setPosterUrl] = useState(item?.posterUrl || "");
+
+  useEffect(() => {
+    setBackdropUrl(item?.backdropUrl || "");
+    setPosterUrl(item?.posterUrl || "");
+  }, [item?.backdropUrl, item?.posterUrl]);
+
+  if (!backdropUrl && !posterUrl) return null;
+  if (!backdropUrl) {
+    return (
+      <div className="media-gallery media-gallery-poster-only">
+        <div className="media-poster-thumb">
+          <img src={posterUrl} alt="" loading="lazy" onError={() => setPosterUrl("")} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="media-gallery">
+      <div className="media-still">
+        <img src={backdropUrl} alt="" loading="lazy" onError={() => setBackdropUrl("")} />
+      </div>
+      {posterUrl && (
+        <div className="media-poster-thumb">
+          <img src={posterUrl} alt="" loading="lazy" onError={() => setPosterUrl("")} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked, onDeleteItem, onWatchCheckin, onSyncTmdbRating, onRemoveCheckin, watchCheckins = [] }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
@@ -4392,14 +4426,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
               {(Array.isArray(selectedRecommendationSection.items) ? selectedRecommendationSection.items : []).length === 0 && <p className="empty">暂无片单，稍后点刷新片单重试。</p>}
               {visibleRecommendationItems.map((item) => (
                 <div className="media-feed-card" role="button" tabIndex={0} key={`${selectedRecommendationSection.id}-${item.tmdbId || item.id || item.title}`} onClick={() => onImportTmdb(item)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onImportTmdb(item); } }}>
-                  {(item.backdropUrl || item.posterUrl) && <div className={`media-gallery ${item.backdropUrl ? "" : "media-gallery-single"}`}>
-                    <div className="media-still">
-                      <img src={item.backdropUrl || item.posterUrl} alt="" />
-                    </div>
-                    {item.backdropUrl && <div className="media-poster-thumb">
-                      {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{mediaTitle(item).slice(0, 1)}</span>}
-                    </div>}
-                  </div>}
+                  <MediaGallery item={item} />
                   <strong className="media-feed-title">{mediaTitle(item)}</strong>
                   <span className="media-air">{mediaAirText(item)}</span>
                   <small className="media-meta">{[item.year, item.type || "剧集", item.platform || "TMDB"].filter(Boolean).join(" / ")}</small>
