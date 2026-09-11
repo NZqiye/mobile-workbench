@@ -24,6 +24,7 @@ function normalizeTvmazeRecommendation(item) {
   const title = item?.title || item?.titleZh || "";
   if (!title) return null;
   const showType = String(item?.showType || "").toLowerCase();
+  if (showType === "documentary") return null;
   const category = showType === "animation"
     ? "anime"
     : ["reality", "variety", "talk show", "game show", "panel", "award show"].includes(showType)
@@ -1893,6 +1894,13 @@ function mediaKind(item) {
   if (type === "电影") return "movie";
   if (["电视剧", "剧集", "动漫", "综艺", "纪录片"].includes(type)) return "tv";
   return String(item?.tmdbMediaType || item?.media_type || item?.mediaType || "tv").toLowerCase().startsWith("movie") ? "movie" : "tv";
+}
+
+function sourceMediaKind(item) {
+  const sourceType = String(item?.tmdbMediaType || item?.media_type || item?.mediaType || "").toLowerCase();
+  if (sourceType.startsWith("movie")) return "movie";
+  if (sourceType.startsWith("tv")) return "tv";
+  return mediaKind(item);
 }
 
 function recommendationKind(sectionId) {
@@ -4079,8 +4087,8 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
   const filterRecommendationSections = (sections) => sections.map((section) => ({
     ...section,
     items: (Array.isArray(section.items) ? section.items : [])
-      .map((item) => normalizeRecommendationItem(item, section.id))
-      .filter((item) => mediaKind(item) === recommendationKind(section.id) && !isAlreadyWatched(item)),
+      .filter((item) => sourceMediaKind(item) === recommendationKind(section.id) && !isAlreadyWatched(item))
+      .map((item) => normalizeRecommendationItem(item, section.id)),
   }));
   const visibleRecommendationSections = filterRecommendationSections(recommendationSections.length ? recommendationSections : [
     { id: "movieHot", title: "近期热播", items: [] },
