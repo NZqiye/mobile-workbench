@@ -14,6 +14,12 @@ const sectionMeta = [
   ["animeUpcoming", "\u52a8\u6f2b", "\u4e0a\u5347\u699c"],
   ["animeHistory", "\u52a8\u6f2b", "\u9ad8\u5206\u699c"],
 ];
+const INDIAN_LANGUAGES = new Set(["hi", "bn", "ta", "te", "ml", "kn", "mr", "pa", "gu", "ur"]);
+
+function isIndianItem(item) {
+  const countries = Array.isArray(item?.origin_country) ? item.origin_country : [];
+  return countries.includes("IN") || INDIAN_LANGUAGES.has(String(item?.original_language || "").toLowerCase());
+}
 
 async function readPage(source, page, genres = "", sortBy = "") {
   const url = new URL(source);
@@ -41,6 +47,7 @@ async function loadSection([id, type, category, mediaType, source, genres, sortB
   const items = pages.flatMap((data) => data.results || [])
     .filter((item) => item.media_type !== "person")
     .filter((item) => !item.media_type || item.media_type === mediaType)
+    .filter((item) => !isIndianItem(item))
     .filter((item) => {
       const genreIds = Array.isArray(item.genre_ids) ? item.genre_ids : [];
       const isAnimation = genreIds.includes(16);
@@ -49,6 +56,7 @@ async function loadSection([id, type, category, mediaType, source, genres, sortB
       if (type === "\u7efc\u827a") return isVariety && (item.origin_country || []).some((country) => country === "CN" || country === "KR");
       return true;
     })
+    .filter((item, index, list) => item.id && list.findIndex((candidate) => candidate.id === item.id) === index)
     .slice(0, 60);
   return {
     id,
