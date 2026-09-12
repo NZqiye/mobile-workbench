@@ -6858,6 +6858,79 @@ textarea::placeholder {
   transform: translateY(-1px) rotate(-45deg);
 }
 
+/* Match the desktop episode record on mobile: checkbox + still + episode copy, no separate right-side badge. */
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode {
+  position: relative;
+  grid-template-columns: 22px 88px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 74px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 224, 190, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode.checked {
+  border-color: rgba(255, 206, 167, 0.48);
+  background: rgba(255, 206, 167, 0.12);
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode > input {
+  position: static;
+  grid-column: 1;
+  grid-row: 1;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  opacity: 1;
+  pointer-events: auto;
+  accent-color: #c73e4c;
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode img,
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode > span {
+  grid-column: 2;
+  grid-row: 1;
+  width: 88px;
+  height: 52px;
+  border-radius: 8px;
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode > div {
+  grid-column: 3;
+  grid-row: 1;
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode strong {
+  color: #fff5f0;
+  font-size: 13px;
+  line-height: 1.28;
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode small {
+  color: rgba(255, 233, 224, 0.72);
+  font-size: 11px;
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: rgba(255, 233, 224, 0.7);
+  font-size: 11px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode-check {
+  display: none !important;
+}
+
 .phone-shell.mobile-shell.page-consultations .watch-mobile-rating-footer {
   gap: 8px;
 }

@@ -4144,7 +4144,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
                         return <label className={`watch-mobile-episode ${checkedEpisodes.has(episodeNumber) ? "checked" : ""}`} key={episode.id || episodeNumber}>
                           <input type="checkbox" checked={checkedEpisodes.has(episodeNumber)} onChange={() => toggleEpisode(episodeNumber)} />
                           {episode.stillUrl ? <img src={episode.stillUrl} alt="" loading="lazy" /> : <span>E{episodeNumber}</span>}
-                          <div><strong>{episode.name || `第 ${episodeNumber} 集`}</strong><small>{[episode.airDate, episode.runtime ? `${episode.runtime} 分钟` : ""].filter(Boolean).join(" · ")}</small></div>
+                          <div><strong>E{episodeNumber} · {episode.name || `第 ${episodeNumber} 集`}</strong><small>{[episode.airDate, episode.runtime ? `${episode.runtime} 分钟` : ""].filter(Boolean).join(" · ")}</small>{episode.overview && <p>{episode.overview}</p>}</div>
                           <i className="watch-mobile-episode-check" aria-hidden="true">{checkedEpisodes.has(episodeNumber) ? "✓" : ""}</i>
                         </label>;
                       })}
