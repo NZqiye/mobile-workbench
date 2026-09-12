@@ -1377,7 +1377,8 @@ select:focus-visible {
 .asset-form-head h3 { margin: 0; font-size: 16px; color: #26262c; }
 .asset-form-head button { border: 0; background: transparent; color: var(--muted); font-size: 13px; font-weight: 700; }
 .asset-form input, .asset-form select { height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: #fffdf9; font-size: 14px; }
-.asset-form input:focus, .asset-form select:focus { outline: none; border-color: var(--theme-main); }
+.asset-form textarea { min-height: 76px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fffdf9; font-size: 14px; resize: vertical; }
+.asset-form input:focus, .asset-form select:focus, .asset-form textarea:focus { outline: none; border-color: var(--theme-main); }
 .asset-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .asset-field { display: grid; gap: 5px; color: var(--muted); font-size: 12px; font-weight: 700; }
 .asset-submit { height: 40px; border: 0; border-radius: 8px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 14px; font-weight: 900; }
@@ -1423,7 +1424,7 @@ select:focus-visible {
 .asset-status-tabs button { min-height: 36px; border: 1px solid rgba(234, 215, 208, 0.72); background: rgba(255, 252, 250, 0.72); }
 .asset-status-tabs button.active { color: var(--theme-main); border-color: color-mix(in srgb, var(--theme-main) 40%, transparent); background: color-mix(in srgb, var(--theme-soft) 78%, #fff); }
 .subscription-board { display: grid; gap: 14px; padding: 16px 14px; border: 1px solid rgba(234, 215, 208, 0.82); border-radius: 8px; background: rgba(255, 255, 255, 0.9); box-shadow: var(--shadow); }
-.subscription-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; overflow: hidden; border-radius: 12px; color: #fff; background: rgba(255, 255, 255, 0.18); }
+.subscription-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; overflow: hidden; border-radius: 12px; color: #fff; background: rgba(255, 255, 255, 0.18); }
 .subscription-summary > div { display: grid; grid-template-columns: auto auto; justify-content: center; align-items: baseline; gap: 4px; padding: 14px 8px; text-align: center; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); }
 .subscription-summary span { grid-column: 1 / -1; font-size: 11px; opacity: 0.82; }
 .subscription-summary strong { font-size: 21px; line-height: 1; }
@@ -1437,6 +1438,7 @@ select:focus-visible {
 .subscription-info { display: grid; gap: 3px; min-width: 0; }
 .subscription-info strong { overflow: hidden; color: #26262c; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
 .subscription-info small, .subscription-info span { color: var(--muted); font-size: 11px; line-height: 1.4; }
+.subscription-info .subscription-note { color: var(--muted); opacity: 0.9; }
 .subscription-info span { color: var(--theme-main); font-weight: 800; }
 .subscription-price { color: #26262c; font-size: 16px; font-weight: 950; }
 .subscription-actions { display: flex; grid-column: 2 / -1; justify-content: flex-end; gap: 8px; }
@@ -7048,4 +7050,29 @@ textarea::placeholder {
   background: rgba(255, 213, 138, 0.1);
   font-size: 12px;
   font-weight: 800;
+}
+
+/* Keep subscription stats in one row on mobile. */
+.subscription-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+}
+.subscription-summary > div {
+  min-width: 0;
+  padding: 12px 4px;
+}
+.subscription-summary span {
+  font-size: 10px;
+  white-space: nowrap;
+}
+.subscription-summary strong {
+  font-size: 18px;
+}
+.subscription-summary small {
+  font-size: 9px;
+}
+@media (max-width: 420px) {
+  .subscription-summary > div { padding: 10px 2px; }
+  .subscription-summary span { font-size: 9px; }
+  .subscription-summary strong { font-size: 16px; }
+  .subscription-summary small { font-size: 8px; }
 }
