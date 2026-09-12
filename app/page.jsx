@@ -143,13 +143,13 @@ const petSupplyItems = [
   { id: "stick", label: "电影票", icon: "🎟️", action: "胖咕嘎收下电影票，开心地挥手。" },
 ];
 const ponyThemes = [
-  { id: "rmb", name: "赤焰", note: "100元红金", primary: "#b4232c", accent: "#c98a2c" },
-  { id: "gold", name: "鎏金", note: "金色暖调", primary: "#a45f16", accent: "#d6a23a" },
-  { id: "ink", name: "墨红", note: "沉稳深色", primary: "#3a2024", accent: "#b7791f" },
-  { id: "jade", name: "青玉", note: "低饱和青绿", primary: "#16645a", accent: "#c99a3a" },
-  { id: "blue", name: "霜蓝", note: "冷静蓝灰", primary: "#285980", accent: "#b88a37" },
-  { id: "pine", name: "松绿", note: "自然深绿", primary: "#255f3e", accent: "#c98a2c" },
-  { id: "bw", name: "\u9ed1\u767d", note: "\u7ecf\u5178\u9ed1\u767d", primary: "#18181b", accent: "#f4f4f5" },
+  { id: "rmb", name: "赤焰", note: "红金烈焰", primary: "#8f1d2c", accent: "#f0c56a" },
+  { id: "gold", name: "暮金", note: "黑金琥珀", primary: "#b7791f", accent: "#f7d77a" },
+  { id: "ink", name: "紫曜", note: "深紫玫瑰", primary: "#5b2a86", accent: "#f0a6ca" },
+  { id: "jade", name: "青瓷", note: "青绿瓷釉", primary: "#0e7c72", accent: "#f2c86b" },
+  { id: "blue", name: "星蓝", note: "深空极光", primary: "#2563eb", accent: "#c084fc" },
+  { id: "pine", name: "森岚", note: "雾森松绿", primary: "#1f7a4d", accent: "#e8b85c" },
+  { id: "bw", name: "黑白", note: "极简黑白", primary: "#18181b", accent: "#f4f4f5" },
 ];
 const noteTypes = [
   { value: "life", label: "生活" },
@@ -1924,7 +1924,7 @@ function DailyQuoteCard() {
 function normalizeMarketQuote(quote) {
   const mappedName = marketSymbolNames[quote.symbol];
   const name = String(quote.name || "");
-  const brokenName = !name || name.includes("�") || /^[\d.]+$/.test(name);
+  const brokenName = !name || name.includes("\uFFFD") || /^[\d.]+$/.test(name);
   return { ...quote, name: mappedName || (brokenName ? quote.symbol : name) };
 }
 

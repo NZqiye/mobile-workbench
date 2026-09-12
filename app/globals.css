@@ -37,12 +37,12 @@ button:active { transform: translateY(1px); }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid rgba(217, 100, 42, 0.24); outline-offset: 2px; }
 
 .phone-shell { position: relative; display: grid; grid-template-rows: 58px minmax(0, 1fr); width: 100%; min-height: 100dvh; margin: 0; overflow: hidden; border-inline: 0; background: var(--surface); box-shadow: none; }
-.pony-theme-rmb { --theme-deep: #751923; --theme-main: #b4232c; --theme-warm: #d7613c; --theme-accent: #c98a2c; --theme-soft: #fff0e8; --theme-side-top: #d86d53; --theme-side-bottom: #8e1d29; }
-.pony-theme-gold { --theme-deep: #5b3511; --theme-main: #a45f16; --theme-warm: #c47a24; --theme-accent: #d6a23a; --theme-soft: #fff4df; --theme-side-top: #d4912f; --theme-side-bottom: #7b4514; }
-.pony-theme-ink { --theme-deep: #1f1719; --theme-main: #3a2024; --theme-warm: #73333a; --theme-accent: #b7791f; --theme-soft: #f5ece7; --theme-side-top: #5b2a30; --theme-side-bottom: #1f1719; }
-.pony-theme-jade { --theme-deep: #123d38; --theme-main: #16645a; --theme-warm: #258777; --theme-accent: #c99a3a; --theme-soft: #edf8f5; --theme-side-top: #278778; --theme-side-bottom: #123d38; }
-.pony-theme-blue { --theme-deep: #172d42; --theme-main: #285980; --theme-warm: #3f78a6; --theme-accent: #b88a37; --theme-soft: #edf5fb; --theme-side-top: #4f82a8; --theme-side-bottom: #172d42; }
-.pony-theme-pine { --theme-deep: #183623; --theme-main: #255f3e; --theme-warm: #3f805a; --theme-accent: #c98a2c; --theme-soft: #eef7ef; --theme-side-top: #4a865f; --theme-side-bottom: #183623; }
+.pony-theme-rmb { --theme-deep: #3f1218; --theme-main: #8f1d2c; --theme-warm: #b83a3f; --theme-accent: #f0c56a; --theme-soft: #2a1517; --theme-side-top: #a9343d; --theme-side-bottom: #300c12; }
+.pony-theme-gold { --theme-deep: #18130a; --theme-main: #b7791f; --theme-warm: #e0a43a; --theme-accent: #f7d77a; --theme-soft: #271f11; --theme-side-top: #d69a2e; --theme-side-bottom: #0f0b06; }
+.pony-theme-ink { --theme-deep: #16111d; --theme-main: #5b2a86; --theme-warm: #8a3ffc; --theme-accent: #f0a6ca; --theme-soft: #24182f; --theme-side-top: #7142b8; --theme-side-bottom: #100b18; }
+.pony-theme-jade { --theme-deep: #062d2b; --theme-main: #0e7c72; --theme-warm: #19a99a; --theme-accent: #f2c86b; --theme-soft: #0b332f; --theme-side-top: #20a99b; --theme-side-bottom: #041d1b; }
+.pony-theme-blue { --theme-deep: #071827; --theme-main: #2563eb; --theme-warm: #38bdf8; --theme-accent: #c084fc; --theme-soft: #0b2135; --theme-side-top: #2f80ed; --theme-side-bottom: #05111f; }
+.pony-theme-pine { --theme-deep: #071f18; --theme-main: #1f7a4d; --theme-warm: #2fb172; --theme-accent: #e8b85c; --theme-soft: #0d2b20; --theme-side-top: #34a66a; --theme-side-bottom: #04150f; }
 .phone-status { position: sticky; top: 0; z-index: 30; display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; padding: 0 clamp(14px, 2vw, 22px); color: #171014; border-bottom: 1px solid var(--line); background: rgba(255, 253, 249, 0.92); backdrop-filter: blur(18px); font-size: 18px; font-weight: 900; }
 .phone-status span { color: #171014; font-size: 12px; font-weight: 800; opacity: 0.75; }
 .page-today .phone-status strong, .page-today .phone-status span { visibility: hidden; }
@@ -582,9 +582,9 @@ textarea { resize: vertical; }
 .anniversary-archive { display: grid; gap: 9px; }
 .anniversary-archive summary { display: flex; align-items: center; justify-content: space-between; min-height: 38px; padding: 0 12px; border: 1px solid color-mix(in srgb, var(--theme-main) 12%, var(--line)); border-radius: 12px; color: var(--muted); background: rgba(255, 255, 255, 0.66); font-size: 13px; font-weight: 900; cursor: pointer; list-style: none; }
 .anniversary-archive summary::-webkit-details-marker { display: none; }
-.anniversary-archive summary::after { content: "展开"; color: var(--theme-main); font-size: 12px; }
+.anniversary-archive summary::after { content: "灞曞紑"; color: var(--theme-main); font-size: 12px; }
 .anniversary-archive[open] summary { margin-bottom: 9px; color: var(--theme-main); background: color-mix(in srgb, var(--theme-soft) 72%, #fff); }
-.anniversary-archive[open] summary::after { content: "收起"; }
+.anniversary-archive[open] summary::after { content: "鏀惰捣"; }
 .birthday-groups { display: grid; gap: 10px; }
 .birthday-group { display: grid; gap: 9px; }
 .birthday-group-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 10px; border: 1px solid color-mix(in srgb, var(--theme-main) 14%, var(--line)); border-radius: 12px; color: var(--theme-main); background: color-mix(in srgb, var(--theme-soft) 70%, #fff); }
@@ -2346,7 +2346,7 @@ select:focus-visible {
 .mini-chip { padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255, 255, 255, 0.8); color: var(--muted); font-size: 12px; font-weight: 800; cursor: pointer; }
 .mini-chip.active { color: #fff; border-color: transparent; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); }
 
-/* 天气穿搭提示 */
+/* 澶╂皵绌挎惌鎻愮ず */
 .weather-outfit-tip { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; padding: 9px 12px; border-radius: 12px; background: color-mix(in srgb, var(--theme-soft) 60%, #fff); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7); }
 .weather-outfit-tip span { color: var(--theme-main); font-size: 13px; font-weight: 900; white-space: nowrap; }
 .weather-outfit-tip small { color: var(--muted); font-size: 12px; line-height: 1.4; }
@@ -4036,61 +4036,61 @@ textarea::placeholder {
 }
 
 .pony-theme-gold {
-  --theme-deep: #1f1a12;
-  --theme-main: #6f4c1f;
-  --theme-warm: #9b6a2b;
-  --theme-accent: #f3c76b;
-  --theme-soft: #2b2418;
-  --theme-side-top: #9a6a2c;
-  --theme-side-bottom: #17120b;
+  --theme-deep: #18130a;
+  --theme-main: #b7791f;
+  --theme-warm: #e0a43a;
+  --theme-accent: #f7d77a;
+  --theme-soft: #271f11;
+  --theme-side-top: #d69a2e;
+  --theme-side-bottom: #0f0b06;
 }
 
 .pony-theme-ink {
-  --theme-deep: #171316;
-  --theme-main: #35262d;
-  --theme-warm: #5a3945;
-  --theme-accent: #d9a86c;
-  --theme-soft: #262024;
-  --theme-side-top: #4a313a;
-  --theme-side-bottom: #120f12;
+  --theme-deep: #16111d;
+  --theme-main: #5b2a86;
+  --theme-warm: #8a3ffc;
+  --theme-accent: #f0a6ca;
+  --theme-soft: #24182f;
+  --theme-side-top: #7142b8;
+  --theme-side-bottom: #100b18;
 }
 
 .pony-theme-jade {
-  --theme-deep: #06231f;
-  --theme-main: #0f5f56;
-  --theme-warm: #1f8a7a;
-  --theme-accent: #d7bd72;
-  --theme-soft: #0d2e2a;
-  --theme-side-top: #208579;
-  --theme-side-bottom: #061b18;
+  --theme-deep: #062d2b;
+  --theme-main: #0e7c72;
+  --theme-warm: #19a99a;
+  --theme-accent: #f2c86b;
+  --theme-soft: #0b332f;
+  --theme-side-top: #20a99b;
+  --theme-side-bottom: #041d1b;
 }
 
 .pony-theme-blue {
-  --theme-deep: #0b1726;
-  --theme-main: #1f4e79;
-  --theme-warm: #326fa3;
-  --theme-accent: #c8d9f0;
-  --theme-soft: #111f31;
-  --theme-side-top: #326fa3;
-  --theme-side-bottom: #08111d;
+  --theme-deep: #071827;
+  --theme-main: #2563eb;
+  --theme-warm: #38bdf8;
+  --theme-accent: #c084fc;
+  --theme-soft: #0b2135;
+  --theme-side-top: #2f80ed;
+  --theme-side-bottom: #05111f;
 }
 
 .pony-theme-pine {
-  --theme-deep: #0d1f17;
-  --theme-main: #1f5b3d;
-  --theme-warm: #347a54;
-  --theme-accent: #d6b568;
-  --theme-soft: #13291f;
-  --theme-side-top: #347a54;
-  --theme-side-bottom: #09160f;
+  --theme-deep: #071f18;
+  --theme-main: #1f7a4d;
+  --theme-warm: #2fb172;
+  --theme-accent: #e8b85c;
+  --theme-soft: #0d2b20;
+  --theme-side-top: #34a66a;
+  --theme-side-bottom: #04150f;
 }
 
 .theme-rmb { --pony-primary: #8f1d2c; }
-.theme-gold { --pony-primary: #9b6a2b; }
-.theme-ink { --pony-primary: #35262d; }
-.theme-jade { --pony-primary: #0f5f56; }
-.theme-blue { --pony-primary: #1f4e79; }
-.theme-pine { --pony-primary: #1f5b3d; }
+.theme-gold { --pony-primary: #b7791f; }
+.theme-ink { --pony-primary: #5b2a86; }
+.theme-jade { --pony-primary: #0e7c72; }
+.theme-blue { --pony-primary: #2563eb; }
+.theme-pine { --pony-primary: #1f7a4d; }
 
 /* consultation page contrast polish */
 .page-consultations .work-area {
@@ -6670,7 +6670,7 @@ textarea::placeholder {
   box-shadow: none;
 }
 
-.phone-shell.mobile-shell.page-consultations .watch-mobile-titlebar > button[aria-label="搜索作品"] {
+.phone-shell.mobile-shell.page-consultations .watch-mobile-titlebar > button[aria-label="鎼滅储浣滃搧"] {
   width: 54px;
   border-radius: 999px;
   font-size: 13px;
@@ -7076,3 +7076,22 @@ textarea::placeholder {
   .subscription-summary strong { font-size: 16px; }
   .subscription-summary small { font-size: 8px; }
 }
+
+/* Make subscription usage note readable across themes. */
+.subscription-form textarea {
+  color: color-mix(in srgb, #fff 92%, var(--theme-main));
+  background: color-mix(in srgb, var(--theme-deep) 82%, #050806);
+  border-color: rgba(255, 255, 255, 0.14);
+  caret-color: color-mix(in srgb, #fff 92%, var(--theme-main));
+}
+.subscription-form textarea::placeholder {
+  color: color-mix(in srgb, #fff 58%, var(--theme-main));
+  opacity: 1;
+}
+.subscription-form textarea:focus {
+  color: color-mix(in srgb, #fff 96%, var(--theme-main));
+  background: color-mix(in srgb, var(--theme-deep) 76%, var(--theme-main));
+  border-color: color-mix(in srgb, var(--theme-accent) 72%, rgba(255, 255, 255, 0.18));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent) 18%, transparent);
+}
+
