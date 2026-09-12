@@ -20,6 +20,22 @@ function mediaDescription(item) {
   return item?.summaryZh || item?.reviewZh || item?.summary || item?.overview || item?.review || "暂无简介";
 }
 
+const animeTitleHints = ["凡人修仙传", "择日飞升", "斗罗大陆", "斗破苍穹", "吞噬星空", "完美世界", "仙逆", "牧神记", "遮天", "灵笼", "画江湖", "狐妖小红娘", "一人之下", "雾山五行", "全职高手", "龙族"];
+
+function inferMediaCategory(item) {
+  const explicit = item?.category;
+  if (["movie", "variety", "anime"].includes(explicit)) return explicit;
+  const text = [item?.titleZh, item?.title, item?.originalTitle, item?.type, item?.review, item?.summary, item?.overview, ...(Array.isArray(item?.tags) ? item.tags : [])].filter(Boolean).join(" ").toLowerCase();
+  if (item?.type === "动漫" || animeTitleHints.some((title) => text.includes(title.toLowerCase())) || /动漫|动画|国漫|番剧|anime|animation|donghua/.test(text)) return "anime";
+  if (item?.type === "综艺" || /综艺|真人秀|脱口秀|talk show|reality|variety/.test(text)) return "variety";
+  if (tmdbMediaType(item) === "movie" || item?.type === "电影") return "movie";
+  return "tv";
+}
+
+function mediaTypeLabel(item) {
+  return { movie: "电影", tv: "电视剧", variety: "综艺", anime: "动漫" }[inferMediaCategory(item)] || "电视剧";
+}
+
 function normalizeTvmazeRecommendation(item) {
   const title = item?.title || item?.titleZh || "";
   if (!title || !item?.tmdbId) return null;
@@ -1228,6 +1244,16 @@ async function saveCloudItem(session, name, value) {
   });
   cloudWriteQueue = task.catch(() => {});
   return task;
+}
+
+async function saveMergedCloudCollection(session, name, value) {
+  if (!supabase || !session) return value;
+  await cloudWriteQueue.catch(() => {});
+  const cloud = await loadCloudItems(session);
+  const merged = mergeSyncedItems(name, value, cloud[name], cloud);
+  const nextValue = name === "watchCheckins" ? dedupeWatchCheckins(merged) : merged;
+  await saveCloudItem(session, name, nextValue);
+  return nextValue;
 }
 
 function StatButton({ label, value, onClick }) {
@@ -3834,14 +3860,11 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
   const selectedType = selected ? tmdbMediaType(selected) : "tv";
   const isMovie = selectedType === "movie";
   const categoryLabel = (item) => {
-    if (["movie", "tv", "variety", "anime"].includes(item?.category)) return { movie: "电影", tv: "电视剧", variety: "综艺", anime: "动漫" }[item.category];
-    if (tmdbMediaType(item) === "movie" || item?.type === "电影") return "电影";
-    if (item?.type === "综艺") return "综艺";
-    if (item?.type === "动漫") return "动漫";
-    return "电视剧";
+    return mediaTypeLabel(item);
   };
   const filteredItems = watchItems.filter((item) => {
-    const matchesCategory = category === "all" || (category === "movie" ? tmdbMediaType(item) === "movie" : categoryLabel(item) === ({ tv: "电视剧", variety: "综艺", anime: "动漫" }[category] || category));
+    const itemCategory = inferMediaCategory(item);
+    const matchesCategory = category === "all" || itemCategory === category;
     const keyword = query.trim().toLowerCase();
     const matchesQuery = !keyword || [mediaTitle(item), item.title, item.originalTitle, item.status, item.platform].some((value) => String(value || "").toLowerCase().includes(keyword));
     return matchesCategory && matchesQuery;
@@ -5741,7 +5764,10 @@ export default function Workbench() {
     writeStorage(name, nextValue);
     const cloudSession = session || (localStorage.getItem(key("accessUnlocked")) === "true" ? fixedSession : null);
     if (cloudSession) {
-      saveCloudItem(cloudSession, name, nextValue)
+      const saveTask = ["consultations", "watchCheckins"].includes(name)
+        ? saveMergedCloudCollection(cloudSession, name, nextValue)
+        : saveCloudItem(cloudSession, name, nextValue);
+      saveTask
         .then(() => setSyncStatus(`已同步 · ${nowText()}`))
         .catch((error) => setSyncStatus(`同步失败：${error.message}`));
     }
@@ -5832,7 +5858,7 @@ export default function Workbench() {
       writeStorage("weightRecords", cloud.weightRecords);
     }
     if (Array.isArray(cloud.watchCheckins)) {
-      const nextWatchCheckins = dedupeWatchCheckins(cloud.watchCheckins.filter((record) => !deletedConsultationIds.has(String(record.consultationId))));
+      const nextWatchCheckins = dedupeWatchCheckins(cloud.watchCheckins);
       setWatchCheckins(nextWatchCheckins);
       writeStorage("watchCheckins", nextWatchCheckins);
     }
@@ -6273,9 +6299,12 @@ export default function Workbench() {
       imdbID: omdbDetails.imdbId || item.imdbID || "",
       ...details,
     };
+    const inferredCategory = inferMediaCategory(mergedItem);
     const nextItem = {
       id: crypto.randomUUID(),
       ...mergedItem,
+      category: inferredCategory,
+      type: { movie: "电影", tv: "电视剧", variety: "综艺", anime: "动漫" }[inferredCategory] || mergedItem.type || "电视剧",
       status: "想看的剧",
       rating: "",
       watchedDate: "",
@@ -6615,7 +6644,7 @@ export default function Workbench() {
 
   function saveConsultation(item) {
     const oldItem = consultations.find((record) => record.id === item.id);
-    const nextItem = oldItem ? { ...oldItem, ...item } : item;
+    const nextItem = oldItem ? { ...oldItem, ...item, updatedAt: Date.now() } : stampItem(item);
     const next = dedupeConsultations(consultations.some((record) => record.id === item.id)
       ? mapItemsById(consultations, item.id, () => nextItem)
       : [nextItem, ...consultations]);
@@ -6657,6 +6686,7 @@ export default function Workbench() {
         seasonRatings,
         seasonEpisodeCounts,
         time,
+        updatedAt: Date.now(),
       } : record);
       setConsultations(next);
       persist("consultations", next);
@@ -6695,7 +6725,7 @@ export default function Workbench() {
     }
 
     if (mode === "movie") {
-      const next = consultations.map((record) => record.id === id ? { ...record, rating: rating || "", status: "看过的剧", watchedDate: watchedAt, time } : record);
+      const next = consultations.map((record) => record.id === id ? { ...record, rating: rating || "", status: "看过的剧", watchedDate: watchedAt, time, updatedAt: Date.now() } : record);
       setConsultations(next);
       persist("consultations", next);
       const existing = watchCheckins.find((record) => record.mode === "movie" && String(record.consultationId) === String(id));
@@ -6727,7 +6757,7 @@ export default function Workbench() {
     const maxEpisode = isMovie ? currentEpisode : Math.max(...legacyEpisodes);
     const total = Number(item.totalEpisodes || 0);
     const nextStatus = isMovie || (total > 0 && maxEpisode >= total) ? "看过的剧" : "正在看";
-    const next = consultations.map((record) => record.id === id ? { ...record, rating: rating || "", status: nextStatus, currentEpisode: isMovie ? record.currentEpisode || "" : String(maxEpisode), watchedDate: watchedAt, time } : record);
+    const next = consultations.map((record) => record.id === id ? { ...record, rating: rating || "", status: nextStatus, currentEpisode: isMovie ? record.currentEpisode || "" : String(maxEpisode), watchedDate: watchedAt, time, updatedAt: Date.now() } : record);
     setConsultations(next);
     persist("consultations", next);
     const checkedEpisodes = isMovie ? [""] : legacyEpisodes;
@@ -6802,6 +6832,7 @@ export default function Workbench() {
 
   function deleteWatchCheckin(recordId) {
     const record = watchCheckins.find((item) => item.id === recordId);
+    if (recordId) markDeleted("watchCheckins", recordId);
     const nextWatchCheckins = dedupeWatchCheckins(watchCheckins.filter((record) => record.id !== recordId));
     setWatchCheckins(nextWatchCheckins);
     persist("watchCheckins", nextWatchCheckins);
@@ -6833,11 +6864,15 @@ export default function Workbench() {
     setConsultations(next);
     persist("consultations", next);
     const title = String(item?.title || "").trim().toLowerCase();
+    const removedWatchCheckinIds = [];
     const nextWatchCheckins = watchCheckins.filter((record) => {
       const recordTitle = String(record.title || "").trim().toLowerCase();
       const titleMatched = title && recordTitle && (recordTitle.includes(title) || title.includes(recordTitle));
-      return String(record.consultationId || "") !== String(id) && !titleMatched;
+      const removed = String(record.consultationId || "") === String(id) || titleMatched;
+      if (removed && record.id) removedWatchCheckinIds.push(record.id);
+      return !removed;
     });
+    if (removedWatchCheckinIds.length) persistDeletedIds("watchCheckins", [...readDeletedIds("watchCheckins"), ...removedWatchCheckinIds]);
     setWatchCheckins(nextWatchCheckins);
     persist("watchCheckins", nextWatchCheckins);
     if (!item?.tmdbId) return;
