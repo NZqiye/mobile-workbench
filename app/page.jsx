@@ -1992,6 +1992,16 @@ function consultationKey(item) {
   return `title:${String(mediaTitle(item)).trim().toLowerCase()}`;
 }
 
+function mediaAliasKeys(item) {
+  const keys = new Set();
+  if (item?.tmdbId) keys.add(tmdbItemKey(item));
+  [item?.title, item?.titleZh, item?.originalTitle, mediaTitle(item)].forEach((title) => {
+    const normalized = String(title || "").trim().toLowerCase();
+    if (normalized) keys.add(`title:${normalized}`);
+  });
+  return Array.from(keys).filter(Boolean);
+}
+
 function watchStatusRank(status) {
   return { "想看的剧": 1, "正在看": 2, "看过的剧": 3, "暂停/弃剧": 0, "已归档": 0 }[status] || 0;
 }
@@ -2003,7 +2013,9 @@ function mergeConsultationRecord(base, incoming) {
   const older = newer === incoming ? base : incoming;
   const baseStatus = watchStatusRank(base?.status);
   const incomingStatus = watchStatusRank(incoming?.status);
-  const status = incomingStatus > baseStatus ? incoming.status : base.status;
+  const status = baseUpdatedAt && incomingUpdatedAt && baseUpdatedAt !== incomingUpdatedAt
+    ? newer.status
+    : incomingStatus > baseStatus ? incoming.status : base.status;
   return {
     ...older,
     ...newer,
@@ -2015,47 +2027,31 @@ function mergeConsultationRecord(base, incoming) {
   };
 }
 
+function canMergeConsultations(base, incoming, matchedKey) {
+  const baseTmdb = String(base?.tmdbId || "").trim();
+  const incomingTmdb = String(incoming?.tmdbId || "").trim();
+  if (matchedKey?.startsWith("tmdb:")) return true;
+  if (baseTmdb && incomingTmdb && baseTmdb !== incomingTmdb) return false;
+  return true;
+}
+
 function dedupeConsultations(items) {
   const list = Array.isArray(items) ? items : [];
   const kept = [];
-  const seenKeys = new Set();
-  const titleIndex = new Map();
+  const keyIndex = new Map();
   list.forEach((item) => {
-    const key = consultationKey(item);
-    const title = String(item.title || "").trim().toLowerCase();
-    if (key && seenKeys.has(key)) {
-      const prevIndex = kept.findIndex((entry) => consultationKey(entry) === key);
-      if (prevIndex >= 0) kept[prevIndex] = mergeConsultationRecord(kept[prevIndex], item);
+    const keys = mediaAliasKeys(item);
+    const matched = keys
+      .map((key) => ({ key, index: keyIndex.get(key) }))
+      .find(({ key, index }) => Number.isInteger(index) && canMergeConsultations(kept[index], item, key));
+    const prevIndex = matched?.index;
+    if (Number.isInteger(prevIndex)) {
+      kept[prevIndex] = mergeConsultationRecord(kept[prevIndex], item);
+      mediaAliasKeys(kept[prevIndex]).forEach((key) => keyIndex.set(key, prevIndex));
       return;
     }
-    if (title && titleIndex.has(title)) {
-      const prevIndex = titleIndex.get(title);
-      const prev = kept[prevIndex];
-      const prevHasTmdb = Boolean(prev?.tmdbId);
-      const curHasTmdb = Boolean(item.tmdbId);
-      const sameTmdb = prevHasTmdb && curHasTmdb && String(prev.tmdbId) === String(item.tmdbId);
-      if (sameTmdb) {
-        kept[prevIndex] = mergeConsultationRecord(prev, item);
-        return;
-      }
-      if (prevHasTmdb && curHasTmdb) {
-        // 同名但 tmdbId 不同，视为不同作品，保留
-      } else if (!prevHasTmdb && curHasTmdb) {
-        kept[prevIndex] = mergeConsultationRecord(prev, item);
-        titleIndex.set(title, prevIndex);
-        if (key) seenKeys.add(key);
-        return;
-      } else if (prevHasTmdb && !curHasTmdb) {
-        kept[prevIndex] = mergeConsultationRecord(prev, item);
-        return;
-      } else {
-        kept[prevIndex] = mergeConsultationRecord(prev, item);
-        return;
-      }
-    }
     kept.push(item);
-    titleIndex.set(title, kept.length - 1);
-    if (key) seenKeys.add(key);
+    keys.forEach((key) => keyIndex.set(key, kept.length - 1));
   });
   return kept;
 }
@@ -2063,19 +2059,34 @@ function dedupeConsultations(items) {
 function syncConsultationStatusFromWatchCheckins(consultations, watchCheckins) {
   const records = Array.isArray(watchCheckins) ? watchCheckins : [];
   return (Array.isArray(consultations) ? consultations : []).map((item) => {
+    const itemKeys = new Set(mediaAliasKeys(item));
     const related = records.filter((record) => {
       if (record.consultationId && item.id && String(record.consultationId) === String(item.id)) return true;
       if (record.tmdbId && item.tmdbId && String(record.tmdbId) === String(item.tmdbId)) return true;
-      return String(mediaTitle(record)).trim().toLowerCase() === String(mediaTitle(item)).trim().toLowerCase();
+      return mediaAliasKeys(record).some((key) => itemKeys.has(key));
     });
     if (!related.length) return item;
     if (item.status === "看过的剧") return item;
     const hasCompletedRecord = related.some((record) => {
-      const watchedEpisodes = Array.isArray(record.episodes) ? record.episodes.length : 0;
-      const episodeCount = Number(record.episodeCount || 0);
-      return record.mode === "movie" || Number(record.seasonRating || record.rating || 0) > 0 || (record.mode === "season" && episodeCount > 0 && watchedEpisodes >= episodeCount);
+      return record.mode === "movie" || Number(record.seasonRating || record.rating || 0) > 0;
     });
-    return hasCompletedRecord ? { ...item, status: "看过的剧", updatedAt: Math.max(itemUpdatedAt(item), ...related.map(itemUpdatedAt)) || Date.now() } : item;
+    if (hasCompletedRecord) return { ...item, status: "看过的剧", updatedAt: Math.max(itemUpdatedAt(item), ...related.map(itemUpdatedAt)) || Date.now() };
+    if (item.status === "看过的剧") {
+      const knownSeasons = Array.isArray(item.seasons) ? item.seasons.filter((season) => Number(season?.seasonNumber) > 0) : [];
+      const seasonRecords = related.filter((record) => record.mode === "season");
+      const allKnownSeasonsComplete = knownSeasons.length > 0 && knownSeasons.every((season) => {
+        const key = String(season.seasonNumber);
+        const count = Number(season.episodeCount || item.seasonEpisodeCounts?.[key] || 0);
+        const savedCount = Array.isArray(item.seasonProgress?.[key]) ? item.seasonProgress[key].length : 0;
+        const record = seasonRecords.find((entry) => String(entry.season) === key);
+        const recordCount = Array.isArray(record?.episodes) ? record.episodes.length : 0;
+        return count > 0 && Math.max(savedCount, recordCount) >= count;
+      });
+      if (seasonRecords.length && knownSeasons.length && !allKnownSeasonsComplete) {
+        return { ...item, status: "正在看", updatedAt: Date.now() };
+      }
+    }
+    return item;
   });
 }
 
@@ -5827,7 +5838,17 @@ export default function Workbench() {
         ? saveMergedCloudCollection(cloudSession, name, nextValue)
         : saveCloudItem(cloudSession, name, nextValue);
       saveTask
-        .then(() => setSyncStatus(`已同步 · ${nowText()}`))
+        .then((savedValue) => {
+          if (name === "consultations" && Array.isArray(savedValue)) {
+            setConsultations(savedValue);
+            writeStorage("consultations", savedValue);
+          }
+          if (name === "watchCheckins" && Array.isArray(savedValue)) {
+            setWatchCheckins(savedValue);
+            writeStorage("watchCheckins", savedValue);
+          }
+          setSyncStatus(`已同步 · ${nowText()}`);
+        })
         .catch((error) => setSyncStatus(`同步失败：${error.message}`));
     }
   }
