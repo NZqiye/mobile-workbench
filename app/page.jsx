@@ -4065,7 +4065,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
                 {isMovie ? (
                 <div className="watch-rating-movie-form">
                   <div><strong>电影整体评分</strong><small>看完后记录一次即可</small></div>
-                  <input type="number" min="0.5" max="10" step="0.5" value={movieRating} onChange={(event) => { setMovieRating(event.target.value); setRatingStatus(""); }} placeholder="0.5 - 10" aria-label="电影整体评分" />
+                  <input type="text" inputMode="decimal" value={movieRating} onChange={(event) => { setMovieRating(event.target.value); setRatingStatus(""); }} placeholder="0.5 - 10" aria-label="电影整体评分" />
                   <div className="watch-rating-actions"><button type="button" onClick={saveMovie}>保存电影记录</button>{selected.tmdbId && <button type="button" className="secondary" onClick={syncMovieRating} disabled={!movieRating}>同步 TMDB</button>}</div>
                 </div>
                 ) : (
@@ -4078,15 +4078,16 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
                   {seasonLoading ? <p className="watch-rating-status">正在读取第 {seasonNumber} 季的 TMDB 集数…</p> : episodes.length === 0 ? <p className="watch-rating-status">TMDB 暂未返回这一季的集数。</p> : <div className="watch-rating-episodes">
                     {episodes.map((episode) => {
                       const episodeNumber = Number(episode.episodeNumber);
+                      const episodeImage = episode.stillUrl || activeSeason?.posterUrl || detailPoster;
                       return <label className={`watch-rating-episode ${checkedEpisodes.has(episodeNumber) ? "checked" : ""}`} key={episode.id || episodeNumber}>
                         <input type="checkbox" checked={checkedEpisodes.has(episodeNumber)} onChange={() => toggleEpisode(episodeNumber)} />
-                        {episode.stillUrl ? <img src={episode.stillUrl} alt="" loading="lazy" /> : <span className="watch-rating-episode-placeholder">E{episodeNumber}</span>}
+                        {episodeImage ? <img src={episodeImage} alt="" loading="lazy" /> : <span className="watch-rating-episode-placeholder">E{episodeNumber}</span>}
                         <span><strong>E{episodeNumber} · {episode.name || "未命名集数"}</strong><small>{[episode.airDate, episode.runtime ? `${episode.runtime} 分钟` : ""].filter(Boolean).join(" · ")}</small>{episode.overview && <p>{episode.overview}</p>}</span>
                       </label>;
                     })}
                   </div>}
                   <div className="watch-rating-season-footer">
-                    <label><span>本季整体评分</span><input type="number" min="0.5" max="10" step="0.5" value={seasonRating} onChange={(event) => { setSeasonRating(event.target.value); setRatingStatus(""); }} placeholder="看完本季后评分" /></label>
+                    <label><span>本季整体评分</span><input type="text" inputMode="decimal" value={seasonRating} onChange={(event) => { setSeasonRating(event.target.value); setRatingStatus(""); }} placeholder="看完本季后评分" /></label>
                     <div className="watch-rating-actions"><button type="button" onClick={saveProgress}>保存观看进度</button><button type="button" className="secondary" onClick={saveSeasonRating} disabled={!seasonRating}>保存本季评分</button></div>
                   </div>
                 </>
@@ -4107,7 +4108,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
                 {isMovie ? (
                   <div className="watch-mobile-movie">
                     {detailPoster ? <img src={detailPoster} alt="" /> : <span>{detailTitle.slice(0, 1)}</span>}
-                    <div><strong>电影整体评分</strong><small>看完后记录一次即可</small><input type="number" min="0.5" max="10" step="0.5" value={movieRating} onChange={(event) => { setMovieRating(event.target.value); setRatingStatus(""); }} placeholder="0.5 - 10" aria-label="电影整体评分" /><button type="button" onClick={saveMovie}>保存电影记录</button></div>
+                    <div><strong>电影整体评分</strong><small>看完后记录一次即可</small><input type="text" inputMode="decimal" value={movieRating} onChange={(event) => { setMovieRating(event.target.value); setRatingStatus(""); }} placeholder="0.5 - 10" aria-label="电影整体评分" /><button type="button" onClick={saveMovie}>保存电影记录</button></div>
                   </div>
                 ) : mobileRatingView === "seasons" ? (
                   <>
@@ -4141,15 +4142,16 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
                     {seasonLoading ? <p className="watch-rating-status">正在读取 TMDB 集数…</p> : <div className="watch-mobile-episodes">
                       {episodes.map((episode) => {
                         const episodeNumber = Number(episode.episodeNumber);
+                        const episodeImage = episode.stillUrl || activeSeason?.posterUrl || detailPoster;
                         return <label className={`watch-mobile-episode ${checkedEpisodes.has(episodeNumber) ? "checked" : ""}`} key={episode.id || episodeNumber}>
                           <input type="checkbox" checked={checkedEpisodes.has(episodeNumber)} onChange={() => toggleEpisode(episodeNumber)} />
-                          {episode.stillUrl ? <img src={episode.stillUrl} alt="" loading="lazy" /> : <span>E{episodeNumber}</span>}
+                          {episodeImage ? <img src={episodeImage} alt="" loading="lazy" /> : <span>E{episodeNumber}</span>}
                           <div><strong>E{episodeNumber} · {episode.name || `第 ${episodeNumber} 集`}</strong><small>{[episode.airDate, episode.runtime ? `${episode.runtime} 分钟` : ""].filter(Boolean).join(" · ")}</small>{episode.overview && <p>{episode.overview}</p>}</div>
                           <i className="watch-mobile-episode-check" aria-hidden="true">{checkedEpisodes.has(episodeNumber) ? "✓" : ""}</i>
                         </label>;
                       })}
                     </div>}
-                    <div className="watch-mobile-rating-footer"><label>本季整体评分<input type="number" min="0.5" max="10" step="0.5" value={seasonRating} onChange={(event) => { setSeasonRating(event.target.value); setRatingStatus(""); }} placeholder="看完本季后评分" /></label><button type="button" onClick={saveProgress}>保存观看进度</button><button type="button" className="secondary" onClick={saveSeasonRating} disabled={!seasonRating}>保存本季评分</button></div>
+                    <div className="watch-mobile-rating-footer"><label>本季整体评分<input type="text" inputMode="decimal" value={seasonRating} onChange={(event) => { setSeasonRating(event.target.value); setRatingStatus(""); }} placeholder="看完本季后评分" /></label><button type="button" onClick={saveProgress}>保存观看进度</button><button type="button" className="secondary" onClick={saveSeasonRating} disabled={!seasonRating}>保存本季评分</button></div>
                   </>
                 )}
                 {ratingStatus && <p className="watch-rating-status success">{ratingStatus}</p>}
