@@ -278,6 +278,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .phone-shell.mobile-shell .quote-metrics { grid-column: 1 / -1; padding-top: 9px; border-top: 1px solid var(--line); }
   .phone-shell.mobile-shell .market-delete { grid-column: 1 / -1; justify-self: end; }
 }
+
 @media (min-width: 960px) {
   .desktop-shell .quote-row { grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px 14px; }
   .desktop-shell .quote-metrics { grid-column: 1 / -1; padding-top: 9px; border-top: 1px solid var(--line); }
@@ -5254,6 +5255,7 @@ textarea::placeholder {
 }
 
 .watch-rating-mobile-picker-toggle { display: none; }
+.watch-rating-mobile-body { display: none; }
 
 @media screen and (min-width: 960px) {
   .phone-shell.desktop-shell.page-consultations .watch-rating-panel {
@@ -5542,4 +5544,145 @@ textarea::placeholder {
     padding-inline: 8px;
     white-space: normal;
   }
+}
+
+@media screen and (max-width: 959px) {
+  .phone-shell.mobile-shell.page-consultations .watch-rating-desktop-body,
+  .phone-shell.mobile-shell.page-consultations .watch-rating-detail-head {
+    display: none !important;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-mobile-body {
+    display: grid !important;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 14px;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-library,
+  .phone-shell.mobile-shell.page-consultations .watch-rating-detail {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-library {
+    display: none !important;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-panel.mobile-library-open .watch-rating-library {
+    display: grid !important;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-panel.mobile-library-open .watch-rating-detail {
+    display: none !important;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-panel:not(.mobile-library-open) .watch-rating-tmdb-search,
+  .phone-shell.mobile-shell.page-consultations .watch-rating-panel:not(.mobile-library-open) .watch-rating-tmdb-results,
+  .phone-shell.mobile-shell.page-consultations .watch-rating-panel:not(.mobile-library-open) .watch-rating-search-status,
+  .phone-shell.mobile-shell.page-consultations .watch-rating-panel:not(.mobile-library-open) .watch-rating-toolbar {
+    display: none !important;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-panel.mobile-library-open .watch-rating-tmdb-search,
+  .phone-shell.mobile-shell.page-consultations .watch-rating-panel.mobile-library-open .watch-rating-tmdb-results,
+  .phone-shell.mobile-shell.page-consultations .watch-rating-panel.mobile-library-open .watch-rating-toolbar {
+    display: grid !important;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-panel.mobile-library-open .watch-rating-search-status {
+    display: block !important;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-library-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    max-height: min(54dvh, 460px) !important;
+    overflow-y: auto !important;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-detail {
+    grid-template-rows: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-detail-body {
+    display: none !important;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-mobile-picker-toggle {
+    display: flex !important;
+  }
+}
+
+.watch-mobile-titlebar { display: grid; grid-template-columns: 36px minmax(0, 1fr) 36px; gap: 8px; align-items: center; min-width: 0; }
+.watch-mobile-titlebar > button { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid rgba(255, 224, 190, 0.28); border-radius: 50%; color: #ffe7d8; background: rgba(255, 224, 190, 0.1); font-size: 21px; line-height: 1; }
+.watch-mobile-titlebar > span { width: 36px; height: 36px; }
+.watch-mobile-titlebar > div { display: grid; gap: 3px; min-width: 0; }
+.watch-mobile-titlebar h3 { margin: 0; overflow: hidden; color: #fff5f0; font-size: 21px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.watch-mobile-titlebar small { overflow: hidden; color: rgba(255, 233, 224, 0.72); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.watch-mobile-next { display: grid; grid-template-columns: 108px minmax(0, 1fr); gap: 12px; align-items: center; min-width: 0; padding: 10px; border: 1px solid rgba(255, 224, 190, 0.3); border-radius: 12px; background: rgba(255, 224, 190, 0.11); }
+.watch-mobile-next img { width: 108px; height: 68px; border-radius: 8px; object-fit: cover; background: rgba(255, 255, 255, 0.12); }
+.watch-mobile-next-placeholder { display: grid; place-items: center; width: 108px; height: 68px; border-radius: 8px; color: #fff5f0; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 16px; font-weight: 900; }
+.watch-mobile-next > div { display: grid; gap: 5px; min-width: 0; }
+.watch-mobile-next small { color: #ffd58a; font-size: 11px; font-weight: 800; }
+.watch-mobile-next strong { overflow: hidden; color: #fff5f0; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+.watch-mobile-next span { color: rgba(255, 233, 224, 0.72); font-size: 12px; }
+.watch-mobile-section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.watch-mobile-section-title strong { color: #fff5f0; font-size: 22px; }
+.watch-mobile-section-title span { color: rgba(255, 233, 224, 0.72); font-size: 12px; }
+.watch-mobile-seasons { display: grid; gap: 2px; }
+.watch-mobile-season { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto 28px; gap: 11px; align-items: center; min-width: 0; padding: 9px 0; border: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.12); color: #fff5f0; background: transparent; text-align: left; }
+.watch-mobile-season:first-child { padding-top: 3px; }
+.watch-mobile-season:last-child { border-bottom: 0; }
+.watch-mobile-season img, .watch-mobile-season-poster { display: grid; place-items: center; width: 72px; height: 96px; overflow: hidden; border-radius: 9px; object-fit: cover; color: #fff5f0; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 13px; font-weight: 900; }
+.watch-mobile-season > span { display: grid; gap: 5px; min-width: 0; }
+.watch-mobile-season > span strong { overflow: hidden; color: #fff5f0; font-size: 17px; text-overflow: ellipsis; white-space: nowrap; }
+.watch-mobile-season > span small { overflow: hidden; color: rgba(255, 233, 224, 0.72); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.watch-mobile-season > b { color: #f6e5d9; font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.watch-mobile-season > i { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: #32180d; background: #ffd4a5; font-size: 15px; font-style: normal; font-weight: 950; }
+.watch-mobile-episodes-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 3px; }
+.watch-mobile-episodes-head > div { display: grid; gap: 4px; min-width: 0; }
+.watch-mobile-episodes-head strong { color: #fff5f0; font-size: 20px; }
+.watch-mobile-episodes-head small { color: rgba(255, 233, 224, 0.72); font-size: 12px; }
+.watch-mobile-episodes-head button { min-height: 34px; padding: 0 10px; border: 1px solid rgba(255, 224, 190, 0.3); border-radius: 8px; color: #ffe7d8; background: rgba(255, 224, 190, 0.1); font-size: 11px; font-weight: 800; white-space: nowrap; }
+.watch-mobile-episodes { display: grid; gap: 8px; }
+.watch-mobile-episode { display: grid; grid-template-columns: 22px 104px minmax(0, 1fr); gap: 9px; align-items: center; min-width: 0; min-height: 80px; padding: 8px; border: 1px solid rgba(255, 255, 255, 0.13); border-radius: 10px; color: #fff5f0; background: rgba(255, 255, 255, 0.06); }
+.watch-mobile-episode.checked { border-color: rgba(255, 214, 153, 0.52); background: rgba(255, 214, 153, 0.13); }
+.watch-mobile-episode > input { width: 17px; height: 17px; margin: 0; accent-color: #ffd58a; }
+.watch-mobile-episode img, .watch-mobile-episode > span { display: grid; place-items: center; width: 104px; height: 60px; overflow: hidden; border-radius: 7px; object-fit: cover; color: #fff5f0; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 12px; font-weight: 900; }
+.watch-mobile-episode > div { display: grid; gap: 4px; min-width: 0; }
+.watch-mobile-episode strong { overflow: hidden; color: #fff5f0; font-size: 13px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.watch-mobile-episode small { overflow: hidden; color: rgba(255, 233, 224, 0.72); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.watch-mobile-rating-footer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 9px; align-items: end; padding-top: 4px; }
+.watch-mobile-rating-footer label { display: grid; gap: 5px; color: #f6e5d9; font-size: 11px; font-weight: 800; }
+.watch-mobile-rating-footer input { width: 100%; min-width: 0; height: 38px; padding: 0 10px; border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 8px; color: #fff5f0; background: rgba(255, 255, 255, 0.08); }
+.watch-mobile-rating-footer input::placeholder { color: #d8bdb0; opacity: 1; }
+.watch-mobile-rating-footer > button { min-height: 38px; padding: 0 10px; border: 0; border-radius: 8px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 11px; font-weight: 900; white-space: nowrap; }
+.watch-mobile-rating-footer > button.secondary { color: #ffe7d8; border: 1px solid rgba(255, 224, 190, 0.34); background: rgba(255, 224, 190, 0.1); }
+.watch-mobile-rating-footer > button:disabled { cursor: not-allowed; color: #f0d8ca; border-color: rgba(255, 224, 190, 0.24); background: rgba(255, 255, 255, 0.07); opacity: 1; }
+
+@media screen and (max-width: 520px) {
+  .phone-shell.mobile-shell.page-consultations .watch-mobile-next { grid-template-columns: 96px minmax(0, 1fr); gap: 10px; }
+  .phone-shell.mobile-shell.page-consultations .watch-mobile-next img { width: 96px; height: 62px; }
+  .phone-shell.mobile-shell.page-consultations .watch-mobile-next-placeholder { width: 96px; height: 62px; }
+  .phone-shell.mobile-shell.page-consultations .watch-mobile-season { grid-template-columns: 64px minmax(0, 1fr) auto 26px; gap: 8px; }
+  .phone-shell.mobile-shell.page-consultations .watch-mobile-season img, .phone-shell.mobile-shell.page-consultations .watch-mobile-season-poster { width: 64px; height: 88px; }
+  .phone-shell.mobile-shell.page-consultations .watch-mobile-season > span strong { font-size: 16px; }
+  .phone-shell.mobile-shell.page-consultations .watch-mobile-season > span small { font-size: 11px; }
+  .phone-shell.mobile-shell.page-consultations .watch-mobile-episode { grid-template-columns: 20px 88px minmax(0, 1fr); gap: 7px; min-height: 72px; padding: 7px; }
+  .phone-shell.mobile-shell.page-consultations .watch-mobile-episode img, .phone-shell.mobile-shell.page-consultations .watch-mobile-episode > span { width: 88px; height: 54px; }
+  .phone-shell.mobile-shell.page-consultations .watch-mobile-episode strong { font-size: 12px; }
+  .phone-shell.mobile-shell.page-consultations .watch-mobile-episode small { font-size: 10px; }
+  .phone-shell.mobile-shell.page-consultations .watch-mobile-rating-footer { grid-template-columns: minmax(0, 1fr); }
+  .phone-shell.mobile-shell.page-consultations .watch-mobile-rating-footer > button { width: 100%; }
 }
