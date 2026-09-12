@@ -5253,6 +5253,116 @@ textarea::placeholder {
   .watch-rating-movie-form .watch-rating-actions { grid-column: auto; }
 }
 
+.watch-rating-mobile-picker-toggle { display: none; }
+
+@media screen and (min-width: 960px) {
+  .phone-shell.desktop-shell.page-consultations .watch-rating-panel {
+    min-height: 0;
+  }
+
+  .phone-shell.desktop-shell.page-consultations .watch-rating-layout {
+    display: grid !important;
+    grid-template-columns: minmax(250px, 0.78fr) minmax(0, 1.42fr) !important;
+    align-items: stretch !important;
+    height: clamp(560px, calc(100dvh - 220px), 760px) !important;
+    min-height: 0;
+  }
+
+  .phone-shell.desktop-shell.page-consultations .watch-rating-library,
+  .phone-shell.desktop-shell.page-consultations .watch-rating-detail {
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .phone-shell.desktop-shell.page-consultations .watch-rating-library-grid {
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .phone-shell.desktop-shell.page-consultations .watch-rating-detail-body {
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .phone-shell.desktop-shell.page-consultations .watch-rating-detail-body .watch-rating-episodes {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media screen and (max-width: 959px) {
+  .phone-shell.mobile-shell.page-consultations .watch-rating-mobile-picker-toggle {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 42px;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 224, 190, 0.28);
+    border-radius: 10px;
+    color: #ffe7d8;
+    background: rgba(255, 224, 190, 0.1);
+    font-size: 13px;
+    font-weight: 900;
+    text-align: left;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 14px;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-library {
+    display: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 320px !important;
+    overflow: hidden !important;
+    flex: 0 0 auto;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-library.mobile-library-open {
+    display: grid !important;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-library-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    min-width: 0;
+    max-height: 260px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-detail {
+    display: grid !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    flex: 0 0 auto;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-detail-body {
+    min-width: 0;
+    overflow: visible !important;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-detail-body .watch-rating-episodes {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}
+
 /* Keep the rating workspace readable at both operating sizes. */
 .watch-rating-layout { align-items: stretch; }
 .watch-rating-library, .watch-rating-detail { box-sizing: border-box; }
