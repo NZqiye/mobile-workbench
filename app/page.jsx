@@ -3912,6 +3912,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
     }
     if (!details && !selected?.seasons?.length) return;
     const available = (details?.seasons || selected?.seasons || []).filter((season) => Number(season?.seasonNumber) > 0);
+    if (seasonNumber && available.some((season) => String(season.seasonNumber) === String(seasonNumber))) return;
     const preferred = selected?.season || details?.season || available[0]?.seasonNumber || "";
     if (preferred && String(preferred) !== String(seasonNumber)) setSeasonNumber(String(preferred));
   }, [details, isMovie, seasonNumber, selected?.season, selected?.seasons]);
@@ -3932,6 +3933,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
       setSeasonData({ seasonNumber: Number(seasonNumber), episodeCount: details.episodes.length, episodes: details.episodes });
       return undefined;
     }
+    setSeasonData(null);
     setSeasonLoading(true);
     fetch(`/api/tmdb/details?id=${encodeURIComponent(selected.tmdbId)}&type=tv&season=${encodeURIComponent(seasonNumber)}`)
       .then(async (response) => {
