@@ -6657,6 +6657,13 @@ textarea::placeholder {
   box-shadow: none;
 }
 
+.phone-shell.mobile-shell.page-consultations .watch-mobile-titlebar > button[aria-label="搜索作品"] {
+  width: 54px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
 .phone-shell.mobile-shell.page-consultations .watch-mobile-titlebar h3 {
   color: #fff5f0;
   font-size: 20px;

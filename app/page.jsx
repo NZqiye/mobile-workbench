@@ -4100,7 +4100,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
                     <h3>{mobileRatingView === "episodes" ? `第 ${seasonNumber} 季` : detailTitle}</h3>
                     {mobileRatingView === "episodes" && <small>{detailTitle}</small>}
                   </div>
-                  <button type="button" onClick={() => setMobileLibraryOpen(true)} aria-label="更换作品">⌕</button>
+                  <button type="button" onClick={() => setMobileLibraryOpen(true)} aria-label="搜索作品">搜索</button>
                 </div>
                 {detailsLoading && <p className="watch-rating-status">正在读取 TMDB 详情…</p>}
                 {detailStatus && <p className="watch-rating-status error">{detailStatus}</p>}
@@ -4125,7 +4125,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
                     {seasonOptions.length === 0 ? <p className="watch-rating-status">正在读取 TMDB 季列表…</p> : <div className="watch-mobile-seasons">
                       {seasonOptions.map((season) => {
                         const key = String(season.seasonNumber);
-                        const progress = Array.isArray(selected?.seasonProgress?.[key]) ? selected.seasonProgress[key].length : 0;
+                        const progress = key === String(seasonNumber) ? checkedEpisodes.size : (Array.isArray(selected?.seasonProgress?.[key]) ? selected.seasonProgress[key].length : 0);
                         const count = Number(season.episodeCount || 0);
                         return <button type="button" className="watch-mobile-season" key={season.seasonNumber} onClick={() => { setSeasonNumber(key); setMobileRatingView("episodes"); }}>
                           {season.posterUrl ? <img src={season.posterUrl} alt="" loading="lazy" /> : <span className="watch-mobile-season-poster">S{season.seasonNumber}</span>}
@@ -6606,6 +6606,13 @@ export default function Workbench() {
       const nextWatchCheckins = upsertWatchCheckin(watchCheckins, seasonRecord);
       setWatchCheckins(nextWatchCheckins);
       persist("watchCheckins", nextWatchCheckins);
+      if (allSeasonsComplete && item.status !== "看过的剧" && item.tmdbId) {
+        fetch("/api/tmdb/watchlist", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mediaId: item.tmdbId, mediaType: tmdbMediaType(item) }),
+        }).catch((error) => setTmdbStatus(error.message || "TMDB 已看片单同步失败"));
+      }
       return;
     }
 
