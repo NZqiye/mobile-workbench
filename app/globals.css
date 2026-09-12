@@ -6782,15 +6782,53 @@ textarea::placeholder {
 }
 
 .phone-shell.mobile-shell.page-consultations .watch-mobile-episode {
-  grid-template-columns: 82px minmax(0, 1fr) 34px;
-  gap: 10px;
+  position: relative;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+  min-height: 62px;
+  padding-right: 42px;
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode > input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .phone-shell.mobile-shell.page-consultations .watch-mobile-episode img,
 .phone-shell.mobile-shell.page-consultations .watch-mobile-episode > span {
-  width: 82px;
-  height: 48px;
+  grid-column: 1;
+  grid-row: 1;
+  width: 96px;
+  height: 54px;
   border-radius: 10px;
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode > div {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding-right: 0;
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode strong,
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode-check {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .phone-shell.mobile-shell.page-consultations .watch-mobile-rating-footer {
