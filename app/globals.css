@@ -1432,7 +1432,9 @@ select:focus-visible {
 .subscription-form { gap: 12px; }
 .subscription-field { display: grid; gap: 5px; color: var(--muted); font-size: 12px; font-weight: 800; }
 .subscription-field input, .subscription-field select { width: 100%; }
-.subscription-list { display: grid; gap: 8px; }
+.subscription-list { display: grid; gap: 12px; }
+.subscription-group { display: grid; gap: 8px; }
+.subscription-group h3 { margin: 4px 0 0; color: color-mix(in srgb, #fff 88%, var(--theme-accent)); font-size: 13px; font-weight: 950; }
 .subscription-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 12px; border: 1px solid rgba(234, 215, 208, 0.7); border-radius: 8px; background: rgba(255, 252, 250, 0.82); }
 .subscription-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 9px; background: rgba(0, 0, 0, 0.04); }
 .subscription-info { display: grid; gap: 3px; min-width: 0; }

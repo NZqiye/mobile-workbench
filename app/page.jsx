@@ -5362,6 +5362,36 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
     return `剩余 ${days} 天`;
   }
 
+  function sortSubscriptionRecords(a, b) {
+    return String(a.endDate || "9999-12-31").localeCompare(String(b.endDate || "9999-12-31")) || String(b.purchaseDate || "").localeCompare(String(a.purchaseDate || ""));
+  }
+
+  function sortPermanentRecords(a, b) {
+    return String(b.purchaseDate || "").localeCompare(String(a.purchaseDate || ""));
+  }
+
+  const subscriptionItems = records.filter((item) => item.purchaseType !== "永久会员").sort(sortSubscriptionRecords);
+  const permanentItems = records.filter((item) => item.purchaseType === "永久会员").sort(sortPermanentRecords);
+
+  function renderSubscriptionRow(item) {
+    return (
+      <div className="subscription-row" key={item.id}>
+        <span className="subscription-icon"><AssetIcon name={item.icon || "thiings-subscribe:credit-card"} size={32} /></span>
+        <div className="subscription-info">
+          <strong>{item.title}</strong>
+          <small>{item.purchaseType}{item.billingCycle ? ` · ${item.billingCycle}` : ""} · 购买于 {item.purchaseDate}</small>
+          <span>{subscriptionStatus(item)}{item.endDate ? ` · ${item.endDate}` : ""}</span>
+          {item.usageNote && <small className="subscription-note">{item.usageNote}</small>}
+        </div>
+        <div className="subscription-price">¥{Number(item.price || 0).toLocaleString()}</div>
+        <div className="subscription-actions">
+          <button type="button" onClick={() => startEdit(item)}>编辑</button>
+          <button type="button" onClick={() => { if (window.confirm(`确定删除${item.title}？`)) onDelete(item.id); }}>删除</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <section className="subscription-board">
       <div className="subscription-summary">
@@ -5442,22 +5472,18 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
       )}
       <div className="subscription-list">
         {records.length === 0 && <p className="empty">还没有订阅记录，添加后可以集中查看购买周期和结束日期。</p>}
-        {records.map((item) => (
-          <div className="subscription-row" key={item.id}>
-            <span className="subscription-icon"><AssetIcon name={item.icon || "thiings-subscribe:credit-card"} size={32} /></span>
-            <div className="subscription-info">
-              <strong>{item.title}</strong>
-              <small>{item.purchaseType}{item.billingCycle ? ` · ${item.billingCycle}` : ""} · 购买于 {item.purchaseDate}</small>
-              <span>{subscriptionStatus(item)}{item.endDate ? ` · ${item.endDate}` : ""}</span>
-              {item.usageNote && <small className="subscription-note">{item.usageNote}</small>}
-            </div>
-            <div className="subscription-price">¥{Number(item.price || 0).toLocaleString()}</div>
-            <div className="subscription-actions">
-              <button type="button" onClick={() => startEdit(item)}>编辑</button>
-              <button type="button" onClick={() => { if (window.confirm(`确定删除${item.title}？`)) onDelete(item.id); }}>删除</button>
-            </div>
-          </div>
-        ))}
+        {subscriptionItems.length > 0 && (
+          <section className="subscription-group">
+            <h3>订阅会员</h3>
+            {subscriptionItems.map(renderSubscriptionRow)}
+          </section>
+        )}
+        {permanentItems.length > 0 && (
+          <section className="subscription-group">
+            <h3>永久会员</h3>
+            {permanentItems.map(renderSubscriptionRow)}
+          </section>
+        )}
       </div>
     </section>
   );
