@@ -3811,7 +3811,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
   const [query, setQuery] = useState("");
   const [tmdbQuery, setTmdbQuery] = useState("");
   const [category, setCategory] = useState("all");
-  const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
+  const [mobileLibraryOpen, setMobileLibraryOpen] = useState(true);
   const [mobileRatingView, setMobileRatingView] = useState("seasons");
   const [details, setDetails] = useState(null);
   const [seasonData, setSeasonData] = useState(null);
@@ -5939,7 +5939,8 @@ export default function Workbench() {
   useEffect(() => {
     migrateLegacyData();
     const savedPage = localStorage.getItem(key("activePage"));
-    setActivePage(pages.some((page) => page.id === savedPage) ? savedPage : "today");
+    const nextPage = pages.some((page) => page.id === savedPage) ? savedPage : "today";
+    setActivePage(nextPage);
     setPlans(readStorage("plans", []));
     setNotes(readStorage("notes", []));
     const nextConsultations = filterDeletedTmdbConsultations(readStorage("consultations", []), readStorage("deletedTmdbWatchlist", []));
@@ -5969,6 +5970,7 @@ export default function Workbench() {
       const nextMode = window.innerWidth >= 960 ? "desktop" : "mobile";
       setDisplayMode(nextMode);
       localStorage.setItem(key("displayMode"), nextMode);
+      if (nextMode === "mobile" && nextPage === "consultations") setConsultationView("rating");
     };
     applyResponsiveMode();
     window.addEventListener("resize", applyResponsiveMode);
@@ -6028,6 +6030,7 @@ export default function Workbench() {
 
   function switchPage(page) {
     setActivePage(page);
+    if (page === "consultations" && displayMode === "mobile") setConsultationView("rating");
     localStorage.setItem(key("activePage"), page);
     setMenuOpen(false);
   }
@@ -6035,6 +6038,7 @@ export default function Workbench() {
   function toggleDisplayMode() {
     const next = displayMode === "desktop" ? "mobile" : "desktop";
     setDisplayMode(next);
+    if (next === "mobile" && activePage === "consultations") setConsultationView("rating");
     localStorage.setItem(key("displayMode"), next);
   }
 
