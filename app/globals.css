@@ -6988,6 +6988,22 @@ textarea::placeholder {
   background: rgba(255, 213, 138, 0.1);
 }
 
+.page-consultations .watch-rating-syncbar {
+  border-color: rgba(255, 224, 190, 0.28) !important;
+  color: #fff5f0 !important;
+  background: rgba(61, 12, 20, 0.86) !important;
+}
+
+.page-consultations .watch-rating-syncbar span {
+  color: #fff5f0 !important;
+}
+
+.page-consultations .watch-rating-syncbar button {
+  border-color: rgba(255, 213, 138, 0.62) !important;
+  color: #ffe1ae !important;
+  background: rgba(255, 213, 138, 0.12) !important;
+}
+
 .phone-shell.mobile-shell.page-consultations .watch-mobile-season-summary {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
