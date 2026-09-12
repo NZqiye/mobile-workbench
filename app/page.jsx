@@ -1992,6 +1992,32 @@ function consultationKey(item) {
   return `title:${String(mediaTitle(item)).trim().toLowerCase()}`;
 }
 
+function normalizeSeriesTitle(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[：:：]?\s*(season|series)\s*\d+.*$/i, "")
+    .replace(/[：:：]?\s*s\d+.*$/i, "")
+    .replace(/[：:：]?\s*第\s*[一二三四五六七八九十百千万\d]+\s*[季部篇].*$/i, "")
+    .replace(/[：:：]?\s*part\.?\s*\d+.*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function watchStatsKey(item) {
+  const titleKey = normalizeSeriesTitle(mediaTitle(item) || item?.titleZh || item?.title || item?.originalTitle);
+  if (titleKey) return `series:${titleKey}`;
+  return consultationKey(item) || `id:${item?.id || ""}`;
+}
+
+function countUniqueWatchItems(items, predicate = () => true) {
+  const keys = new Set();
+  (Array.isArray(items) ? items : []).forEach((item) => {
+    if (predicate(item)) keys.add(watchStatsKey(item));
+  });
+  return keys.size;
+}
+
 function mediaAliasKeys(item) {
   const keys = new Set();
   if (item?.tmdbId) keys.add(tmdbItemKey(item));
@@ -3941,6 +3967,9 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
   });
   const completedFilteredItems = filteredItems.filter((item) => item.status === "看过的剧");
   const visibleLibraryItems = completedLibraryOpen ? filteredItems : filteredItems.filter((item) => item.status !== "看过的剧");
+  const watchItemCount = countUniqueWatchItems(watchItems);
+  const filteredItemCount = countUniqueWatchItems(filteredItems);
+  const visibleLibraryItemCount = countUniqueWatchItems(visibleLibraryItems);
   const seasonList = (details?.seasons || selected?.seasons || []).filter((season) => Number(season?.seasonNumber) > 0);
   const seasonOptions = seasonList.length ? seasonList : seasonNumber ? [{ seasonNumber: Number(seasonNumber), episodeCount: 0 }] : [];
   const activeSeason = seasonOptions.find((season) => Number(season.seasonNumber) === Number(seasonNumber)) || seasonOptions[0];
@@ -4124,7 +4153,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
           <h2>观影评分</h2>
           <p>从片单找到作品，按 TMDB 的季和集记录观看进度</p>
         </div>
-        <strong>{watchItems.length} 部</strong>
+        <strong>{watchItemCount} 部</strong>
       </div>
       <div className="watch-rating-syncbar">
         <span>{syncStatus || "观看记录会在解锁后同步到云端"}</span>
@@ -4165,7 +4194,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
           </button>
           <div className="watch-rating-layout">
             <div className={`watch-rating-library ${mobileLibraryOpen ? "mobile-library-open" : ""}`}>
-              <div className="watch-rating-library-head"><strong>我的片单</strong><span>{visibleLibraryItems.length}/{filteredItems.length} 部</span>{completedFilteredItems.length > 0 && <button type="button" onClick={() => setCompletedLibraryOpen((value) => !value)}>{completedLibraryOpen ? "隐藏看过" : `展开看过 ${completedFilteredItems.length}`}</button>}</div>
+              <div className="watch-rating-library-head"><strong>我的片单</strong><span>{visibleLibraryItemCount}/{filteredItemCount} 部</span>{completedFilteredItems.length > 0 && <button type="button" onClick={() => setCompletedLibraryOpen((value) => !value)}>{completedLibraryOpen ? "隐藏看过" : `展开看过 ${countUniqueWatchItems(completedFilteredItems)}`}</button>}</div>
               {filteredItems.length === 0 ? <p className="empty">没有匹配的影视。</p> : visibleLibraryItems.length === 0 ? <p className="empty">当前只剩看过的剧，点“展开看过”查看。</p> : <div className="watch-rating-library-grid">
                 {visibleLibraryItems.map((item) => (
                   <button className={`watch-rating-media-card ${item.id === selected?.id ? "active" : ""}`} type="button" key={item.id} onClick={() => { setSelectedId(item.id); setMobileLibraryOpen(false); setMobileRatingView("seasons"); }}>
@@ -4570,8 +4599,9 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
   });
   const visibleWatchItems = watchListOpen || hasActiveWatchFilter ? filteredWatchItems.slice(0, watchListOpen ? filteredWatchItems.length : 8) : [];
   const watchStatusSummary = consultationStatuses
-    .map((status) => ({ status, count: managedWatchItems.filter((item) => item.status === status).length }))
+    .map((status) => ({ status, count: countUniqueWatchItems(managedWatchItems, (item) => item.status === status) }))
     .filter((item) => item.count > 0);
+  const managedWatchCount = countUniqueWatchItems(managedWatchItems);
   const searchResults = Array.isArray(tmdbResults) ? tmdbResults : [];
   const recommendationSections = Array.isArray(tmdbSections) ? tmdbSections : [];
   const watchedIds = new Set(
@@ -4819,7 +4849,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
             <div className="panel-head">
               <div>
                 <h2>我的片单</h2>
-                <p>已加入 {managedWatchItems.length} 部，默认收起；搜索或展开后再管理</p>
+                <p>已加入 {managedWatchCount} 部，默认收起；搜索或展开后再管理</p>
               </div>
               <button className="chip-button" type="button" onClick={() => setWatchListOpen(!watchListOpen)}>
                 {watchListOpen ? "收起片单" : "管理片单"}
@@ -4830,7 +4860,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
               {hasActiveWatchFilter && <button type="button" onClick={() => { setWatchListQuery(""); setWatchListStatus("all"); }}>清空</button>}
             </div>
             <div className="watch-list-summary" aria-label="片单状态概览">
-              <button className={watchListStatus === "all" ? "active" : ""} type="button" onClick={() => setWatchListStatus("all")}>全部 {managedWatchItems.length}</button>
+              <button className={watchListStatus === "all" ? "active" : ""} type="button" onClick={() => setWatchListStatus("all")}>全部 {managedWatchCount}</button>
               {watchStatusSummary.length === 0 && <span>暂无片单</span>}
               {watchStatusSummary.map((item) => (
                 <button className={watchListStatus === item.status ? "active" : ""} type="button" key={item.status} onClick={() => setWatchListStatus(item.status)}>
@@ -6099,7 +6129,7 @@ export default function Workbench() {
         saveCloudItem(cloudSession, "consultations", nextConsultations),
         saveCloudItem(cloudSession, "watchCheckins", nextWatchCheckins),
       ]);
-      setSyncStatus(`观影记录已刷新 · 看过 ${nextConsultations.filter((item) => item.status === "看过的剧").length} · 记录 ${nextWatchCheckins.length} · ${nowText()}`);
+      setSyncStatus(`观影记录已刷新 · 看过 ${countUniqueWatchItems(nextConsultations, (item) => item.status === "看过的剧")} · 记录 ${nextWatchCheckins.length} · ${nowText()}`);
       return true;
     } catch (error) {
       setSyncStatus(`观影记录刷新失败：${error.message || "请稍后再试"}`);
