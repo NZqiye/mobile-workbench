@@ -5149,6 +5149,10 @@ textarea::placeholder {
 .watch-rating-heading h2 { margin: 0; color: var(--ink); font-size: 20px; }
 .watch-rating-heading p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
 .watch-rating-heading > strong { flex: 0 0 auto; color: var(--theme-main); font-size: 16px; }
+.watch-rating-syncbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; min-width: 0; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--theme-main) 16%, var(--line)); border-radius: 10px; color: var(--muted); background: color-mix(in srgb, var(--theme-soft) 42%, #fff); font-size: 11px; line-height: 1.35; }
+.watch-rating-syncbar span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.watch-rating-syncbar button { min-height: 30px; padding: 0 10px; border: 1px solid color-mix(in srgb, var(--theme-main) 24%, var(--line)); border-radius: 8px; color: var(--theme-main); background: rgba(255, 255, 255, 0.72); font-size: 11px; font-weight: 900; white-space: nowrap; }
+.watch-rating-syncbar button:disabled { cursor: not-allowed; opacity: 0.62; }
 .watch-rating-tmdb-search { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; min-width: 0; }
 .watch-rating-tmdb-search input { min-width: 0; height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--ink); background: #fffdf9; }
 .watch-rating-tmdb-search button { min-height: 40px; padding: 0 13px; border: 0; border-radius: 9px; color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); font-size: 12px; font-weight: 900; white-space: nowrap; }
@@ -6957,4 +6961,64 @@ textarea::placeholder {
   min-height: 38px;
   border-radius: 10px;
   font-size: 12px;
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-rating-syncbar {
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-color: rgba(255, 224, 190, 0.2);
+  color: rgba(255, 233, 224, 0.72);
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-rating-syncbar button {
+  border-color: rgba(255, 213, 138, 0.5);
+  color: #ffe1ae;
+  background: rgba(255, 213, 138, 0.1);
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-season-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(255, 206, 167, 0.34);
+  border-radius: 12px;
+  background: rgba(255, 206, 167, 0.1);
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-season-summary > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-season-summary strong {
+  overflow: hidden;
+  color: #fff5f0;
+  font-size: 14px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-season-summary span {
+  overflow: hidden;
+  color: rgba(255, 233, 224, 0.74);
+  font-size: 12px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-season-summary button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 213, 138, 0.55);
+  border-radius: 10px;
+  color: #ffe1ae;
+  background: rgba(255, 213, 138, 0.1);
+  font-size: 12px;
+  font-weight: 800;
 }

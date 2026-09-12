@@ -3805,7 +3805,7 @@ function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelet
   );
 }
 
-function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchTmdb, onImportTmdb, onCheckin, onSyncTmdbRating, onRemoveCheckin, watchCheckins = [] }) {
+function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchTmdb, onImportTmdb, onCheckin, onSyncTmdbRating, onRemoveCheckin, onRefreshCloud, syncStatus = "", watchCheckins = [] }) {
   const watchItems = items.filter((item) => item.status !== "已归档" && item.status !== "暂停/弃剧");
   const [selectedId, setSelectedId] = useState(watchItems[0]?.id || "");
   const [query, setQuery] = useState("");
@@ -3823,6 +3823,8 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [seasonLoading, setSeasonLoading] = useState(false);
   const [ratingStatus, setRatingStatus] = useState("");
+  const [expandedCompletedSeasons, setExpandedCompletedSeasons] = useState({});
+  const [cloudRefreshing, setCloudRefreshing] = useState(false);
   const [historyQuery, setHistoryQuery] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
   const selected = watchItems.find((item) => item.id === selectedId) || watchItems[0];
@@ -3849,6 +3851,10 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
   const episodeCount = Number(seasonData?.episodeCount || activeSeason?.episodeCount || episodes.length || 0);
   const checkedCount = checkedEpisodes.size;
   const allEpisodesChecked = episodes.length > 0 && episodes.every((episode) => checkedEpisodes.has(Number(episode.episodeNumber)));
+  const completedSeasonKey = `${selected?.id || ""}:${seasonNumber}`;
+  const hasSeasonRating = Boolean(String(seasonRating || selected?.seasonRatings?.[String(seasonNumber)] || "").trim());
+  const seasonComplete = !isMovie && Number(seasonNumber) > 0 && episodeCount > 0 && checkedCount >= episodeCount;
+  const shouldCollapseSeason = mobileRatingView === "episodes" && seasonComplete && hasSeasonRating && !expandedCompletedSeasons[completedSeasonKey];
   const detailTitle = details?.title || mediaTitle(selected);
   const detailPoster = details?.posterUrl || selected?.posterUrl || "";
   const detailSummary = details?.review || selected?.review || "暂无简介";
@@ -3973,6 +3979,9 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
     }
     setSeasonRating(String(rating));
     onCheckin?.({ id: selected.id, mode: "season-rating", season: Number(seasonNumber), episodes: Array.from(checkedEpisodes).sort((a, b) => a - b), episodeCount, rating, date: todayKey() });
+    if (episodeCount > 0 && checkedEpisodes.size >= episodeCount) {
+      setExpandedCompletedSeasons((previous) => ({ ...previous, [completedSeasonKey]: false }));
+    }
     if (!selected.tmdbId) {
       setRatingStatus(`第 ${seasonNumber} 季评分已保存`);
       return;
@@ -4001,6 +4010,14 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
     setRatingStatus(ok ? "已同步到 TMDB" : "TMDB 同步失败");
   }
 
+  async function refreshCloudCheckins() {
+    if (!onRefreshCloud || cloudRefreshing) return;
+    setCloudRefreshing(true);
+    const ok = await onRefreshCloud();
+    setCloudRefreshing(false);
+    if (ok) setRatingStatus("已从云端刷新观看记录");
+  }
+
   return (
     <section className={`watch-rating-panel ${mobileLibraryVisible ? "mobile-library-open" : ""}`}>
       <div className="watch-rating-heading">
@@ -4009,6 +4026,10 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
           <p>从片单找到作品，按 TMDB 的季和集记录观看进度</p>
         </div>
         <strong>{watchItems.length} 部</strong>
+      </div>
+      <div className="watch-rating-syncbar">
+        <span>{syncStatus || "观看记录会在解锁后同步到云端"}</span>
+        <button type="button" onClick={refreshCloudCheckins} disabled={cloudRefreshing}>{cloudRefreshing ? "刷新中" : "刷新云端"}</button>
       </div>
       <form className="watch-rating-tmdb-search" onSubmit={(event) => { event.preventDefault(); onSearchTmdb?.(tmdbQuery); }}>
         <input value={tmdbQuery} onChange={(event) => setTmdbQuery(event.target.value)} placeholder="从 TMDB 搜索电视剧、电影、综艺或动漫" aria-label="从 TMDB 搜索影视" />
@@ -4134,7 +4155,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
                         const key = String(season.seasonNumber);
                         const progress = key === String(seasonNumber) ? checkedEpisodes.size : (Array.isArray(selected?.seasonProgress?.[key]) ? selected.seasonProgress[key].length : 0);
                         const count = Number(season.episodeCount || 0);
-                        return <button type="button" className="watch-mobile-season" key={season.seasonNumber} onClick={() => { setSeasonNumber(key); setMobileRatingView("episodes"); }}>
+                        return <button type="button" className="watch-mobile-season" key={season.seasonNumber} onClick={() => { setExpandedCompletedSeasons((previous) => ({ ...previous, [`${selected?.id || ""}:${key}`]: false })); setSeasonNumber(key); setMobileRatingView("episodes"); }}>
                           {season.posterUrl ? <img src={season.posterUrl} alt="" loading="lazy" /> : <span className="watch-mobile-season-poster">S{season.seasonNumber}</span>}
                           <span><strong>第 {season.seasonNumber} 季</strong><small>{season.airDate || "日期待定"}</small></span>
                           <b>{progress}/{count || "-"}</b><i aria-hidden="true">{count > 0 && progress >= count ? "✓" : ""}</i>
@@ -4145,19 +4166,28 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
                 ) : (
                   <>
                     <div className="watch-mobile-episodes-head"><div><strong>第 {seasonNumber} 季</strong><small>{checkedCount}/{episodeCount || episodes.length} 集已看</small></div>{episodes.length > 0 && <button type="button" onClick={toggleAllEpisodes}>{allEpisodesChecked ? "取消全选" : "全选本季"}</button>}</div>
-                    {seasonLoading ? <p className="watch-rating-status">正在读取 TMDB 集数…</p> : <div className="watch-mobile-episodes">
-                      {episodes.map((episode) => {
-                        const episodeNumber = Number(episode.episodeNumber);
-                        const episodeImage = episode.stillUrl || activeSeason?.posterUrl || detailPoster;
-                        return <label className={`watch-mobile-episode ${checkedEpisodes.has(episodeNumber) ? "checked" : ""}`} key={episode.id || episodeNumber}>
-                          <input type="checkbox" checked={checkedEpisodes.has(episodeNumber)} onChange={() => toggleEpisode(episodeNumber)} />
-                          {episodeImage ? <img src={episodeImage} alt="" loading="lazy" /> : <span>E{episodeNumber}</span>}
-                          <div><strong>E{episodeNumber} · {episode.name || `第 ${episodeNumber} 集`}</strong><small>{[episode.airDate, episode.runtime ? `${episode.runtime} 分钟` : ""].filter(Boolean).join(" · ")}</small>{episode.overview && <p>{episode.overview}</p>}</div>
-                          <i className="watch-mobile-episode-check" aria-hidden="true">{checkedEpisodes.has(episodeNumber) ? "✓" : ""}</i>
-                        </label>;
-                      })}
-                    </div>}
-                    <div className="watch-mobile-rating-footer"><label>本季整体评分<input type="text" inputMode="decimal" value={seasonRating} onChange={(event) => { setSeasonRating(event.target.value); setRatingStatus(""); }} placeholder="看完本季后评分" /></label><button type="button" onClick={saveProgress}>保存观看进度</button><button type="button" className="secondary" onClick={saveSeasonRating} disabled={!seasonRating}>保存本季评分</button></div>
+                    {shouldCollapseSeason ? (
+                      <div className="watch-mobile-season-summary">
+                        <div><strong>第 {seasonNumber} 季已完成</strong><span>已看 {checkedCount}/{episodeCount || episodes.length} 集 · 评分 {seasonRating || selected?.seasonRatings?.[String(seasonNumber)]}</span></div>
+                        <button type="button" onClick={() => setExpandedCompletedSeasons((previous) => ({ ...previous, [completedSeasonKey]: true }))}>展开修改</button>
+                      </div>
+                    ) : (
+                      <>
+                        {seasonLoading ? <p className="watch-rating-status">正在读取 TMDB 集数…</p> : <div className="watch-mobile-episodes">
+                          {episodes.map((episode) => {
+                            const episodeNumber = Number(episode.episodeNumber);
+                            const episodeImage = episode.stillUrl || activeSeason?.posterUrl || detailPoster;
+                            return <label className={`watch-mobile-episode ${checkedEpisodes.has(episodeNumber) ? "checked" : ""}`} key={episode.id || episodeNumber}>
+                              <input type="checkbox" checked={checkedEpisodes.has(episodeNumber)} onChange={() => toggleEpisode(episodeNumber)} />
+                              {episodeImage ? <img src={episodeImage} alt="" loading="lazy" /> : <span>E{episodeNumber}</span>}
+                              <div><strong>E{episodeNumber} · {episode.name || `第 ${episodeNumber} 集`}</strong><small>{[episode.airDate, episode.runtime ? `${episode.runtime} 分钟` : ""].filter(Boolean).join(" · ")}</small>{episode.overview && <p>{episode.overview}</p>}</div>
+                              <i className="watch-mobile-episode-check" aria-hidden="true">{checkedEpisodes.has(episodeNumber) ? "✓" : ""}</i>
+                            </label>;
+                          })}
+                        </div>}
+                        <div className="watch-mobile-rating-footer"><label>本季整体评分<input type="text" inputMode="decimal" value={seasonRating} onChange={(event) => { setSeasonRating(event.target.value); setRatingStatus(""); }} placeholder="看完本季后评分" /></label><button type="button" onClick={saveProgress}>保存观看进度</button><button type="button" className="secondary" onClick={saveSeasonRating} disabled={!seasonRating}>保存本季评分</button></div>
+                      </>
+                    )}
                   </>
                 )}
                 {ratingStatus && <p className="watch-rating-status success">{ratingStatus}</p>}
@@ -4409,7 +4439,7 @@ function MediaGallery({ item }) {
   );
 }
 
-function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked, onDeleteItem, onWatchCheckin, onSyncTmdbRating, onRemoveCheckin, watchCheckins = [] }) {
+function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked, onDeleteItem, onWatchCheckin, onSyncTmdbRating, onRemoveCheckin, onRefreshWatchCheckins, syncStatus = "", watchCheckins = [] }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
   const [tmdbQuery, setTmdbQuery] = useState("");
@@ -4738,7 +4768,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
         </>
       )}
       {activeView === "rating" && (
-        <WatchCheckin items={managedWatchItems} tmdbResults={tmdbResults} tmdbStatus={tmdbStatus} onSearchTmdb={onSearchTmdb} onImportTmdb={onImportTmdb} onCheckin={onWatchCheckin} onSyncTmdbRating={onSyncTmdbRating} onRemoveCheckin={onRemoveCheckin} watchCheckins={watchCheckins} />
+        <WatchCheckin items={managedWatchItems} tmdbResults={tmdbResults} tmdbStatus={tmdbStatus} onSearchTmdb={onSearchTmdb} onImportTmdb={onImportTmdb} onCheckin={onWatchCheckin} onSyncTmdbRating={onSyncTmdbRating} onRemoveCheckin={onRemoveCheckin} onRefreshCloud={onRefreshWatchCheckins} syncStatus={syncStatus} watchCheckins={watchCheckins} />
       )}
       {selectedRecommendationSection && (
         <section className="tmdb-recommendations">
@@ -5703,8 +5733,9 @@ export default function Workbench() {
   function persist(name, value) {
     const nextValue = syncedCollections.includes(name) && Array.isArray(value) ? stampItems(value) : value;
     writeStorage(name, nextValue);
-    if (session) {
-      saveCloudItem(session, name, nextValue)
+    const cloudSession = session || (localStorage.getItem(key("accessUnlocked")) === "true" ? fixedSession : null);
+    if (cloudSession) {
+      saveCloudItem(cloudSession, name, nextValue)
         .then(() => setSyncStatus(`已同步 · ${nowText()}`))
         .catch((error) => setSyncStatus(`同步失败：${error.message}`));
     }
@@ -5713,8 +5744,9 @@ export default function Workbench() {
   function persistDeletedIds(name, ids) {
     const next = uniqueIds(ids);
     writeDeletedIds(name, next);
-    if (session) {
-      saveCloudItem(session, syncDeletedKey(name), next)
+    const cloudSession = session || (localStorage.getItem(key("accessUnlocked")) === "true" ? fixedSession : null);
+    if (cloudSession) {
+      saveCloudItem(cloudSession, syncDeletedKey(name), next)
         .then(() => setSyncStatus(`已删除 · ${nowText()}`))
         .catch((error) => setSyncStatus(`同步失败：${error.message}`));
     }
@@ -5936,6 +5968,33 @@ export default function Workbench() {
     }
   }
 
+  async function refreshWatchCheckinsFromCloud() {
+    const cloudSession = session || (localStorage.getItem(key("accessUnlocked")) === "true" ? fixedSession : null);
+    if (!cloudSession) {
+      setSyncStatus("请先解锁访问码后再刷新云端");
+      return false;
+    }
+    setSyncStatus("正在刷新观影记录...");
+    try {
+      const merged = mergeCloudWithLocal(await loadCloudItems(cloudSession));
+      const nextConsultations = merged.consultations || [];
+      const nextWatchCheckins = dedupeWatchCheckins(merged.watchCheckins || []);
+      setConsultations(nextConsultations);
+      writeStorage("consultations", nextConsultations);
+      setWatchCheckins(nextWatchCheckins);
+      writeStorage("watchCheckins", nextWatchCheckins);
+      await Promise.all([
+        saveCloudItem(cloudSession, "consultations", nextConsultations),
+        saveCloudItem(cloudSession, "watchCheckins", nextWatchCheckins),
+      ]);
+      setSyncStatus(`观影记录已刷新 · ${nowText()}`);
+      return true;
+    } catch (error) {
+      setSyncStatus(`观影记录刷新失败：${error.message || "请稍后再试"}`);
+      return false;
+    }
+  }
+
   useEffect(() => {
     migrateLegacyData();
     const savedPage = localStorage.getItem(key("activePage"));
@@ -6130,8 +6189,9 @@ export default function Workbench() {
   }
 
   function syncDeletedTmdbWatchlistToCloud() {
-    if (!session) return;
-    saveCloudItem(session, "deletedTmdbWatchlist", normalizeDeletedTmdbWatchlist(readStorage("deletedTmdbWatchlist", [])))
+    const cloudSession = session || (localStorage.getItem(key("accessUnlocked")) === "true" ? fixedSession : null);
+    if (!cloudSession) return;
+    saveCloudItem(cloudSession, "deletedTmdbWatchlist", normalizeDeletedTmdbWatchlist(readStorage("deletedTmdbWatchlist", [])))
       .then(() => setSyncStatus(`已同步删除记录 · ${nowText()}`))
       .catch((error) => setSyncStatus(`同步失败：${error.message}`));
   }
@@ -7184,6 +7244,8 @@ export default function Workbench() {
                 onWatchCheckin={checkinWatchItem}
                 onSyncTmdbRating={syncTmdbRating}
                 onRemoveCheckin={deleteWatchCheckin}
+                onRefreshWatchCheckins={refreshWatchCheckinsFromCloud}
+                syncStatus={syncStatus}
               />
             </>
           )}
