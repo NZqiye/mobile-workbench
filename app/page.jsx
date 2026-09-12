@@ -3807,10 +3807,12 @@ function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelet
 
 function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchTmdb, onImportTmdb, onCheckin, onSyncTmdbRating, onRemoveCheckin, onRefreshCloud, syncStatus = "", watchCheckins = [] }) {
   const watchItems = items.filter((item) => item.status !== "已归档" && item.status !== "暂停/弃剧");
-  const [selectedId, setSelectedId] = useState(watchItems[0]?.id || "");
+  const activeWatchItems = watchItems.filter((item) => item.status !== "看过的剧");
+  const [selectedId, setSelectedId] = useState(activeWatchItems[0]?.id || watchItems[0]?.id || "");
   const [query, setQuery] = useState("");
   const [tmdbQuery, setTmdbQuery] = useState("");
   const [category, setCategory] = useState("all");
+  const [completedLibraryOpen, setCompletedLibraryOpen] = useState(false);
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(true);
   const [mobileRatingView, setMobileRatingView] = useState("seasons");
   const [details, setDetails] = useState(null);
@@ -3844,6 +3846,8 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
     const matchesQuery = !keyword || [mediaTitle(item), item.title, item.originalTitle, item.status, item.platform].some((value) => String(value || "").toLowerCase().includes(keyword));
     return matchesCategory && matchesQuery;
   });
+  const completedFilteredItems = filteredItems.filter((item) => item.status === "看过的剧");
+  const visibleLibraryItems = completedLibraryOpen ? filteredItems : filteredItems.filter((item) => item.status !== "看过的剧");
   const seasonList = (details?.seasons || selected?.seasons || []).filter((season) => Number(season?.seasonNumber) > 0);
   const seasonOptions = seasonList.length ? seasonList : seasonNumber ? [{ seasonNumber: Number(seasonNumber), episodeCount: 0 }] : [];
   const activeSeason = seasonOptions.find((season) => Number(season.seasonNumber) === Number(seasonNumber)) || seasonOptions[0];
@@ -3866,8 +3870,8 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
   const visibleHistory = historyOpen || historyKeyword ? filteredHistory : filteredHistory.slice(0, 5);
 
   useEffect(() => {
-    if (!watchItems.some((item) => item.id === selectedId)) setSelectedId(watchItems[0]?.id || "");
-  }, [selectedId, watchItems]);
+    if (!watchItems.some((item) => item.id === selectedId)) setSelectedId(activeWatchItems[0]?.id || watchItems[0]?.id || "");
+  }, [activeWatchItems, selectedId, watchItems]);
 
   useEffect(() => {
     let cancelled = false;
@@ -4066,9 +4070,9 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
           </button>
           <div className="watch-rating-layout">
             <div className={`watch-rating-library ${mobileLibraryOpen ? "mobile-library-open" : ""}`}>
-              <div className="watch-rating-library-head"><strong>我的片单</strong><span>{filteredItems.length} 部</span></div>
-              {filteredItems.length === 0 ? <p className="empty">没有匹配的影视。</p> : <div className="watch-rating-library-grid">
-                {filteredItems.map((item) => (
+              <div className="watch-rating-library-head"><strong>我的片单</strong><span>{visibleLibraryItems.length}/{filteredItems.length} 部</span>{completedFilteredItems.length > 0 && <button type="button" onClick={() => setCompletedLibraryOpen((value) => !value)}>{completedLibraryOpen ? "隐藏看过" : `展开看过 ${completedFilteredItems.length}`}</button>}</div>
+              {filteredItems.length === 0 ? <p className="empty">没有匹配的影视。</p> : visibleLibraryItems.length === 0 ? <p className="empty">当前只剩看过的剧，点“展开看过”查看。</p> : <div className="watch-rating-library-grid">
+                {visibleLibraryItems.map((item) => (
                   <button className={`watch-rating-media-card ${item.id === selected?.id ? "active" : ""}`} type="button" key={item.id} onClick={() => { setSelectedId(item.id); setMobileLibraryOpen(false); setMobileRatingView("seasons"); }}>
                     {item.posterUrl ? <img src={item.posterUrl} alt="" loading="lazy" /> : <span className="watch-rating-media-poster">{mediaTitle(item).slice(0, 1)}</span>}
                     <span className="watch-rating-media-copy"><strong>{mediaTitle(item)}</strong><small>{categoryLabel(item)} · {item.status || "想看的"}</small></span>

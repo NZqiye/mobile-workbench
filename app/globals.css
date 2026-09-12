@@ -5175,6 +5175,7 @@ textarea::placeholder {
 .watch-rating-library-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .watch-rating-library-head strong { color: var(--ink); font-size: 14px; }
 .watch-rating-library-head span { color: var(--muted); font-size: 11px; }
+.watch-rating-library-head button { flex: 0 0 auto; min-height: 26px; padding: 0 8px; border: 1px solid color-mix(in srgb, var(--theme-main) 18%, var(--line)); border-radius: 8px; color: var(--theme-main); background: color-mix(in srgb, var(--theme-soft) 42%, #fff); font-size: 11px; font-weight: 800; }
 .watch-rating-library-grid { display: grid; gap: 7px; max-height: 660px; overflow: auto; padding-right: 2px; scrollbar-width: thin; }
 .watch-rating-media-card { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 9px; align-items: center; min-width: 0; padding: 7px; border: 1px solid transparent; border-radius: 9px; color: var(--ink); background: rgba(255, 255, 255, 0.72); text-align: left; }
 .watch-rating-media-card:hover { border-color: color-mix(in srgb, var(--theme-main) 28%, var(--line)); background: color-mix(in srgb, var(--theme-soft) 48%, #fff); }
@@ -6598,6 +6599,12 @@ textarea::placeholder {
 .phone-shell.mobile-shell.page-consultations .watch-rating-library-head span,
 .phone-shell.mobile-shell.page-consultations .watch-rating-search-status {
   color: rgba(255, 233, 224, 0.72);
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-rating-library-head button {
+  border-color: rgba(255, 213, 138, 0.42);
+  color: #ffe1ae;
+  background: rgba(255, 213, 138, 0.1);
 }
 
 .phone-shell.mobile-shell.page-consultations .watch-rating-library-grid {
