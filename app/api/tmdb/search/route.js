@@ -1,10 +1,17 @@
 import { fetchTmdb, mapTmdbResult, tmdbToken } from "../../../../lib/tmdb";
 
+const animeTitleHints = ["凡人修仙传", "择日飞升", "斗罗大陆", "斗破苍穹", "吞噬星空", "完美世界", "仙逆", "牧神记", "遮天", "灵笼", "画江湖", "狐妖小红娘", "一人之下", "雾山五行", "全职高手", "龙族"];
+
+function looksLikeAnime(item) {
+  const text = [item?.name, item?.title, item?.original_name, item?.original_title, item?.overview].filter(Boolean).join(" ").toLowerCase();
+  return animeTitleHints.some((title) => text.includes(title.toLowerCase())) || /动漫|动画|国漫|番剧|anime|animation|donghua/.test(text);
+}
+
 function classifyResult(item) {
   const mapped = mapTmdbResult(item);
   if (item.media_type === "movie") return { ...mapped, category: "movie", type: "电影" };
   const genreIds = Array.isArray(item.genre_ids) ? item.genre_ids : [];
-  if (genreIds.includes(16)) return { ...mapped, category: "anime", type: "动漫" };
+  if (genreIds.includes(16) || looksLikeAnime(item)) return { ...mapped, category: "anime", type: "动漫" };
   if (genreIds.includes(10764) || genreIds.includes(10767)) return { ...mapped, category: "variety", type: "综艺" };
   return { ...mapped, category: "tv", type: "电视剧" };
 }
