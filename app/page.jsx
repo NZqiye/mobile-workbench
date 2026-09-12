@@ -3733,9 +3733,30 @@ const assetIconImageMap = {
   package: "/assets-icons/package.png",
 };
 
+const subscriptionIconCategories = [{
+  id: "subscribe",
+  label: "订阅服务",
+  icons: [
+    "thiings-subscribe:credit-card",
+    "thiings-subscribe:bilibili",
+    "thiings-subscribe:youtube",
+    "thiings-subscribe:netflix",
+    "thiings-subscribe:disney-plus",
+    "thiings-subscribe:apple-tv",
+    "thiings-subscribe:emby",
+    "thiings-subscribe:openai",
+    "thiings-subscribe:anthropic",
+    "thiings-subscribe:deepseek",
+    "thiings-subscribe:clash",
+    "thiings-subscribe:clouddrive",
+    "thiings-subscribe:book",
+  ],
+}];
+const subscriptionIconByKey = new Map(subscriptionIconCategories.flatMap((category) => category.icons.map((icon) => [icon, `/assets-icons/thiings/subscribe/${icon.replace("thiings-subscribe:", "")}.webp`])));
+
 function AssetIcon({ name, size = 20 }) {
   const [err, setErr] = useState(false);
-  const src = thiingsIconByKey[name] || assetIconImageMap[name];
+  const src = subscriptionIconByKey.get(name) || thiingsIconByKey[name] || assetIconImageMap[name];
   useEffect(() => setErr(false), [name]);
   if (!src || err) {
     return (
@@ -5264,9 +5285,13 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
   const [purchaseDate, setPurchaseDate] = useState(todayKey());
   const [billingCycle, setBillingCycle] = useState("每月");
   const [endDate, setEndDate] = useState("");
+  const [usageNote, setUsageNote] = useState("");
+  const [formIcon, setFormIcon] = useState("thiings-subscribe:credit-card");
+  const [showIconPicker, setShowIconPicker] = useState(false);
   const records = Array.isArray(items) ? items : [];
   const subscriptionCount = records.filter((item) => item.purchaseType === "订阅会员").length;
   const permanentCount = records.filter((item) => item.purchaseType === "永久会员").length;
+  const totalAmount = records.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
 
   function resetForm() {
     setShowForm(false);
@@ -5277,6 +5302,9 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
     setPurchaseDate(todayKey());
     setBillingCycle("每月");
     setEndDate("");
+    setUsageNote("");
+    setFormIcon("thiings-subscribe:credit-card");
+    setShowIconPicker(false);
   }
 
   function startEdit(item) {
@@ -5287,6 +5315,9 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
     setPurchaseDate(item.purchaseDate || todayKey());
     setBillingCycle(item.billingCycle || "每月");
     setEndDate(item.endDate || "");
+    setUsageNote(item.usageNote || "");
+    setFormIcon(item.icon || "thiings-subscribe:credit-card");
+    setShowIconPicker(false);
     setShowForm(true);
   }
 
@@ -5299,6 +5330,8 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
       purchaseDate,
       billingCycle: purchaseType === "订阅会员" ? billingCycle : "",
       endDate: purchaseType === "订阅会员" ? endDate : "",
+      usageNote: usageNote.trim(),
+      icon: formIcon,
     };
     if (editingId) onUpdate(editingId, values);
     else onAdd(values);
@@ -5319,6 +5352,7 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
       <div className="subscription-summary">
         <div><span>订阅会员</span><strong>{subscriptionCount}</strong><small>项</small></div>
         <div><span>永久会员</span><strong>{permanentCount}</strong><small>项</small></div>
+        <div><span>订阅总金额</span><strong>¥{totalAmount.toLocaleString()}</strong></div>
         <div><span>累计记录</span><strong>{records.length}</strong><small>项</small></div>
       </div>
       <button className="asset-add-btn" type="button" onClick={() => { resetForm(); setShowForm(true); }}>+ 添加订阅记录</button>
@@ -5330,8 +5364,27 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
           </div>
           <label className="subscription-field">
             <span>标题</span>
-            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：视频会员" required />
+            <div className="asset-name-row">
+              <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：视频会员" required />
+              <button type="button" className="asset-icon-btn" onClick={() => setShowIconPicker(!showIconPicker)}>
+                <span className="asset-icon-preview"><AssetIcon name={formIcon} size={34} /></span>
+                <span className="asset-icon-edit">📷</span>
+              </button>
+            </div>
           </label>
+          {showIconPicker && (
+            <div className="asset-icon-picker">
+              <div className="asset-icon-picker-head">
+                <strong>选择图标</strong>
+                <button type="button" onClick={() => setShowIconPicker(false)}>×</button>
+              </div>
+              <div className="asset-icon-grid">
+                {subscriptionIconCategories[0].icons.map((icon) => (
+                  <button type="button" key={icon} className={`asset-icon-cell ${formIcon === icon ? "selected" : ""}`} onClick={() => { setFormIcon(icon); setShowIconPicker(false); }}><AssetIcon name={icon} size={36} /></button>
+                ))}
+              </div>
+            </div>
+          )}
           <label className="subscription-field">
             <span>价格</span>
             <input value={price} onChange={(event) => setPrice(event.target.value)} type="number" min="0" step="0.01" inputMode="decimal" placeholder="请输入价格" required />
@@ -5365,6 +5418,10 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
               </label>
             </div>
           )}
+          <label className="subscription-field">
+            <span>订阅使用情况说明</span>
+            <textarea value={usageNote} onChange={(event) => setUsageNote(event.target.value)} rows={3} placeholder="例如：家人共用 / 已取消自动续费 / 主要看综艺" />
+          </label>
           <button type="submit" className="asset-submit">{editingId ? "保存修改" : "保存订阅"}</button>
         </form>
       )}
@@ -5372,11 +5429,12 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
         {records.length === 0 && <p className="empty">还没有订阅记录，添加后可以集中查看购买周期和结束日期。</p>}
         {records.map((item) => (
           <div className="subscription-row" key={item.id}>
-            <span className="subscription-icon"><AssetIcon name="thiings:credit-card" size={32} /></span>
+            <span className="subscription-icon"><AssetIcon name={item.icon || "thiings-subscribe:credit-card"} size={32} /></span>
             <div className="subscription-info">
               <strong>{item.title}</strong>
               <small>{item.purchaseType}{item.billingCycle ? ` · ${item.billingCycle}` : ""} · 购买于 {item.purchaseDate}</small>
               <span>{subscriptionStatus(item)}{item.endDate ? ` · ${item.endDate}` : ""}</span>
+              {item.usageNote && <small className="subscription-note">{item.usageNote}</small>}
             </div>
             <div className="subscription-price">¥{Number(item.price || 0).toLocaleString()}</div>
             <div className="subscription-actions">
@@ -7036,7 +7094,7 @@ export default function Workbench() {
       ...exerciseRecords.map((item) => `- ${item.date} ${item.time} ${item.label} ${item.duration}分钟 ${item.calories}kcal`),
       "",
       "## 订阅记录",
-      ...subscriptionRecords.map((item) => `- ${item.title} ¥${item.price} · ${item.purchaseType}${item.billingCycle ? ` · ${item.billingCycle}` : ""} · 购买日期 ${item.purchaseDate}${item.endDate ? ` · 结束日期 ${item.endDate}` : ""}`),
+      ...subscriptionRecords.map((item) => `- ${item.title} ¥${item.price} · ${item.purchaseType}${item.billingCycle ? ` · ${item.billingCycle}` : ""} · 购买日期 ${item.purchaseDate}${item.endDate ? ` · 结束日期 ${item.endDate}` : ""}${item.usageNote ? ` · 使用说明：${item.usageNote}` : ""}`),
       "",
       "## 体重记录",
       ...weightRecords.map((item) => `- ${item.date} ${item.time} ${formatWeight(item.weight)}kg`),
