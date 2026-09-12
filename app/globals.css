@@ -6831,6 +6831,31 @@ textarea::placeholder {
   transform: translateY(-50%);
 }
 
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode .watch-mobile-episode-check {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 224, 190, 0.34);
+  border-radius: 11px;
+  color: transparent;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+  font-size: 0;
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode.checked .watch-mobile-episode-check {
+  border-color: rgba(255, 213, 138, 0.78);
+  background: rgba(255, 213, 138, 0.14);
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-mobile-episode.checked .watch-mobile-episode-check::before {
+  content: "";
+  width: 12px;
+  height: 7px;
+  border-left: 2px solid #ffd58a;
+  border-bottom: 2px solid #ffd58a;
+  transform: translateY(-1px) rotate(-45deg);
+}
+
 .phone-shell.mobile-shell.page-consultations .watch-mobile-rating-footer {
   gap: 8px;
 }
