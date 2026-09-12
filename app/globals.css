@@ -5166,7 +5166,7 @@ textarea::placeholder {
 .watch-rating-categories button { flex: 0 0 auto; min-height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); background: transparent; font-size: 12px; font-weight: 800; white-space: nowrap; }
 .watch-rating-categories button.active { color: #fff; border-color: transparent; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); }
 .watch-rating-layout { display: grid; grid-template-columns: minmax(220px, 0.82fr) minmax(0, 1.55fr); gap: 16px; align-items: start; min-width: 0; }
-.watch-rating-library, .watch-rating-detail { display: grid; gap: 12px; min-width: 0; padding: 12px; border: 1px solid rgba(234, 215, 208, 0.72); border-radius: 12px; background: rgba(255, 252, 250, 0.84); }
+.watch-rating-library, .watch-rating-detail { display: grid; gap: 12px; min-width: 0; min-height: 0; padding: 12px; border: 1px solid rgba(234, 215, 208, 0.72); border-radius: 12px; background: rgba(255, 252, 250, 0.84); }
 .watch-rating-library-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .watch-rating-library-head strong { color: var(--ink); font-size: 14px; }
 .watch-rating-library-head span { color: var(--muted); font-size: 11px; }
@@ -5216,8 +5216,14 @@ textarea::placeholder {
 .page-consultations .watch-rating-panel { border-color: rgba(255, 255, 255, 0.14); color: #fff5f0; background: linear-gradient(145deg, color-mix(in srgb, var(--theme-deep) 84%, #050806), color-mix(in srgb, var(--theme-main) 68%, #040606)); }
 .page-consultations .watch-rating-heading h2, .page-consultations .watch-rating-library-head strong, .page-consultations .watch-rating-detail-head h3, .page-consultations .watch-rating-media-copy strong, .page-consultations .watch-rating-episode strong, .page-consultations .watch-rating-movie-form strong { color: #fff5f0; }
 .page-consultations .watch-rating-heading p, .page-consultations .watch-rating-library-head span, .page-consultations .watch-rating-detail-head p, .page-consultations .watch-rating-summary, .page-consultations .watch-rating-status, .page-consultations .watch-rating-media-copy small, .page-consultations .watch-rating-episode small, .page-consultations .watch-rating-episode p, .page-consultations .watch-rating-movie-form small { color: rgba(255, 233, 224, 0.72); }
+.page-consultations .watch-rating-season-head label, .page-consultations .watch-rating-season-footer label { color: #f6e5d9; }
+.page-consultations .watch-rating-season-stats strong { color: #ffd58a; }
+.page-consultations .watch-rating-season-stats small { color: #e8cfc2; }
 .page-consultations .watch-rating-library, .page-consultations .watch-rating-detail { border-color: rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.055); }
 .page-consultations .watch-rating-toolbar > input, .page-consultations .watch-rating-season-head select, .page-consultations .watch-rating-season-footer input, .page-consultations .watch-rating-movie-form input { color: #fff5f0; border-color: rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.08); }
+.page-consultations .watch-rating-season-footer input::placeholder, .page-consultations .watch-rating-movie-form input::placeholder { color: #d8bdb0; opacity: 1; }
+.page-consultations .watch-rating-actions button.secondary, .page-consultations .watch-rating-season-head > .secondary { color: #ffe7d8; border-color: rgba(255, 224, 190, 0.34); background: rgba(255, 224, 190, 0.1); }
+.page-consultations .watch-rating-actions button.secondary:disabled, .page-consultations .watch-rating-season-head > .secondary:disabled { color: #f0d8ca; border-color: rgba(255, 224, 190, 0.24); background: rgba(255, 255, 255, 0.07); opacity: 1; }
 .page-consultations .watch-rating-tmdb-search input { color: #fff5f0; border-color: rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.08); }
 .page-consultations .watch-rating-media-card, .page-consultations .watch-rating-episode { color: #fff5f0; border-color: rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.055); }
 .page-consultations .watch-rating-tmdb-results button { color: #fff5f0; border-color: rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.055); }
@@ -5227,19 +5233,21 @@ textarea::placeholder {
 .page-consultations .watch-rating-categories button.active { color: #fff; border-color: transparent; }
 
 @media (max-width: 959px) {
-  .watch-rating-layout { grid-template-columns: minmax(0, 1fr); }
-  .watch-rating-library-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: none; }
+  .phone-shell.mobile-shell .watch-rating-layout { grid-template-columns: minmax(0, 1fr); }
+  .phone-shell.mobile-shell .watch-rating-library-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: none; overflow: visible; }
+  .phone-shell.desktop-shell .watch-rating-layout { grid-template-columns: minmax(248px, 0.78fr) minmax(0, 1.42fr); }
+  .phone-shell.desktop-shell .watch-rating-library-grid { max-height: min(660px, calc(100dvh - 250px)); }
 }
 
 @media (max-width: 520px) {
-  .watch-rating-panel { gap: 12px; padding: 14px 12px; }
+  .phone-shell.mobile-shell .watch-rating-panel { gap: 12px; padding: 14px 12px; }
   .watch-rating-detail-head { grid-template-columns: 72px minmax(0, 1fr); gap: 10px; }
   .watch-rating-detail-head img, .watch-rating-detail-poster { width: 72px; height: 108px; }
   .watch-rating-detail-head h3 { font-size: 18px; }
-  .watch-rating-season-head { grid-template-columns: minmax(0, 1fr) auto; }
-  .watch-rating-season-head > .secondary { grid-column: 1 / -1; justify-self: start; }
-  .watch-rating-season-footer, .watch-rating-movie-form { grid-template-columns: minmax(0, 1fr); }
-  .watch-rating-tmdb-search { grid-template-columns: minmax(0, 1fr); }
+  .phone-shell.mobile-shell .watch-rating-season-head { grid-template-columns: minmax(0, 1fr) auto; }
+  .phone-shell.mobile-shell .watch-rating-season-head > .secondary { grid-column: 1 / -1; justify-self: start; }
+  .phone-shell.mobile-shell .watch-rating-season-footer, .phone-shell.mobile-shell .watch-rating-movie-form { grid-template-columns: minmax(0, 1fr); }
+  .phone-shell.mobile-shell .watch-rating-tmdb-search { grid-template-columns: minmax(0, 1fr); }
   .watch-rating-episode { grid-template-columns: 20px 72px minmax(0, 1fr); gap: 7px; padding: 7px; }
   .watch-rating-episode img, .watch-rating-episode-placeholder { width: 72px; height: 44px; }
   .watch-rating-movie-form .watch-rating-actions { grid-column: auto; }
