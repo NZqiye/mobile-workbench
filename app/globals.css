@@ -5249,6 +5249,162 @@ textarea::placeholder {
   .phone-shell.mobile-shell .watch-rating-season-footer, .phone-shell.mobile-shell .watch-rating-movie-form { grid-template-columns: minmax(0, 1fr); }
   .phone-shell.mobile-shell .watch-rating-tmdb-search { grid-template-columns: minmax(0, 1fr); }
   .watch-rating-episode { grid-template-columns: 20px 72px minmax(0, 1fr); gap: 7px; padding: 7px; }
-  .watch-rating-episode img, .watch-rating-episode-placeholder { width: 72px; height: 44px; }
+.watch-rating-episode img, .watch-rating-episode-placeholder { width: 72px; height: 44px; }
   .watch-rating-movie-form .watch-rating-actions { grid-column: auto; }
+}
+
+/* Keep the rating workspace readable at both operating sizes. */
+.watch-rating-layout { align-items: stretch; }
+.watch-rating-library, .watch-rating-detail { box-sizing: border-box; }
+.watch-rating-detail { grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
+.watch-rating-library { grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
+.watch-rating-detail-body { display: grid; align-content: start; gap: 12px; min-width: 0; min-height: 0; overflow: auto; padding-right: 3px; scrollbar-width: thin; }
+.watch-rating-detail-body .watch-rating-episodes { max-height: none; overflow: visible; }
+
+@media (min-width: 960px) {
+  .phone-shell.desktop-shell.page-consultations .watch-rating-layout {
+    height: clamp(560px, calc(100dvh - 220px), 760px);
+    grid-template-columns: minmax(248px, 0.78fr) minmax(0, 1.42fr);
+    align-items: stretch;
+  }
+
+  .phone-shell.desktop-shell.page-consultations .watch-rating-library,
+  .phone-shell.desktop-shell.page-consultations .watch-rating-detail {
+    height: 100%;
+  }
+
+  .phone-shell.desktop-shell.page-consultations .watch-rating-library-grid {
+    min-height: 0;
+    max-height: none;
+  }
+}
+
+@media (max-width: 959px) {
+  .phone-shell.mobile-shell.page-consultations .watch-rating-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 14px;
+    width: 100%;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-library,
+  .phone-shell.mobile-shell.page-consultations .watch-rating-detail {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-library {
+    max-height: 320px;
+    overflow: hidden;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-library-grid {
+    grid-template-columns: minmax(0, 1fr);
+    max-height: 250px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-media-card {
+    grid-template-columns: 52px minmax(0, 1fr);
+    min-height: 78px;
+    padding: 8px;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-media-card img,
+  .phone-shell.mobile-shell.page-consultations .watch-rating-media-poster {
+    width: 52px;
+    height: 72px;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-detail {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-detail-body {
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-episodes {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 520px) {
+  .phone-shell.mobile-shell.page-consultations .watch-rating-panel {
+    padding: 16px 12px;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-library {
+    max-height: 300px;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-library-grid {
+    max-height: 236px;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-detail-head {
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-detail-head img,
+  .phone-shell.mobile-shell.page-consultations .watch-rating-detail-poster {
+    width: 84px;
+    height: 126px;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-detail-head h3 {
+    font-size: 20px;
+    line-height: 1.25;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-episode {
+    grid-template-columns: 22px 96px minmax(0, 1fr);
+    gap: 9px;
+    padding: 10px 8px;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-episode img,
+  .phone-shell.mobile-shell.page-consultations .watch-rating-episode-placeholder {
+    width: 96px;
+    height: 60px;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-episode strong {
+    font-size: 13px;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-episode small {
+    font-size: 11px;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-episode p {
+    -webkit-line-clamp: 3;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-season-footer,
+  .phone-shell.mobile-shell.page-consultations .watch-rating-movie-form {
+    gap: 12px;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-actions button {
+    width: 100%;
+    min-height: 40px;
+    padding-inline: 8px;
+    white-space: normal;
+  }
 }
