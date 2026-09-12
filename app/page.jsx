@@ -3964,7 +3964,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
     setRatingStatus("本季观看进度已保存");
   }
 
-  function saveSeasonRating() {
+  async function saveSeasonRating() {
     if (!selected || isMovie || !seasonNumber) return;
     const rating = validRating(seasonRating);
     if (rating === null) {
@@ -3973,7 +3973,13 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
     }
     setSeasonRating(String(rating));
     onCheckin?.({ id: selected.id, mode: "season-rating", season: Number(seasonNumber), episodes: Array.from(checkedEpisodes).sort((a, b) => a - b), episodeCount, rating, date: todayKey() });
-    setRatingStatus(`第 ${seasonNumber} 季评分已保存`);
+    if (!selected.tmdbId) {
+      setRatingStatus(`第 ${seasonNumber} 季评分已保存`);
+      return;
+    }
+    setRatingStatus(`第 ${seasonNumber} 季评分已保存，正在同步 TMDB…`);
+    const ok = await onSyncTmdbRating?.({ id: selected.id, rating });
+    setRatingStatus(ok ? `第 ${seasonNumber} 季评分已保存 · 已同步 TMDB` : `第 ${seasonNumber} 季评分已保存 · TMDB 同步失败`);
   }
 
   function saveMovie() {
