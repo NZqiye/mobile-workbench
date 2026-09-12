@@ -4130,7 +4130,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
                         return <button type="button" className="watch-mobile-season" key={season.seasonNumber} onClick={() => { setSeasonNumber(key); setMobileRatingView("episodes"); }}>
                           {season.posterUrl ? <img src={season.posterUrl} alt="" loading="lazy" /> : <span className="watch-mobile-season-poster">S{season.seasonNumber}</span>}
                           <span><strong>第 {season.seasonNumber} 季</strong><small>{season.airDate || "日期待定"}</small></span>
-                          <b>{progress}/{count || "-"}</b><i aria-hidden="true">✓</i>
+                          <b>{progress}/{count || "-"}</b><i aria-hidden="true">{count > 0 && progress >= count ? "✓" : ""}</i>
                         </button>;
                       })}
                     </div>}
