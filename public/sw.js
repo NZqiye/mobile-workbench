@@ -1,4 +1,4 @@
-const CACHE_NAME = "qiyeworkbench-v9";
+const CACHE_NAME = "qiyeworkbench-v10";
 const APP_SHELL = ["/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/avatar-cultivation.webp"];
 
 self.addEventListener("install", (event) => {
@@ -13,8 +13,6 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-const STATIC_CACHE_PREFIXES = ["/assets-icons/", "/icons/", "/crew/", "/_next/static/"];
-
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
@@ -25,25 +23,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  const isStatic = STATIC_CACHE_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
-  if (isStatic) {
-    event.respondWith(
-      caches.match(event.request).then((cached) => {
-        if (cached) return cached;
-        return fetch(event.request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        }).catch(() => caches.match(event.request));
-      })
-    );
-    return;
-  }
-
+  // Navigations always bypass the browser HTTP cache. This makes every app
+  // open check the newest HTML; cached content remains an offline fallback.
+  const request = event.request.mode === "navigate"
+    ? new Request(event.request, { cache: "no-store" })
+    : event.request;
   event.respondWith(
-    fetch(event.request).then((response) => {
+    fetch(request).then((response) => {
       if (response.ok) {
         const clone = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
