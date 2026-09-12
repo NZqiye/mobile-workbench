@@ -2092,25 +2092,23 @@ function syncConsultationStatusFromWatchCheckins(consultations, watchCheckins) {
       return mediaAliasKeys(record).some((key) => itemKeys.has(key));
     });
     if (!related.length) return item;
-    if (item.status === "看过的剧") return item;
     const hasCompletedRecord = related.some((record) => {
-      return record.mode === "movie" || Number(record.seasonRating || record.rating || 0) > 0;
+      return record.mode === "movie";
     });
     if (hasCompletedRecord) return { ...item, status: "看过的剧", updatedAt: Math.max(itemUpdatedAt(item), ...related.map(itemUpdatedAt)) || Date.now() };
-    if (item.status === "看过的剧") {
-      const knownSeasons = Array.isArray(item.seasons) ? item.seasons.filter((season) => Number(season?.seasonNumber) > 0) : [];
-      const seasonRecords = related.filter((record) => record.mode === "season");
-      const allKnownSeasonsComplete = knownSeasons.length > 0 && knownSeasons.every((season) => {
-        const key = String(season.seasonNumber);
-        const count = Number(season.episodeCount || item.seasonEpisodeCounts?.[key] || 0);
-        const savedCount = Array.isArray(item.seasonProgress?.[key]) ? item.seasonProgress[key].length : 0;
-        const record = seasonRecords.find((entry) => String(entry.season) === key);
-        const recordCount = Array.isArray(record?.episodes) ? record.episodes.length : 0;
-        return count > 0 && Math.max(savedCount, recordCount) >= count;
-      });
-      if (seasonRecords.length && knownSeasons.length && !allKnownSeasonsComplete) {
-        return { ...item, status: "正在看", updatedAt: Date.now() };
-      }
+    const knownSeasons = Array.isArray(item.seasons) ? item.seasons.filter((season) => Number(season?.seasonNumber) > 0) : [];
+    const seasonRecords = related.filter((record) => record.mode === "season");
+    const allKnownSeasonsComplete = knownSeasons.length > 0 && knownSeasons.every((season) => {
+      const key = String(season.seasonNumber);
+      const count = Number(season.episodeCount || item.seasonEpisodeCounts?.[key] || 0);
+      const savedCount = Array.isArray(item.seasonProgress?.[key]) ? item.seasonProgress[key].length : 0;
+      const record = seasonRecords.find((entry) => String(entry.season) === key);
+      const recordCount = Array.isArray(record?.episodes) ? record.episodes.length : 0;
+      return count > 0 && Math.max(savedCount, recordCount) >= count;
+    });
+    if (allKnownSeasonsComplete) return { ...item, status: "看过的剧", updatedAt: Math.max(itemUpdatedAt(item), ...related.map(itemUpdatedAt)) || Date.now() };
+    if (seasonRecords.length || Object.keys(item.seasonProgress || {}).length) {
+      return { ...item, status: "正在看", updatedAt: itemUpdatedAt(item) || Date.now() };
     }
     return item;
   });
