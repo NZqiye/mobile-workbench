@@ -986,6 +986,13 @@ function mergeById(localItems, cloudItems, preferCloudOnTie = false) {
   return Array.from(merged.values());
 }
 
+function mergeConsultations(localItems, cloudItems, cloud) {
+  const deletedIds = new Set(mergeDeletedIds("consultations", cloud));
+  return dedupeConsultations([...mergeById(localItems, cloudItems), ...localItems, ...(Array.isArray(cloudItems) ? cloudItems : [])])
+    .filter((item) => !deletedIds.has(item.id))
+    .map((item) => ({ ...item, updatedAt: itemUpdatedAt(item) }));
+}
+
 function uniqueIds(items) {
   return Array.from(new Set((Array.isArray(items) ? items : []).filter(Boolean)));
 }
@@ -1006,6 +1013,7 @@ function mergeDeletedIds(name, cloud) {
 }
 
 function mergeSyncedItems(name, localItems, cloudItems, cloud) {
+  if (name === "consultations") return mergeConsultations(localItems, cloudItems, cloud);
   const deletedIds = new Set(mergeDeletedIds(name, cloud));
   return mergeById(localItems, cloudItems, name === "assetRecords")
     .filter((item) => !deletedIds.has(item.id))
@@ -2018,6 +2026,21 @@ function dedupeConsultations(items) {
     if (key) seenKeys.add(key);
   });
   return kept;
+}
+
+function syncConsultationStatusFromWatchCheckins(consultations, watchCheckins) {
+  const records = Array.isArray(watchCheckins) ? watchCheckins : [];
+  return (Array.isArray(consultations) ? consultations : []).map((item) => {
+    const related = records.filter((record) => {
+      if (record.consultationId && item.id && String(record.consultationId) === String(item.id)) return true;
+      if (record.tmdbId && item.tmdbId && String(record.tmdbId) === String(item.tmdbId)) return true;
+      return String(mediaTitle(record)).trim().toLowerCase() === String(mediaTitle(item)).trim().toLowerCase();
+    });
+    if (!related.length) return item;
+    if (item.status === "看过的剧") return item;
+    const hasCompletedRecord = related.some((record) => record.mode === "movie" || Number(record.seasonRating || record.rating || 0) > 0);
+    return hasCompletedRecord ? { ...item, status: "看过的剧", updatedAt: Math.max(itemUpdatedAt(item), ...related.map(itemUpdatedAt)) || Date.now() } : item;
+  });
 }
 
 function normalizeDeletedTmdbWatchlist(items = []) {
@@ -6009,8 +6032,8 @@ export default function Workbench() {
     setSyncStatus("正在刷新观影记录...");
     try {
       const merged = mergeCloudWithLocal(await loadCloudItems(cloudSession));
-      const nextConsultations = merged.consultations || [];
       const nextWatchCheckins = dedupeWatchCheckins(merged.watchCheckins || []);
+      const nextConsultations = syncConsultationStatusFromWatchCheckins(merged.consultations || [], nextWatchCheckins);
       setConsultations(nextConsultations);
       writeStorage("consultations", nextConsultations);
       setWatchCheckins(nextWatchCheckins);
@@ -6019,7 +6042,7 @@ export default function Workbench() {
         saveCloudItem(cloudSession, "consultations", nextConsultations),
         saveCloudItem(cloudSession, "watchCheckins", nextWatchCheckins),
       ]);
-      setSyncStatus(`观影记录已刷新 · ${nowText()}`);
+      setSyncStatus(`观影记录已刷新 · 看过 ${nextConsultations.filter((item) => item.status === "看过的剧").length} · 记录 ${nextWatchCheckins.length} · ${nowText()}`);
       return true;
     } catch (error) {
       setSyncStatus(`观影记录刷新失败：${error.message || "请稍后再试"}`);

@@ -6973,9 +6973,13 @@ textarea::placeholder {
 .phone-shell.mobile-shell.page-consultations .watch-rating-syncbar {
   margin-bottom: 8px;
   padding: 8px 10px;
-  border-color: rgba(255, 224, 190, 0.2);
-  color: rgba(255, 233, 224, 0.72);
-  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(255, 224, 190, 0.24);
+  color: #fff5f0;
+  background: rgba(61, 12, 20, 0.78);
+}
+
+.phone-shell.mobile-shell.page-consultations .watch-rating-syncbar span {
+  color: #fff5f0;
 }
 
 .phone-shell.mobile-shell.page-consultations .watch-rating-syncbar button {
