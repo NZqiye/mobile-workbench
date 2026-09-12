@@ -5295,6 +5295,24 @@ textarea::placeholder {
 }
 
 @media screen and (max-width: 959px) {
+  .phone-shell.mobile-shell,
+  .phone-shell.mobile-shell .app-body,
+  .phone-shell.mobile-shell .work-area,
+  .phone-shell.mobile-shell .content,
+  .phone-shell.mobile-shell .watch-shell {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-panel {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
   .phone-shell.mobile-shell.page-consultations .watch-rating-mobile-picker-toggle {
     display: flex !important;
     align-items: center;
@@ -5317,6 +5335,13 @@ textarea::placeholder {
     width: 100% !important;
     min-width: 0 !important;
     gap: 14px;
+  }
+
+  .phone-shell.mobile-shell.page-consultations .watch-rating-layout > * {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex: 0 0 auto;
   }
 
   .phone-shell.mobile-shell.page-consultations .watch-rating-library {
