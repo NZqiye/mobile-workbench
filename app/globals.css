@@ -5686,3 +5686,97 @@ textarea::placeholder {
   .phone-shell.mobile-shell.page-consultations .watch-mobile-rating-footer { grid-template-columns: minmax(0, 1fr); }
   .phone-shell.mobile-shell.page-consultations .watch-mobile-rating-footer > button { width: 100%; }
 }
+
+/* Mobile rating is a separate flow: the library and the work view never share the viewport. */
+@media screen and (max-width: 959px) {
+  .watch-rating-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+  }
+
+  .watch-rating-panel .watch-rating-layout {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .watch-rating-panel .watch-rating-library,
+  .watch-rating-panel .watch-rating-detail {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .watch-rating-panel .watch-rating-library {
+    display: none !important;
+    max-height: min(58dvh, 480px) !important;
+    overflow: hidden !important;
+  }
+
+  .watch-rating-panel.mobile-library-open .watch-rating-library {
+    display: grid !important;
+  }
+
+  .watch-rating-panel.mobile-library-open .watch-rating-detail {
+    display: none !important;
+  }
+
+  .watch-rating-panel:not(.mobile-library-open) .watch-rating-detail {
+    display: grid !important;
+    grid-template-rows: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .watch-rating-panel .watch-rating-library-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    min-width: 0 !important;
+    max-height: min(50dvh, 420px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  .watch-rating-panel .watch-rating-detail-head,
+  .watch-rating-panel .watch-rating-desktop-body {
+    display: none !important;
+  }
+
+  .watch-rating-panel .watch-rating-detail-body {
+    display: none !important;
+  }
+
+  .watch-rating-panel .watch-rating-mobile-body {
+    display: grid !important;
+    gap: 16px;
+    min-width: 0 !important;
+  }
+
+  .watch-rating-panel .watch-rating-mobile-picker-toggle {
+    display: flex !important;
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .watch-rating-panel:not(.mobile-library-open) .watch-rating-toolbar,
+  .watch-rating-panel:not(.mobile-library-open) .watch-rating-tmdb-search,
+  .watch-rating-panel:not(.mobile-library-open) .watch-rating-tmdb-results,
+  .watch-rating-panel:not(.mobile-library-open) .watch-rating-search-status {
+    display: none !important;
+  }
+
+  .watch-rating-panel.mobile-library-open .watch-rating-toolbar,
+  .watch-rating-panel.mobile-library-open .watch-rating-tmdb-search,
+  .watch-rating-panel.mobile-library-open .watch-rating-tmdb-results {
+    display: grid !important;
+  }
+
+  .watch-rating-panel.mobile-library-open .watch-rating-search-status {
+    display: block !important;
+  }
+}
