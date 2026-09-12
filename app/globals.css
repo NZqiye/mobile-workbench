@@ -5780,3 +5780,107 @@ textarea::placeholder {
     display: block !important;
   }
 }
+
+/* Keep the compact phone flow deterministic even when the display-mode toggle
+   was previously set to desktop. A phone always gets one readable column. */
+@media screen and (max-width: 959px) {
+  .watch-rating-panel .watch-rating-layout {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .watch-rating-panel .watch-rating-library {
+    display: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .watch-rating-panel.mobile-library-open .watch-rating-library {
+    display: grid !important;
+  }
+
+  .watch-rating-panel.mobile-library-open .watch-rating-detail,
+  .watch-rating-panel .watch-rating-detail-head,
+  .watch-rating-panel .watch-rating-desktop-body,
+  .watch-rating-panel .watch-rating-detail-body {
+    display: none !important;
+  }
+
+  .watch-rating-panel:not(.mobile-library-open) .watch-rating-detail {
+    display: grid !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .watch-rating-panel:not(.mobile-library-open) .watch-rating-mobile-body {
+    display: grid !important;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  /* The title bar's search icon is the only mobile affordance for switching
+     shows; keep the extra picker row out of the episode reading flow. */
+  .watch-rating-panel .watch-rating-mobile-picker-toggle {
+    display: none !important;
+  }
+
+  .watch-rating-panel:not(.mobile-library-open) .watch-rating-tmdb-search,
+  .watch-rating-panel:not(.mobile-library-open) .watch-rating-tmdb-results,
+  .watch-rating-panel:not(.mobile-library-open) .watch-rating-search-status,
+  .watch-rating-panel:not(.mobile-library-open) .watch-rating-toolbar {
+    display: none !important;
+  }
+
+  .watch-rating-panel.mobile-library-open .watch-rating-tmdb-search,
+  .watch-rating-panel.mobile-library-open .watch-rating-tmdb-results,
+  .watch-rating-panel.mobile-library-open .watch-rating-toolbar {
+    display: grid !important;
+  }
+
+  .watch-mobile-episode {
+    position: relative;
+    grid-template-columns: minmax(88px, 30%) minmax(0, 1fr) 34px;
+    gap: 10px;
+    min-height: 78px;
+  }
+
+  .watch-mobile-episode > input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .watch-mobile-episode img,
+  .watch-mobile-episode > span {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    height: 64px;
+  }
+
+  .watch-mobile-episode > div {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .watch-mobile-episode-check {
+    display: grid;
+    grid-column: 3;
+    grid-row: 1;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: #32180d;
+    background: #ffd4a5;
+    font-size: 17px;
+    font-style: normal;
+    font-weight: 950;
+  }
+}

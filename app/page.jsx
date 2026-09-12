@@ -4096,7 +4096,10 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
               <div className="watch-rating-mobile-body">
                 <div className="watch-mobile-titlebar">
                   {mobileRatingView === "episodes" ? <button type="button" onClick={() => setMobileRatingView("seasons")} aria-label="返回季列表">←</button> : <span />}
-                  <div><h3>{detailTitle}</h3><small>{[categoryLabel(selected), details?.year || selected.year, details?.tmdbRating || selected.tmdbRating ? `TMDB ${details?.tmdbRating || selected.tmdbRating}` : ""].filter(Boolean).join(" · ")}</small></div>
+                  <div>
+                    <h3>{mobileRatingView === "episodes" ? `第 ${seasonNumber} 季` : detailTitle}</h3>
+                    {mobileRatingView === "episodes" && <small>{detailTitle}</small>}
+                  </div>
                   <button type="button" onClick={() => setMobileLibraryOpen(true)} aria-label="更换作品">⌕</button>
                 </div>
                 {detailsLoading && <p className="watch-rating-status">正在读取 TMDB 详情…</p>}
@@ -4142,6 +4145,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
                           <input type="checkbox" checked={checkedEpisodes.has(episodeNumber)} onChange={() => toggleEpisode(episodeNumber)} />
                           {episode.stillUrl ? <img src={episode.stillUrl} alt="" loading="lazy" /> : <span>E{episodeNumber}</span>}
                           <div><strong>{episode.name || `第 ${episodeNumber} 集`}</strong><small>{[episode.airDate, episode.runtime ? `${episode.runtime} 分钟` : ""].filter(Boolean).join(" · ")}</small></div>
+                          <i className="watch-mobile-episode-check" aria-hidden="true">{checkedEpisodes.has(episodeNumber) ? "✓" : ""}</i>
                         </label>;
                       })}
                     </div>}
