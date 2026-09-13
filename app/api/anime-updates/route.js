@@ -1,4 +1,4 @@
-import { fetchTmdb, tmdbToken } from "../../../lib/tmdb";
+import { fetchTmdb, mapTmdbResult, tmdbToken } from "../../../lib/tmdb";
 
 const ANILIST_URL = "https://graphql.anilist.co";
 const KITSU_BASE = "https://kitsu.io/api/edge";
@@ -60,30 +60,49 @@ function cleanDescription(text) {
   return String(text || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 }
 
+function animeTitleCandidates(title) {
+  const raw = String(title || '').trim();
+  if (!raw) return [];
+  const candidates = [raw];
+  const stripped = raw
+    .replace(/\s*[:：-]?\s*(?:season|第\s*[0-9一二三四五六七八九十]+\s*季|[0-9]+(?:st|nd|rd|th)\s+season|part\s*[0-9ivx]+|cour\s*[0-9]+).*$/i, '')
+    .replace(/\s*[:：-]?\s*(?:2nd|3rd|4th|final|the final).*$/i, '')
+    .trim();
+  if (stripped && stripped !== raw) candidates.push(stripped);
+  const mainTitle = raw.split(/\s*[:：]\s*/)[0].trim();
+  if (mainTitle && mainTitle !== raw && mainTitle.length >= 2) candidates.push(mainTitle);
+  return [...new Set(candidates)];
+}
+
 async function fetchTmdbAnimeTitle(title) {
-  if (!tmdbToken || !title) return { title: "", overview: "" };
+  if (!tmdbToken || !title) return null;
   if (animeTitleCache.has(title)) return animeTitleCache.get(title);
   const promise = (async () => {
     try {
-      const url = new URL("https://api.themoviedb.org/3/search/tv");
-      url.searchParams.set("query", title);
-      url.searchParams.set("language", "zh-CN");
-      url.searchParams.set("include_adult", "false");
-      const response = await fetchTmdb(url);
-      const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
-      if (!response.ok) return { title: "", overview: "" };
-      const results = Array.isArray(data.results) ? data.results : [];
-      const query = normalizeTitle(title);
-      const best = results.find((item) => normalizeTitle(item.original_name) === query || normalizeTitle(item.name) === query)
-        || results.find((item) => hasChinese(item.name))
-        || null;
-      return {
-        title: best?.name && hasChinese(best.name) ? best.name : "",
-        overview: best?.overview || "",
+      const results = [];
+      for (const candidate of animeTitleCandidates(title)) {
+        const url = new URL('https://api.themoviedb.org/3/search/tv');
+        url.searchParams.set('query', candidate);
+        url.searchParams.set('language', 'zh-CN');
+        url.searchParams.set('include_adult', 'false');
+        const response = await fetchTmdb(url);
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : {};
+        if (response.ok && Array.isArray(data.results)) results.push(...data.results);
+      }
+      const candidates = [...new Map(results.filter((item) => item?.id).map((item) => [item.id, item])).values()];
+      if (!candidates.length) return null;
+      const queries = animeTitleCandidates(title).map(normalizeTitle).filter(Boolean);
+      const score = (item) => {
+        const names = [item.name, item.original_name].map(normalizeTitle).filter(Boolean);
+        const exact = names.some((name) => queries.includes(name));
+        const related = names.some((name) => queries.some((query) => name.includes(query) || query.includes(name)));
+        const animation = Array.isArray(item.genre_ids) && item.genre_ids.includes(16);
+        return (exact ? 100 : related ? 50 : 0) + (animation ? 20 : 0) + Number(item.popularity || 0) / 1000;
       };
+      return candidates.sort((a, b) => score(b) - score(a))[0] || null;
     } catch {
-      return { title: "", overview: "" };
+      return null;
     }
   })();
   animeTitleCache.set(title, promise);
@@ -94,29 +113,32 @@ async function normalizeAnilistAnime(item) {
   const title = item?.title?.romaji || item?.title?.english || item?.title?.native || "";
   const manualZh = ANIME_ZH[title] || ANIME_ZH[item?.title?.english] || "";
   const tmdbInfo = await fetchTmdbAnimeTitle(title);
+  const tmdbItem = tmdbInfo ? mapTmdbResult({ ...tmdbInfo, media_type: "tv" }) : null;
   return {
-    id: item?.id ? `anilist-${item.id}` : title,
-    tmdbId: "",
-    title,
-    titleZh: manualZh || tmdbInfo.title || (hasChinese(item?.title?.native) ? item.title.native : ""),
+    ...(tmdbItem || {}),
+    id: tmdbItem?.tmdbId ? `tmdb-tv-${tmdbItem.tmdbId}` : item?.id ? `anilist-${item.id}` : title,
+    tmdbId: tmdbItem?.tmdbId || "",
+    title: tmdbItem?.title || title,
+    titleZh: tmdbItem?.titleZh || manualZh || (hasChinese(item?.title?.native) ? item.title.native : ""),
     allowOriginalTitle: true,
-    titleSource: manualZh ? "manual" : tmdbInfo.title ? "tmdb" : hasChinese(item?.title?.native) ? "native" : "original",
+    titleSource: manualZh ? "manual" : tmdbItem ? "tmdb" : hasChinese(item?.title?.native) ? "native" : "original",
     titleJa: item?.title?.native || "",
     type: "动漫",
-    platform: "AniList",
-    source: "AniList",
-    sourceLabel: "AniList",
-    year: item?.seasonYear || "",
+    category: "anime",
+    platform: tmdbItem ? "TMDB" : "AniList",
+    source: tmdbItem ? "TMDB" : "AniList",
+    sourceLabel: tmdbItem ? "TMDB" : "AniList",
+    year: tmdbItem?.year || item?.seasonYear || "",
     airDate: formatAnilistDate(item?.startDate),
     startDate: formatAnilistDate(item?.startDate),
     episodeCount: item?.episodes || "",
-    tmdbRating: item?.averageScore ? String((Number(item.averageScore) / 10).toFixed(1)) : "",
+    tmdbRating: tmdbItem?.tmdbRating || (item?.averageScore ? String((Number(item.averageScore) / 10).toFixed(1)) : ""),
     score: item?.averageScore || "",
     popularity: item?.popularity || "",
-    posterUrl: item?.coverImage?.large || item?.coverImage?.medium || "",
-    backdropUrl: item?.bannerImage || "",
-    summary: cleanDescription(item?.description),
-    summaryZh: ANIME_SUMMARY_ZH[title] || tmdbInfo.overview || (hasChinese(item?.description) ? cleanDescription(item?.description) : ""),
+    posterUrl: tmdbItem?.posterUrl || item?.coverImage?.large || item?.coverImage?.medium || "",
+    backdropUrl: tmdbInfo?.backdrop_path ? `https://image.tmdb.org/t/p/w780${tmdbInfo.backdrop_path}` : item?.bannerImage || "",
+    summary: tmdbItem?.summary || cleanDescription(item?.description),
+    summaryZh: ANIME_SUMMARY_ZH[title] || tmdbItem?.summaryZh || (hasChinese(item?.description) ? cleanDescription(item?.description) : ""),
     review: cleanDescription(item?.description),
     url: item?.siteUrl || "",
   };
@@ -148,27 +170,31 @@ async function normalizeKitsuAnime(item) {
   const title = pickKitsuTitle(attrs);
   const manualZh = ANIME_ZH[title] || "";
   const tmdbInfo = await fetchTmdbAnimeTitle(title);
+  const tmdbItem = tmdbInfo ? mapTmdbResult({ ...tmdbInfo, media_type: "tv" }) : null;
   return {
-    id: item?.id ? `kitsu-${item.id}` : title,
-    title,
-    titleZh: manualZh || tmdbInfo.title,
+    ...(tmdbItem || {}),
+    id: tmdbItem?.tmdbId ? `tmdb-tv-${tmdbItem.tmdbId}` : item?.id ? `kitsu-${item.id}` : title,
+    tmdbId: tmdbItem?.tmdbId || "",
+    title: tmdbItem?.title || title,
+    titleZh: tmdbItem?.titleZh || manualZh || "",
     allowOriginalTitle: true,
-    titleSource: manualZh ? "manual" : tmdbInfo.title ? "tmdb" : "original",
+    titleSource: manualZh ? "manual" : tmdbItem ? "tmdb" : "original",
     titleJa: titles.ja_jp || "",
     type: "动漫",
-    platform: "Kitsu",
-    source: "Kitsu",
-    sourceLabel: "Kitsu 备用",
-    year: String(attrs.startDate || "").slice(0, 4),
+    category: "anime",
+    platform: tmdbItem ? "TMDB" : "Kitsu",
+    source: tmdbItem ? "TMDB" : "Kitsu",
+    sourceLabel: tmdbItem ? "TMDB" : "Kitsu 备用",
+    year: tmdbItem?.year || String(attrs.startDate || "").slice(0, 4),
     airDate: attrs.startDate || "",
     startDate: attrs.startDate || "",
     episodeCount: attrs.episodeCount || "",
-    tmdbRating: attrs.averageRating ? String((Number(attrs.averageRating) / 10).toFixed(1)) : "",
+    tmdbRating: tmdbItem?.tmdbRating || (attrs.averageRating ? String((Number(attrs.averageRating) / 10).toFixed(1)) : ""),
     score: attrs.averageRating || "",
-    posterUrl: poster.small || poster.medium || poster.original || "",
-    backdropUrl: "",
-    summary: attrs.synopsis || "",
-    summaryZh: ANIME_SUMMARY_ZH[title] || tmdbInfo.overview || (hasChinese(attrs.synopsis) ? attrs.synopsis : ""),
+    posterUrl: tmdbItem?.posterUrl || poster.small || poster.medium || poster.original || "",
+    backdropUrl: tmdbInfo?.backdrop_path ? `https://image.tmdb.org/t/p/w780${tmdbInfo.backdrop_path}` : "",
+    summary: tmdbItem?.summary || attrs.synopsis || "",
+    summaryZh: ANIME_SUMMARY_ZH[title] || tmdbItem?.summaryZh || (hasChinese(attrs.synopsis) ? attrs.synopsis : ""),
     review: attrs.synopsis || "",
     url: attrs.slug ? `https://kitsu.app/anime/${attrs.slug}` : "",
   };
