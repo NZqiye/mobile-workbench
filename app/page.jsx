@@ -4110,8 +4110,15 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
   function toggleEpisode(episodeNumber) {
     setCheckedEpisodes((current) => {
       const next = new Set(current);
-      if (next.has(episodeNumber)) next.delete(episodeNumber);
-      else next.add(episodeNumber);
+      if (next.has(episodeNumber)) {
+        next.delete(episodeNumber);
+      } else {
+        // 勾选某一集时，视为已连续看完到该集，自动补齐前面的集数。
+        episodes.forEach((episode) => {
+          const number = Number(episode.episodeNumber);
+          if (Number.isFinite(number) && number > 0 && number <= episodeNumber) next.add(number);
+        });
+      }
       return next;
     });
   }
