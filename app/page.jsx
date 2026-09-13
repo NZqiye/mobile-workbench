@@ -107,7 +107,12 @@ function mergeRecommendationSources(baseSections = [], mediaData, animeData) {
 
   for (const section of Array.isArray(animeData?.sections) ? animeData.sections : []) {
     const items = Array.isArray(section.items) ? section.items.filter((item) => item?.title) : [];
-    replaceSectionItems(section.id, items);
+    const existing = sections.find((entry) => entry.id === section.id);
+    if (existing) {
+      existing.items = mergeRecommendationItems(items, existing.items);
+    } else {
+      sections.push({ ...section, items: [...items] });
+    }
   }
   return sections;
 }
@@ -4669,12 +4674,15 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
     items: (Array.isArray(section.items) ? section.items : [])
       .filter((item) => {
         const expectedKind = recommendationKind(section.id);
+        const isAnimeSection = String(section.id || "").startsWith("anime");
+        const isAnimeItem = item?.category === "anime" || item?.type === "动漫";
         const isTmdbMovie = expectedKind === "movie" && item?.source === "TMDB";
-        return sourceMediaKind(item) === expectedKind && (expectedKind !== "movie" || isTmdbMovie) && !isAlreadyWatched(item);
+        const matchesKind = isAnimeSection ? isAnimeItem : sourceMediaKind(item) === expectedKind;
+        return matchesKind && (expectedKind !== "movie" || isTmdbMovie) && !isAlreadyWatched(item);
       })
       .map((item) => normalizeRecommendationItem(item, section.id)),
   }));
-  const visibleRecommendationSections = filterRecommendationSections(recommendationSections.length ? recommendationSections : [
+  const recommendationSectionDefaults = [
     { id: "movieHot", title: "近期热播", items: [] },
     { id: "movieUpcoming", title: "即将上线", items: [] },
     { id: "movieHistory", title: "历史热榜", items: [] },
@@ -4687,7 +4695,11 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
     { id: "animeHot", title: "近期热播", items: [] },
     { id: "animeUpcoming", title: "即将上线", items: [] },
     { id: "animeHistory", title: "历史热榜", items: [] },
-  ]);
+  ];
+  const sectionsWithDefaults = recommendationSections.length
+    ? [...recommendationSections, ...recommendationSectionDefaults.filter((fallback) => !recommendationSections.some((section) => section.id === fallback.id))]
+    : recommendationSectionDefaults;
+  const visibleRecommendationSections = filterRecommendationSections(sectionsWithDefaults);
   const recommendationGroups = {
     movies: ["movieHot", "movieUpcoming", "movieHistory"],
     tv: ["tvHot", "tvUpcoming", "tvHistory"],
@@ -6429,8 +6441,19 @@ export default function Workbench() {
       if (animeData?.ok) sources.push(animeData.source || "AniList");
       setTmdbRecommendationStatus(`${sources.join(" + ")} 在线片单 · 每组默认展示 20 条`);
     } catch (error) {
-      setTmdbSections([]);
+      // TMDB 失败时不要清空已经加载成功的 AniList/Kitsu 动漫数据。
       setTmdbRecommendationStatus(error.message || "片单暂时不可用，请点刷新片单重试");
+      // TMDB 整体不可用时，单独尝试动漫数据源，避免动漫标签整页空白。
+      try {
+        const animeResponse = await fetch("/api/anime-updates");
+        const animeData = await animeResponse.json();
+        if (animeResponse.ok && animeData?.ok) {
+          setTmdbSections((current) => mergeRecommendationSources(current, null, animeData));
+          setTmdbRecommendationStatus(`${animeData.source || "AniList"} 动漫片单在线 · TMDB 暂不可用`);
+        }
+      } catch {
+        // 动漫备用数据也不可用时，保留原有错误提示。
+      }
     }
   }
 
