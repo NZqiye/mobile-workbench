@@ -14,7 +14,8 @@
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "stock-sdk": "^2.4.2"
+    "stock-sdk": "^2.4.2",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "eslint": "latest",
