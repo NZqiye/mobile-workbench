@@ -886,6 +886,33 @@ function readStorage(name, fallback) {
   }
 }
 
+function PushSettings() {
+  const [status, setStatus] = useState("未开启");
+  const [busy, setBusy] = useState(false);
+  const [accessCode, setAccessCode] = useState("");
+  async function enablePush() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) { setStatus("当前浏览器不支持后台推送"); return; }
+    setBusy(true);
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") throw new Error("请允许通知权限");
+      const registration = await navigator.serviceWorker.ready;
+      const keyResponse = await fetch("/api/push/public-key");
+      const keyData = await keyResponse.json();
+      if (!keyResponse.ok) throw new Error(keyData.error || "推送服务未配置");
+      const raw = atob(keyData.publicKey.replace(/-/g, "+").replace(/_/g, "/"));
+      const applicationServerKey = Uint8Array.from(raw, (char) => char.charCodeAt(0));
+      const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
+      const response = await fetch("/api/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: "personal-workbench", accessCode, subscription: subscription.toJSON() }) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "订阅保存失败");
+      setStatus("已开启后台提醒");
+    } catch (error) { setStatus(error.message || "开启失败"); }
+    finally { setBusy(false); }
+  }
+  return <section className="panel"><div className="panel-head"><div><h2>后台消息提醒</h2><p>{status}</p></div></div><div className="stack-form"><input type="password" value={accessCode} onChange={(event) => setAccessCode(event.target.value)} placeholder="输入固定访问码" /><button type="button" onClick={enablePush} disabled={busy || !accessCode}>{busy ? "开启中…" : "开启提醒"}</button></div><p className="empty">开启后，设置了提醒时间的未完成任务会在手机锁屏时推送。需要 HTTPS，并建议将本 PWA 添加到主屏幕。</p></section>;
+}
+
 function writeStorage(name, value) {
   localStorage.setItem(key(name), JSON.stringify(value));
 }
@@ -3434,6 +3461,7 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
         <form className="task-form" onSubmit={onAddTask}>
           <input name="title" placeholder="近期要处理的工作" required />
           <input name="note" placeholder="备注，可选" />
+          <input name="reminderAt" type="datetime-local" aria-label="提醒时间，可选" />
           <button type="submit">添加任务</button>
         </form>
         <div className="arrange-list">
@@ -3442,7 +3470,7 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
             <div className="task-row" key={task.id}>
               <label>
                 <input type="checkbox" checked={task.status === "已完成"} onChange={() => onToggleTask(task.id)} />
-                <span>{task.title}<small>{[task.note, task.date].filter(Boolean).join(" · ")}</small></span>
+                <span>{task.title}<small>{[task.note, task.date, task.reminderAt ? `提醒 ${task.reminderAt.replace("T", " ")}` : ""].filter(Boolean).join(" · ")}</small></span>
               </label>
               <button type="button" onClick={() => onDeleteTask(task.id)}>删除</button>
             </div>
@@ -6796,6 +6824,8 @@ export default function Workbench() {
       priority: "中",
       status: "未完成",
       note: String(data.get("note") || ""),
+      reminderAt: String(data.get("reminderAt") || ""),
+      reminderSentAt: "",
       time: nowText(),
     }, ...plans];
     setPlans(next);
@@ -7566,6 +7596,7 @@ export default function Workbench() {
           {activePage === "settings" && (
             <>
               <PonyThemePanel value={ponyTheme} onChange={changePonyTheme} />
+              <PushSettings />
               <SyncPanel session={session} syncStatus={syncStatus} onLogin={login} onLogout={logout} onSync={() => syncAll()} onExport={exportMarkdown} />
               <section className="panel">
                 <div className="panel-head">
