@@ -889,7 +889,6 @@ function readStorage(name, fallback) {
 function PushSettings() {
   const [status, setStatus] = useState("未开启");
   const [busy, setBusy] = useState(false);
-  const [accessCode, setAccessCode] = useState("");
   async function enablePush() {
     if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) { setStatus("当前浏览器不支持后台推送"); return; }
     setBusy(true);
@@ -903,14 +902,14 @@ function PushSettings() {
       const raw = atob(keyData.publicKey.replace(/-/g, "+").replace(/_/g, "/"));
       const applicationServerKey = Uint8Array.from(raw, (char) => char.charCodeAt(0));
       const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
-      const response = await fetch("/api/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: "personal-workbench", accessCode, subscription: subscription.toJSON() }) });
+      const response = await fetch("/api/push/subscribe", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subscription: subscription.toJSON() }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "订阅保存失败");
       setStatus("已开启后台提醒");
     } catch (error) { setStatus(error.message || "开启失败"); }
     finally { setBusy(false); }
   }
-  return <section className="panel"><div className="panel-head"><div><h2>后台消息提醒</h2><p>{status}</p></div></div><div className="stack-form"><input type="password" value={accessCode} onChange={(event) => setAccessCode(event.target.value)} placeholder="输入固定访问码" /><button type="button" onClick={enablePush} disabled={busy || !accessCode}>{busy ? "开启中…" : "开启提醒"}</button></div><p className="empty">开启后，设置了提醒时间的未完成任务会在手机锁屏时推送。需要 HTTPS，并建议将本 PWA 添加到主屏幕。</p></section>;
+  return <section className="panel"><div className="panel-head"><div><h2>后台消息提醒</h2><p>{status}</p></div><button className="chip-button" type="button" onClick={enablePush} disabled={busy}>{busy ? "开启中…" : "开启提醒"}</button></div><p className="empty">请先解锁云同步，再开启提醒。设置了提醒时间的未完成任务会在手机锁屏时推送。需要 HTTPS，并建议将本 PWA 添加到主屏幕。</p></section>;
 }
 
 function writeStorage(name, value) {
@@ -7370,6 +7369,7 @@ export default function Workbench() {
   }
 
   async function logout() {
+    await fetch("/api/access/logout", { method: "POST" }).catch(() => {});
     localStorage.removeItem(key("accessUnlocked"));
     setSession(null);
     setSyncStatus("已锁定，本机继续本地保存");
