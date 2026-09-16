@@ -1118,12 +1118,14 @@ function mergeCloudWithLocal(cloud) {
     ...readStorage("deletedTmdbWatchlist", []),
     ...(Array.isArray(cloud.deletedTmdbWatchlist) ? cloud.deletedTmdbWatchlist : []),
   ]);
+  const mergedWatchCheckins = mergeSyncedItems("watchCheckins", readStorage("watchCheckins", []), cloud.watchCheckins, cloud);
+  const mergedConsultations = filterDeletedTmdbConsultations(mergeSyncedItems("consultations", readStorage("consultations", []), cloud.consultations, cloud), deletedTmdbWatchlist);
   return {
     notes: mergeSyncedItems("notes", readStorage("notes", []), cloud.notes, cloud),
     plans: mergeSyncedItems("plans", readStorage("plans", []), cloud.plans, cloud),
-    consultations: filterDeletedTmdbConsultations(mergeSyncedItems("consultations", readStorage("consultations", []), cloud.consultations, cloud), deletedTmdbWatchlist),
+    consultations: syncConsultationStatusFromWatchCheckins(mergedConsultations, mergedWatchCheckins),
     deletedTmdbWatchlist,
-    watchCheckins: mergeSyncedItems("watchCheckins", readStorage("watchCheckins", []), cloud.watchCheckins, cloud),
+    watchCheckins: mergedWatchCheckins,
     assetRecords: mergeSyncedItems("assetRecords", readAssetRecords(), cloudAssetRecords(cloud), cloud),
     subscriptionRecords: mergeSyncedItems("subscriptionRecords", readStorage("subscriptionRecords", []), cloud.subscriptionRecords, cloud),
     dietRecords: mergeSyncedItems("dietRecords", readStorage("dietRecords", []), cloud.dietRecords, cloud),
@@ -2049,6 +2051,16 @@ function countUniqueWatchItems(items, predicate = () => true) {
   return keys.size;
 }
 
+function hasCompleteEpisodeSet(episodes, episodeCount) {
+  const count = Number(episodeCount);
+  if (!Number.isSafeInteger(count) || count <= 0) return false;
+  const watched = new Set((Array.isArray(episodes) ? episodes : []).map(Number));
+  for (let episode = 1; episode <= count; episode += 1) {
+    if (!watched.has(episode)) return false;
+  }
+  return true;
+}
+
 function mediaAliasKeys(item) {
   const keys = new Set();
   if (item?.tmdbId) keys.add(tmdbItemKey(item));
@@ -2131,11 +2143,15 @@ function syncConsultationStatusFromWatchCheckins(consultations, watchCheckins) {
     const seasonRecords = related.filter((record) => record.mode === "season");
     const allKnownSeasonsComplete = knownSeasons.length > 0 && knownSeasons.every((season) => {
       const key = String(season.seasonNumber);
-      const count = Number(season.episodeCount || item.seasonEpisodeCounts?.[key] || 0);
-      const savedCount = Array.isArray(item.seasonProgress?.[key]) ? item.seasonProgress[key].length : 0;
       const record = seasonRecords.find((entry) => String(entry.season) === key);
-      const recordCount = Array.isArray(record?.episodes) ? record.episodes.length : 0;
-      return count > 0 && Math.max(savedCount, recordCount) >= count;
+      const count = Math.max(
+        Number(season.episodeCount) || 0,
+        Number(item.seasonEpisodeCounts?.[key]) || 0,
+        Number(record?.episodeCount) || 0,
+      );
+      const savedEpisodes = Array.isArray(item.seasonProgress?.[key]) ? item.seasonProgress[key] : [];
+      const recordEpisodes = Array.isArray(record?.episodes) ? record.episodes : [];
+      return hasCompleteEpisodeSet([...new Set([...savedEpisodes, ...recordEpisodes])], count);
     });
     if (allKnownSeasonsComplete) return { ...item, status: "看过的剧", updatedAt: Math.max(itemUpdatedAt(item), ...related.map(itemUpdatedAt)) || Date.now() };
     if (seasonRecords.length || Object.keys(item.seasonProgress || {}).length) {
@@ -4045,7 +4061,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
   const allEpisodesChecked = episodes.length > 0 && episodes.every((episode) => checkedEpisodes.has(Number(episode.episodeNumber)));
   const completedSeasonKey = `${selected?.id || ""}:${seasonNumber}`;
   const hasSeasonRating = Boolean(String(seasonRating || selected?.seasonRatings?.[String(seasonNumber)] || "").trim());
-  const seasonComplete = !isMovie && Number(seasonNumber) > 0 && episodeCount > 0 && checkedCount >= episodeCount;
+  const seasonComplete = !isMovie && Number(seasonNumber) > 0 && hasCompleteEpisodeSet(Array.from(checkedEpisodes), episodeCount);
   const shouldCollapseSeason = mobileRatingView === "episodes" && seasonComplete && hasSeasonRating && !expandedCompletedSeasons[completedSeasonKey];
   const detailTitle = details?.title || mediaTitle(selected);
   const detailPoster = details?.posterUrl || selected?.posterUrl || "";
@@ -4359,7 +4375,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
                         return <button type="button" className="watch-mobile-season" key={season.seasonNumber} onClick={() => { setExpandedCompletedSeasons((previous) => ({ ...previous, [`${selected?.id || ""}:${key}`]: false })); setSeasonNumber(key); setMobileRatingView("episodes"); }}>
                           {season.posterUrl ? <img src={season.posterUrl} alt="" loading="lazy" /> : <span className="watch-mobile-season-poster">S{season.seasonNumber}</span>}
                           <span><strong>第 {season.seasonNumber} 季</strong><small>{season.airDate || "日期待定"}</small></span>
-                          <b>{progress}/{count || "-"}</b><i aria-hidden="true">{count > 0 && progress >= count ? "✓" : ""}</i>
+                          <b>{progress}/{count || "-"}</b><i aria-hidden="true">{count > 0 && hasCompleteEpisodeSet(key === String(seasonNumber) ? Array.from(checkedEpisodes) : selected?.seasonProgress?.[key], count) ? "✓" : ""}</i>
                         </button>;
                       })}
                     </div>}
@@ -6287,13 +6303,16 @@ export default function Workbench() {
     setActivePage(nextPage);
     setPlans(readStorage("plans", []));
     setNotes(readStorage("notes", []));
-    const nextConsultations = filterDeletedTmdbConsultations(readStorage("consultations", []), readStorage("deletedTmdbWatchlist", []));
+    const savedWatchCheckins = dedupeWatchCheckins(readStorage("watchCheckins", []));
+    const nextConsultations = syncConsultationStatusFromWatchCheckins(
+      filterDeletedTmdbConsultations(readStorage("consultations", []), readStorage("deletedTmdbWatchlist", [])),
+      savedWatchCheckins,
+    );
     setConsultations(nextConsultations);
     writeStorage("consultations", nextConsultations);
     setDietRecords(readStorage("dietRecords", []));
     setExerciseRecords(readStorage("exerciseRecords", []));
     setWeightRecords(readStorage("weightRecords", []));
-    const savedWatchCheckins = dedupeWatchCheckins(readStorage("watchCheckins", []));
     setWatchCheckins(savedWatchCheckins);
     writeStorage("watchCheckins", savedWatchCheckins);
     setAssetItems(readAssetRecords());
@@ -6644,7 +6663,7 @@ export default function Workbench() {
         }).catch(() => {})));
       }
       const refreshedCount = keptIncoming.length - nextItems.length;
-      const next = dedupeConsultations([...nextItems, ...refreshedItems]);
+      const next = syncConsultationStatusFromWatchCheckins(dedupeConsultations([...nextItems, ...refreshedItems]), watchCheckins);
       setConsultations(next);
       persist("consultations", next);
       setTmdbStatus(`TMDB 片单同步完成：新增 ${nextItems.length} 部，刷新 ${refreshedCount} 部`);
@@ -6674,10 +6693,11 @@ export default function Workbench() {
         .filter((result) => result.status === "fulfilled")
         .map((result) => [result.value.key, result.value.item]));
       if (!freshByKey.size) throw settled.find((result) => result.status === "rejected")?.reason || new Error("没有刷新到剧集更新");
-      const next = consultations.map((item) => {
+      const refreshedItems = consultations.map((item) => {
         const fresh = freshByKey.get(consultationKey(item));
         return fresh ? mergeTmdbFields(item, fresh) : item;
       });
+      const next = syncConsultationStatusFromWatchCheckins(refreshedItems, watchCheckins);
       setConsultations(next);
       persist("consultations", next);
       setTmdbStatus(`剧集更新已刷新：${freshByKey.size}/${tracked.length} 部`);
@@ -6934,12 +6954,17 @@ export default function Workbench() {
       const seasonProgress = { ...(item.seasonProgress && typeof item.seasonProgress === "object" ? item.seasonProgress : {}), [seasonKey]: normalizedEpisodes };
       const seasonRatings = { ...(item.seasonRatings && typeof item.seasonRatings === "object" ? item.seasonRatings : {}) };
       if (mode === "season-rating") seasonRatings[seasonKey] = String(rating);
-      const seasonEpisodeCounts = { ...(item.seasonEpisodeCounts && typeof item.seasonEpisodeCounts === "object" ? item.seasonEpisodeCounts : {}), [seasonKey]: Number(episodeCount) || normalizedEpisodes.length };
+      const previousEpisodeCount = Number(item.seasonEpisodeCounts?.[seasonKey]) || 0;
+      const currentEpisodeCount = Number(episodeCount) || 0;
+      const seasonEpisodeCounts = {
+        ...(item.seasonEpisodeCounts && typeof item.seasonEpisodeCounts === "object" ? item.seasonEpisodeCounts : {}),
+        [seasonKey]: currentEpisodeCount || previousEpisodeCount,
+      };
       const knownSeasons = Array.isArray(item.seasons) ? item.seasons : [];
-      const allSeasonsComplete = knownSeasons.length > 0 && knownSeasons.every((seasonItem) => {
+      const allSeasonsComplete = currentEpisodeCount > 0 && knownSeasons.length > 0 && knownSeasons.every((seasonItem) => {
         const key = String(seasonItem.seasonNumber);
         const count = Number(seasonItem.episodeCount || seasonEpisodeCounts[key] || 0);
-        return count > 0 && (seasonProgress[key] || []).length >= count;
+        return hasCompleteEpisodeSet(seasonProgress[key], count);
       });
       const nextStatus = allSeasonsComplete ? "看过的剧" : normalizedEpisodes.length ? "正在看" : item.status || "想看的剧";
       const next = consultations.map((record) => record.id === id ? {
@@ -6970,7 +6995,7 @@ export default function Workbench() {
         mode: "season",
         season: seasonKey,
         episodes: normalizedEpisodes,
-        episodeCount: Number(episodeCount) || normalizedEpisodes.length,
+        episodeCount: currentEpisodeCount || previousEpisodeCount,
         seasonRating: seasonRatings[seasonKey] || "",
         rating: seasonRatings[seasonKey] || "",
         tmdbRating: item.tmdbRating || "",
