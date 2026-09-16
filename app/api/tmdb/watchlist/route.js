@@ -1,4 +1,5 @@
 import { fetchTmdb, loadTmdbDetails, mapTmdbResult, tmdbToken } from "../../../../lib/tmdb";
+import { isAuthorized, parseMediaInput, readJson, unauthorizedResponse } from "../../../../lib/access-auth";
 
 const tmdbAccountId = process.env.TMDB_ACCOUNT_ID;
 const tmdbSessionId = process.env.TMDB_SESSION_ID;
@@ -52,8 +53,9 @@ async function readWatchlistPage(accountId, page, mediaType = "tv") {
   return readTmdbJson(url, "TMDB 片单读取失败");
 }
 
-export async function GET() {
+export async function GET(request) {
   try {
+    if (!isAuthorized(request)) return unauthorizedResponse();
     if (!tmdbToken || !tmdbSessionId) {
       return Response.json({ error: "缺少 TMDB_ACCESS_TOKEN 或 TMDB_SESSION_ID" }, { status: 500 });
     }
@@ -104,14 +106,18 @@ export async function GET() {
 
 export async function POST(request) {
   try {
+    if (!isAuthorized(request)) return unauthorizedResponse();
     if (!tmdbToken || !tmdbSessionId) {
       return Response.json({ error: "缺少 TMDB_ACCESS_TOKEN 或 TMDB_SESSION_ID" }, { status: 500 });
     }
 
-    const body = await request.json();
-    const mediaId = Number(body.mediaId);
-    const mediaType = body.mediaType === "movie" ? "movie" : "tv";
-    if (!mediaId) return Response.json({ error: "缺少 TMDB mediaId" }, { status: 400 });
+    let mediaId;
+    let mediaType;
+    try {
+      ({ mediaId, mediaType } = parseMediaInput(await readJson(request, 4096)));
+    } catch (error) {
+      return Response.json({ error: error.message || "TMDB 参数无效" }, { status: error.message === "请求体过大" ? 413 : 400 });
+    }
 
     const accountId = await readAccountId();
     const url = new URL(`https://api.themoviedb.org/3/account/${accountId}/watchlist`);
@@ -137,14 +143,18 @@ export async function POST(request) {
 
 export async function DELETE(request) {
   try {
+    if (!isAuthorized(request)) return unauthorizedResponse();
     if (!tmdbToken || !tmdbSessionId) {
       return Response.json({ error: "\u7f3a\u5c11 TMDB_ACCESS_TOKEN \u6216 TMDB_SESSION_ID" }, { status: 500 });
     }
 
-    const body = await request.json();
-    const mediaId = Number(body.mediaId);
-    const mediaType = body.mediaType === "movie" ? "movie" : "tv";
-    if (!mediaId) return Response.json({ error: "\u7f3a\u5c11 TMDB mediaId" }, { status: 400 });
+    let mediaId;
+    let mediaType;
+    try {
+      ({ mediaId, mediaType } = parseMediaInput(await readJson(request, 4096)));
+    } catch (error) {
+      return Response.json({ error: error.message || "TMDB 参数无效" }, { status: error.message === "请求体过大" ? 413 : 400 });
+    }
 
     const accountId = await readAccountId();
     const url = new URL(`https://api.themoviedb.org/3/account/${accountId}/watchlist`);
@@ -170,13 +180,17 @@ export async function DELETE(request) {
 
 export async function PUT(request) {
   try {
+    if (!isAuthorized(request)) return unauthorizedResponse();
     if (!tmdbToken || !tmdbSessionId) {
       return Response.json({ error: "\u7f3a\u5c11 TMDB_ACCESS_TOKEN \u6216 TMDB_SESSION_ID" }, { status: 500 });
     }
-    const body = await request.json();
-    const mediaId = Number(body.mediaId);
-    const mediaType = body.mediaType === "movie" ? "movie" : "tv";
-    if (!mediaId) return Response.json({ error: "\u7f3a\u5c11 TMDB mediaId" }, { status: 400 });
+    let mediaId;
+    let mediaType;
+    try {
+      ({ mediaId, mediaType } = parseMediaInput(await readJson(request, 4096)));
+    } catch (error) {
+      return Response.json({ error: error.message || "TMDB 参数无效" }, { status: error.message === "请求体过大" ? 413 : 400 });
+    }
     const accountId = await readAccountId();
     const watchlistUrl = new URL(`https://api.themoviedb.org/3/account/${accountId}/watchlist`);
     watchlistUrl.searchParams.set("session_id", tmdbSessionId);

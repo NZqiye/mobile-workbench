@@ -1,15 +1,22 @@
 import { fetchTmdb, tmdbToken } from "../../../../lib/tmdb";
+import { isAuthorized, parseMediaInput, readJson, unauthorizedResponse } from "../../../../lib/access-auth";
 
 export async function POST(request) {
   try {
+    if (!isAuthorized(request)) return unauthorizedResponse();
     if (!tmdbToken || !process.env.TMDB_SESSION_ID) {
       return Response.json({ error: "缺少 TMDB_ACCESS_TOKEN 或 TMDB_SESSION_ID" }, { status: 500 });
     }
-    const body = await request.json();
-    const mediaId = Number(body.mediaId);
-    const mediaType = body.mediaType === "movie" ? "movie" : "tv";
+    let body;
+    let mediaId;
+    let mediaType;
+    try {
+      body = await readJson(request, 4096);
+      ({ mediaId, mediaType } = parseMediaInput(body));
+    } catch (error) {
+      return Response.json({ error: error.message || "TMDB 参数无效" }, { status: error.message === "请求体过大" ? 413 : 400 });
+    }
     const rawRating = Number(body.rating);
-    if (!mediaId) return Response.json({ error: "缺少 TMDB mediaId" }, { status: 400 });
     if (!Number.isFinite(rawRating) || rawRating < 0.5 || rawRating > 10) return Response.json({ error: "评分必须在 0.5 到 10 之间" }, { status: 400 });
     const rating = Math.round(rawRating * 2) / 2;
 
