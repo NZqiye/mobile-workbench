@@ -119,6 +119,7 @@ function mergeRecommendationSources(baseSections = [], mediaData, animeData) {
 const statePage = "app_state";
 const pages = [
   { id: "today", name: "今日速看", icon: "home" },
+  { id: "life", name: "余生清单", icon: "life" },
   { id: "consultations", name: "观影记录", icon: "chat" },
   { id: "market", name: "股市行情", icon: "trend" },
   { id: "diet", name: "饮食记录", icon: "food" },
@@ -131,6 +132,7 @@ const pages = [
 const pageNames = Object.fromEntries(pages.map((page) => [page.id, page.name]));
 const pageDescriptions = {
   today: "时间、天气、计划和行情集中整理",
+  life: "设定目标日期，拆分成每天都能完成的行动",
   plans: "习惯打卡、任务安排和纪念日倒数",
   market: "金价、指数、自选资产观察",
   diet: "每日喝水、饮食热量和最近趋势",
@@ -697,6 +699,7 @@ function AnimeNavIcon({ name }) {
 
 const crewImgById = {
   home: "/crew/zoro.png",
+  life: "/crew/doflamingo.png",
   chat: "/crew/nami.png",
   trend: "/crew/sanji.png",
   food: "/crew/usopp.png",
@@ -3786,6 +3789,7 @@ const subscriptionIconCategories = [{
   label: "订阅服务",
   icons: [
     "thiings-subscribe:credit-card",
+    "thiings-subscribe:borg-ui",
     "thiings-subscribe:115-life",
     "thiings-subscribe:115-desktop",
     "thiings-subscribe:jingdong",
@@ -5982,6 +5986,73 @@ function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight,
   );
 }
 
+
+function daysUntilDate(dateValue) {
+  if (!dateValue) return null;
+  const target = new Date(dateValue + "T00:00:00");
+  if (Number.isNaN(target.getTime())) return null;
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.ceil((target.getTime() - start.getTime()) / 86400000);
+}
+
+function LifeListBoard({ goals, onAddGoal, onDeleteGoal, onAddItem, onToggleItem, onDeleteItem }) {
+  return (
+    <section className="life-list-workspace">
+      <form className="panel life-goal-form" onSubmit={onAddGoal}>
+        <div className="panel-head">
+          <div>
+            <h2>新增余生目标</h2>
+            <p>给重要的事情设一个明确的日期。</p>
+          </div>
+        </div>
+        <div className="life-goal-form-fields">
+          <input name="title" placeholder="例如：一个月减肥5斤" required />
+          <label><span>目标日期</span><input name="targetDate" type="date" required /></label>
+          <button type="submit">添加目标</button>
+        </div>
+      </form>
+      <div className="life-goal-grid">
+        {goals.length === 0 && <section className="panel empty life-empty-state">还没有余生目标，先写下一个想完成的愿望吧。</section>}
+        {goals.map((goal) => {
+          const days = daysUntilDate(goal.targetDate);
+          const completedCount = goal.items.filter((item) => item.completed).length;
+          return (
+            <article className="panel life-goal-card" key={goal.id}>
+              <div className="life-goal-card-head">
+                <div>
+                  <h2>{goal.title}</h2>
+                  <p>{goal.targetDate || "未设置日期"}</p>
+                </div>
+                <button className="icon-button" type="button" onClick={() => onDeleteGoal(goal.id)} aria-label="删除目标">×</button>
+              </div>
+              <div className={"life-countdown " + (days !== null && days < 0 ? "overdue" : "")}>
+                <strong>{days === null ? "--" : days < 0 ? "已超过 " + Math.abs(days) + " 天" : days === 0 ? "就是今天" : days}</strong>
+                {days !== null && days >= 0 && <span>天</span>}
+              </div>
+              <div className="life-progress-line"><span>完成 {completedCount}/{goal.items.length}</span><i><b style={{ width: goal.items.length ? (completedCount / goal.items.length) * 100 + "%" : "0%" }} /></i></div>
+              <div className="life-checkin-list">
+                {goal.items.length === 0 && <p className="empty">在这里添加具体的完成打卡项目。</p>}
+                {goal.items.map((item) => (
+                  <div className={"life-checkin-row " + (item.completed ? "completed" : "")} key={item.id}>
+                    <button className="life-check-button" type="button" onClick={() => onToggleItem(goal.id, item.id)} aria-label={item.completed ? "取消完成" : "标记完成"}>{item.completed ? "✓" : ""}</button>
+                    <span>{item.title}</span>
+                    <button className="life-delete-button" type="button" onClick={() => onDeleteItem(goal.id, item.id)} aria-label="删除打卡项目">×</button>
+                  </div>
+                ))}
+              </div>
+              <form className="life-checkin-form" onSubmit={(event) => onAddItem(event, goal.id)}>
+                <input name="itemTitle" placeholder="新增打卡项目，例如：每日跑步打卡" required />
+                <button type="submit">+</button>
+              </form>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function Workbench() {
   const [activePage, setActivePage] = useState("today");
   const [clock, setClock] = useState("--:--:--");
@@ -5995,6 +6066,7 @@ export default function Workbench() {
   const [exerciseRecords, setExerciseRecords] = useState([]);
   const [weightRecords, setWeightRecords] = useState([]);
   const [anniversaries, setAnniversaries] = useState([]);
+  const [lifeGoals, setLifeGoals] = useState([]);
   const [waterTarget, setWaterTarget] = useState(defaultWaterTarget);
   const [habits, setHabits] = useState([]);
   const [done, setDone] = useState({});
@@ -6324,6 +6396,7 @@ export default function Workbench() {
       localStorage.setItem(key(defaultChineseHolidaysSeedKey), "true");
     }
     setAnniversaries(nextAnniversaries);
+    setLifeGoals(readStorage("lifeGoals", []));
     setWaterTarget(readStorage("waterTarget", defaultWaterTarget));
     setHabits(readStorage("habits", readStorage("checkins", [])));
     setDone(readStorage(`done:${todayKey()}`, {}));
@@ -6850,6 +6923,47 @@ export default function Workbench() {
     setPlans(next);
     persist("plans", next);
     event.currentTarget.reset();
+  }
+
+
+  function addLifeGoal(event) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    const title = String(data.get("title") || "").trim();
+    const targetDate = String(data.get("targetDate") || "");
+    if (!title || !targetDate) return;
+    const next = [{ id: crypto.randomUUID(), title, targetDate, items: [] }, ...lifeGoals];
+    setLifeGoals(next);
+    writeStorage("lifeGoals", next);
+    event.currentTarget.reset();
+  }
+
+  function addLifeItem(event, goalId) {
+    event.preventDefault();
+    const title = String(new FormData(event.currentTarget).get("itemTitle") || "").trim();
+    if (!title) return;
+    const next = lifeGoals.map((goal) => goal.id === goalId ? { ...goal, items: [...goal.items, { id: crypto.randomUUID(), title, completed: false }] } : goal);
+    setLifeGoals(next);
+    writeStorage("lifeGoals", next);
+    event.currentTarget.reset();
+  }
+
+  function toggleLifeItem(goalId, itemId) {
+    const next = lifeGoals.map((goal) => goal.id === goalId ? { ...goal, items: goal.items.map((item) => item.id === itemId ? { ...item, completed: !item.completed } : item) } : goal);
+    setLifeGoals(next);
+    writeStorage("lifeGoals", next);
+  }
+
+  function deleteLifeItem(goalId, itemId) {
+    const next = lifeGoals.map((goal) => goal.id === goalId ? { ...goal, items: goal.items.filter((item) => item.id !== itemId) } : goal);
+    setLifeGoals(next);
+    writeStorage("lifeGoals", next);
+  }
+
+  function deleteLifeGoal(goalId) {
+    const next = lifeGoals.filter((goal) => goal.id !== goalId);
+    setLifeGoals(next);
+    writeStorage("lifeGoals", next);
   }
 
   function addAnniversary(event) {
@@ -7408,6 +7522,7 @@ export default function Workbench() {
   const dateKey = visibleTodayKey(clock);
   const skillSummaries = [
     { id: "today", name: "今日速看", icon: "home", badge: "首页", summary: `打卡 ${stats.checkin}` },
+    { id: "life", name: "余生清单", icon: "life", badge: "目标", summary: `${lifeGoals.length} 个目标` },
     { id: "consultations", name: "观影记录", icon: "chat", badge: "观影", summary: `${stats.consultations} 条` },
     { id: "market", name: "股市行情", icon: "trend", badge: "行情", summary: "金价、指数、自选股" },
     { id: "diet", name: "饮食记录", icon: "food", badge: "饮食", summary: `${dietRecords.filter((item) => item.date === todayKey()).length} 条` },
@@ -7539,6 +7654,18 @@ export default function Workbench() {
                 </div>
               </section>
             </>
+          )}
+
+
+          {activePage === "life" && (
+            <LifeListBoard
+              goals={lifeGoals}
+              onAddGoal={addLifeGoal}
+              onDeleteGoal={deleteLifeGoal}
+              onAddItem={addLifeItem}
+              onToggleItem={toggleLifeItem}
+              onDeleteItem={deleteLifeItem}
+            />
           )}
 
           {activePage === "plans" && (

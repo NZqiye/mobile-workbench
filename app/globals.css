@@ -7097,3 +7097,185 @@ textarea::placeholder {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent) 18%, transparent);
 }
 
+
+
+.life-list-workspace {
+  display: grid;
+  gap: 18px;
+}
+.life-goal-form {
+  margin: 0;
+}
+.life-goal-form-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px auto;
+  gap: 10px;
+  align-items: end;
+}
+.life-goal-form-fields label {
+  display: grid;
+  gap: 6px;
+  color: var(--theme-muted);
+  font-size: 12px;
+}
+.life-goal-form-fields input,
+.life-checkin-form input {
+  min-width: 0;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  color: var(--theme-text);
+  background: rgba(255, 255, 255, 0.07);
+}
+.life-goal-form-fields button,
+.life-checkin-form button {
+  height: 42px;
+  padding: 0 16px;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 70%, transparent);
+  border-radius: 10px;
+  color: #29140d;
+  background: var(--theme-accent);
+  font-weight: 800;
+  cursor: pointer;
+}
+.life-goal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.life-empty-state {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 42px 20px;
+  text-align: center;
+}
+.life-goal-card {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  min-width: 0;
+}
+.life-goal-card-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.life-goal-card-head h2 {
+  margin: 0;
+  color: var(--theme-text);
+  font-size: 19px;
+}
+.life-goal-card-head p {
+  margin: 5px 0 0;
+  color: var(--theme-muted);
+  font-size: 12px;
+}
+.life-goal-card .icon-button {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  color: var(--theme-muted);
+  background: rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+}
+.life-countdown {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  color: var(--theme-accent);
+}
+.life-countdown strong {
+  font-size: 34px;
+  line-height: 1;
+}
+.life-countdown span {
+  font-size: 13px;
+}
+.life-countdown.overdue {
+  color: #ff9a8c;
+}
+.life-progress-line {
+  display: grid;
+  gap: 7px;
+  color: var(--theme-muted);
+  font-size: 12px;
+}
+.life-progress-line i {
+  display: block;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.life-progress-line b {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--theme-accent);
+}
+.life-checkin-list {
+  display: grid;
+  gap: 8px;
+}
+.life-checkin-list .empty {
+  margin: 0;
+  padding: 14px 0 4px;
+  font-size: 12px;
+}
+.life-checkin-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 24px;
+  gap: 9px;
+  align-items: center;
+  min-height: 38px;
+  color: var(--theme-text);
+  font-size: 13px;
+}
+.life-checkin-row.completed span {
+  color: var(--theme-muted);
+  text-decoration: line-through;
+}
+.life-check-button {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 65%, transparent);
+  border-radius: 7px;
+  color: #29140d;
+  background: transparent;
+  cursor: pointer;
+}
+.life-checkin-row.completed .life-check-button {
+  background: var(--theme-accent);
+}
+.life-delete-button {
+  border: 0;
+  color: var(--theme-muted);
+  background: transparent;
+  cursor: pointer;
+}
+.life-checkin-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  gap: 8px;
+  padding-top: 2px;
+}
+.life-checkin-form button {
+  padding: 0;
+  font-size: 22px;
+}
+@media (max-width: 680px) {
+  .life-goal-form-fields,
+  .life-goal-grid {
+    grid-template-columns: 1fr;
+  }
+  .life-empty-state {
+    grid-column: auto;
+  }
+}
