@@ -119,7 +119,6 @@ function mergeRecommendationSources(baseSections = [], mediaData, animeData) {
 const statePage = "app_state";
 const pages = [
   { id: "today", name: "今日速看", icon: "home" },
-  { id: "life", name: "余生清单", icon: "life" },
   { id: "consultations", name: "观影记录", icon: "chat" },
   { id: "market", name: "股市行情", icon: "trend" },
   { id: "diet", name: "饮食记录", icon: "food" },
@@ -127,6 +126,7 @@ const pages = [
   { id: "plans", name: "每日安排", icon: "checklist" },
   { id: "assets", name: "资产记录", icon: "diamond" },
   { id: "exercise", name: "运动记录", icon: "exercise" },
+  { id: "life", name: "星光计划", icon: "life" },
   { id: "settings", name: "设置", icon: "settings" },
 ];
 const pageNames = Object.fromEntries(pages.map((page) => [page.id, page.name]));
@@ -5996,13 +5996,32 @@ function daysUntilDate(dateValue) {
   return Math.ceil((target.getTime() - start.getTime()) / 86400000);
 }
 
-function LifeListBoard({ goals, onAddGoal, onDeleteGoal, onAddItem, onToggleItem, onDeleteItem }) {
+function LifeListBoard({ goals, onAddGoal, onDeleteGoal, onAddItem, onToggleItem, onDeleteItem, onUpdateItem }) {
+  const [expandedCompleted, setExpandedCompleted] = useState({});
+  const [editingItem, setEditingItem] = useState(null);
+
+  function toggleCompletedList(goalId) {
+    setExpandedCompleted((current) => ({ ...current, [goalId]: !current[goalId] }));
+  }
+
+  function startEditingItem(goalId, item) {
+    setEditingItem({ goalId, itemId: item.id, title: item.title });
+  }
+
+  function saveEditingItem(event) {
+    event.preventDefault();
+    const title = editingItem?.title.trim();
+    if (!title) return;
+    onUpdateItem(editingItem.goalId, editingItem.itemId, title);
+    setEditingItem(null);
+  }
+
   return (
     <section className="life-list-workspace">
       <form className="panel life-goal-form" onSubmit={onAddGoal}>
         <div className="panel-head">
           <div>
-            <h2>新增余生目标</h2>
+            <h2>新增目标</h2>
             <p>给重要的事情设一个明确的日期。</p>
           </div>
         </div>
@@ -6015,8 +6034,11 @@ function LifeListBoard({ goals, onAddGoal, onDeleteGoal, onAddItem, onToggleItem
       <div className="life-goal-grid">
         {goals.length === 0 && <section className="panel empty life-empty-state">还没有余生目标，先写下一个想完成的愿望吧。</section>}
         {goals.map((goal) => {
+          const items = Array.isArray(goal.items) ? goal.items : [];
+          const pendingItems = items.filter((item) => !item.completed);
+          const completedItems = items.filter((item) => item.completed);
           const days = daysUntilDate(goal.targetDate);
-          const completedCount = goal.items.filter((item) => item.completed).length;
+          const completedCount = completedItems.length;
           return (
             <article className="panel life-goal-card" key={goal.id}>
               <div className="life-goal-card-head">
@@ -6032,15 +6054,55 @@ function LifeListBoard({ goals, onAddGoal, onDeleteGoal, onAddItem, onToggleItem
               </div>
               <div className="life-progress-line"><span>完成 {completedCount}/{goal.items.length}</span><i><b style={{ width: goal.items.length ? (completedCount / goal.items.length) * 100 + "%" : "0%" }} /></i></div>
               <div className="life-checkin-list">
-                {goal.items.length === 0 && <p className="empty">在这里添加具体的完成打卡项目。</p>}
-                {goal.items.map((item) => (
-                  <div className={"life-checkin-row " + (item.completed ? "completed" : "")} key={item.id}>
-                    <button className="life-check-button" type="button" onClick={() => onToggleItem(goal.id, item.id)} aria-label={item.completed ? "取消完成" : "标记完成"}>{item.completed ? "✓" : ""}</button>
-                    <span>{item.title}</span>
-                    <button className="life-delete-button" type="button" onClick={() => onDeleteItem(goal.id, item.id)} aria-label="删除打卡项目">×</button>
+                {items.length === 0 && <p className="empty">在这里添加具体的完成打卡项目。</p>}
+                {pendingItems.map((item) => (
+                  <div className="life-checkin-row" key={item.id}>
+                    <button className="life-check-button" type="button" onClick={() => onToggleItem(goal.id, item.id)} aria-label="标记完成"></button>
+                    {editingItem?.itemId === item.id && editingItem?.goalId === goal.id ? (
+                      <form className="life-edit-form" onSubmit={saveEditingItem}>
+                        <input value={editingItem.title} onChange={(event) => setEditingItem((current) => ({ ...current, title: event.target.value }))} autoFocus />
+                        <button type="submit">保存</button>
+                        <button type="button" onClick={() => setEditingItem(null)}>取消</button>
+                      </form>
+                    ) : (
+                      <span>{item.title}</span>
+                    )}
+                    <div className="life-row-actions">
+                      {editingItem?.itemId !== item.id && <button className="life-edit-button" type="button" onClick={() => startEditingItem(goal.id, item)}>编辑</button>}
+                      <button className="life-delete-button" type="button" onClick={() => onDeleteItem(goal.id, item.id)} aria-label="删除打卡项目">×</button>
+                    </div>
                   </div>
                 ))}
               </div>
+              {completedItems.length > 0 && (
+                <div className="life-completed-section">
+                  <button className="life-completed-toggle" type="button" onClick={() => toggleCompletedList(goal.id)} aria-expanded={Boolean(expandedCompleted[goal.id])}>
+                    <span>已完成清单</span><b>{completedItems.length}</b><em>{expandedCompleted[goal.id] ? "收起" : "展开"}</em>
+                  </button>
+                  {expandedCompleted[goal.id] && (
+                    <div className="life-checkin-list life-completed-list">
+                      {completedItems.map((item) => (
+                        <div className="life-checkin-row completed" key={item.id}>
+                          <button className="life-check-button" type="button" onClick={() => onToggleItem(goal.id, item.id)} aria-label="取消完成">✓</button>
+                          {editingItem?.itemId === item.id && editingItem?.goalId === goal.id ? (
+                            <form className="life-edit-form" onSubmit={saveEditingItem}>
+                              <input value={editingItem.title} onChange={(event) => setEditingItem((current) => ({ ...current, title: event.target.value }))} autoFocus />
+                              <button type="submit">保存</button>
+                              <button type="button" onClick={() => setEditingItem(null)}>取消</button>
+                            </form>
+                          ) : (
+                            <span>{item.title}</span>
+                          )}
+                          <div className="life-row-actions">
+                            {editingItem?.itemId !== item.id && <button className="life-edit-button" type="button" onClick={() => startEditingItem(goal.id, item)}>编辑</button>}
+                            <button className="life-delete-button" type="button" onClick={() => onDeleteItem(goal.id, item.id)} aria-label="删除打卡项目">×</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               <form className="life-checkin-form" onSubmit={(event) => onAddItem(event, goal.id)}>
                 <input name="itemTitle" placeholder="新增打卡项目，例如：每日跑步打卡" required />
                 <button type="submit">+</button>
@@ -6960,6 +7022,12 @@ export default function Workbench() {
     writeStorage("lifeGoals", next);
   }
 
+  function updateLifeItem(goalId, itemId, title) {
+    const next = lifeGoals.map((goal) => goal.id === goalId ? { ...goal, items: goal.items.map((item) => item.id === itemId ? { ...item, title } : item) } : goal);
+    setLifeGoals(next);
+    writeStorage("lifeGoals", next);
+  }
+
   function deleteLifeGoal(goalId) {
     const next = lifeGoals.filter((goal) => goal.id !== goalId);
     setLifeGoals(next);
@@ -7522,7 +7590,6 @@ export default function Workbench() {
   const dateKey = visibleTodayKey(clock);
   const skillSummaries = [
     { id: "today", name: "今日速看", icon: "home", badge: "首页", summary: `打卡 ${stats.checkin}` },
-    { id: "life", name: "余生清单", icon: "life", badge: "目标", summary: `${lifeGoals.length} 个目标` },
     { id: "consultations", name: "观影记录", icon: "chat", badge: "观影", summary: `${stats.consultations} 条` },
     { id: "market", name: "股市行情", icon: "trend", badge: "行情", summary: "金价、指数、自选股" },
     { id: "diet", name: "饮食记录", icon: "food", badge: "饮食", summary: `${dietRecords.filter((item) => item.date === todayKey()).length} 条` },
@@ -7530,6 +7597,7 @@ export default function Workbench() {
     { id: "plans", name: "每日安排", icon: "checklist", badge: "安排", summary: `${todayPlans.length} 条任务` },
     { id: "assets", name: "资产记录", icon: "diamond", badge: "资产", summary: `¥${(assetItems || []).filter((item) => item.status === "服役中").reduce((s, i) => s + (Number(i.price) || 0), 0).toLocaleString()}` },
     { id: "exercise", name: "运动记录", icon: "exercise", badge: "运动", summary: `${exerciseRecords.filter((item) => item.date === todayKey()).length} 条` },
+    { id: "life", name: "星光计划", icon: "life", badge: "目标", summary: `${lifeGoals.length} 个目标` },
     { id: "settings", name: "数据设置", icon: "settings", badge: "备份", summary: session ? "云同步在线" : "本地模式" },
   ];
 
@@ -7594,7 +7662,7 @@ export default function Workbench() {
                   </div>
                 ) : activePage === "assets" ? null : (
                   <div className="module-tabs" aria-label="内容切换">
-                    <button className="active" type="button">今日内容</button>
+                    <button className="active" type="button">{activePage === "life" ? "目标清单" : "今日内容"}</button>
                   </div>
                 )}
               </header>
@@ -7665,6 +7733,7 @@ export default function Workbench() {
               onAddItem={addLifeItem}
               onToggleItem={toggleLifeItem}
               onDeleteItem={deleteLifeItem}
+              onUpdateItem={updateLifeItem}
             />
           )}
 

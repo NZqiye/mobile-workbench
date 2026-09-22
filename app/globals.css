@@ -7279,3 +7279,89 @@ textarea::placeholder {
     grid-column: auto;
   }
 }
+
+.life-completed-section {
+  display: grid;
+  gap: 8px;
+  margin-top: -2px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.life-completed-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  color: var(--theme-muted);
+  background: transparent;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.life-completed-toggle b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 999px;
+  color: var(--theme-text);
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 11px;
+}
+.life-completed-toggle em {
+  margin-left: auto;
+  color: var(--theme-accent);
+  font-style: normal;
+}
+.life-completed-list {
+  padding-top: 2px;
+}
+
+.life-checkin-row {
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+}
+.life-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.life-edit-button {
+  padding: 0;
+  border: 0;
+  color: var(--theme-accent);
+  background: transparent;
+  font-size: 12px;
+  cursor: pointer;
+}
+.life-edit-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 6px;
+  align-items: center;
+}
+.life-edit-form input {
+  min-width: 0;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 55%, transparent);
+  border-radius: 7px;
+  color: var(--theme-text);
+  background: rgba(255, 255, 255, 0.07);
+}
+.life-edit-form button {
+  height: 30px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--theme-text);
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 11px;
+  cursor: pointer;
+}
+.life-edit-form button[type="submit"] {
+  color: #29140d;
+  background: var(--theme-accent);
+}
