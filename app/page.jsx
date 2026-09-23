@@ -260,7 +260,7 @@ const marketSymbolNames = {
 };
 const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
 const defaultChineseHolidaysSeedKey = "defaultChineseHolidays2026Seeded";
-const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins", "assetRecords", "subscriptionRecords", "exerciseRecords", "weightRecords"];
+const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins", "assetRecords", "subscriptionRecords", "exerciseRecords", "weightRecords", "lifeGoals"];
 const marketCacheVersion = 5;
 const fundCacheVersion = 2;
 const indexTrackerCacheVersion = 2;
@@ -1135,6 +1135,7 @@ function mergeCloudWithLocal(cloud) {
     exerciseRecords: mergeSyncedItems("exerciseRecords", readStorage("exerciseRecords", []), cloud.exerciseRecords, cloud),
     weightRecords: mergeSyncedItems("weightRecords", readStorage("weightRecords", []), cloud.weightRecords, cloud),
     anniversaries: mergeSyncedItems("anniversaries", readStorage("anniversaries", []), cloud.anniversaries, cloud),
+    lifeGoals: mergeSyncedItems("lifeGoals", readStorage("lifeGoals", []), cloud.lifeGoals, cloud),
     waterTarget: cloud.waterTarget != null && Number.isFinite(Number(cloud.waterTarget))
       ? Number(cloud.waterTarget)
       : Number(readStorage("waterTarget", defaultWaterTarget)) || defaultWaterTarget,
@@ -6277,6 +6278,10 @@ export default function Workbench() {
       setAnniversaries(cloud.anniversaries);
       writeStorage("anniversaries", cloud.anniversaries);
     }
+    if (Array.isArray(cloud.lifeGoals)) {
+      setLifeGoals(cloud.lifeGoals);
+      writeStorage("lifeGoals", cloud.lifeGoals);
+    }
     if (cloud.waterTarget != null && Number.isFinite(Number(cloud.waterTarget))) {
       setWaterTarget(Number(cloud.waterTarget));
       writeStorage("waterTarget", Number(cloud.waterTarget));
@@ -6346,6 +6351,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "weightRecords", merged.weightRecords),
         saveCloudItem(nextSession, "watchCheckins", merged.watchCheckins),
         saveCloudItem(nextSession, "anniversaries", merged.anniversaries),
+        saveCloudItem(nextSession, "lifeGoals", merged.lifeGoals),
         saveCloudItem(nextSession, "waterTarget", merged.waterTarget),
         saveCloudItem(nextSession, "habits", merged.habits),
         saveCloudItem(nextSession, "deletedHabitIds", merged.deletedHabitIds),
@@ -6383,6 +6389,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "weightRecords", merged.weightRecords),
         saveCloudItem(nextSession, "watchCheckins", merged.watchCheckins),
         saveCloudItem(nextSession, "anniversaries", merged.anniversaries),
+        saveCloudItem(nextSession, "lifeGoals", merged.lifeGoals),
         saveCloudItem(nextSession, "waterTarget", merged.waterTarget),
         saveCloudItem(nextSession, "habits", merged.habits),
         saveCloudItem(nextSession, "deletedHabitIds", merged.deletedHabitIds),
@@ -6996,7 +7003,7 @@ export default function Workbench() {
     if (!title || !targetDate) return;
     const next = [{ id: crypto.randomUUID(), title, targetDate, items: [] }, ...lifeGoals];
     setLifeGoals(next);
-    writeStorage("lifeGoals", next);
+    persist("lifeGoals", next);
     event.currentTarget.reset();
   }
 
@@ -7006,32 +7013,32 @@ export default function Workbench() {
     if (!title) return;
     const next = lifeGoals.map((goal) => goal.id === goalId ? { ...goal, items: [...goal.items, { id: crypto.randomUUID(), title, completed: false }] } : goal);
     setLifeGoals(next);
-    writeStorage("lifeGoals", next);
+    persist("lifeGoals", next);
     event.currentTarget.reset();
   }
 
   function toggleLifeItem(goalId, itemId) {
     const next = lifeGoals.map((goal) => goal.id === goalId ? { ...goal, items: goal.items.map((item) => item.id === itemId ? { ...item, completed: !item.completed } : item) } : goal);
     setLifeGoals(next);
-    writeStorage("lifeGoals", next);
+    persist("lifeGoals", next);
   }
 
   function deleteLifeItem(goalId, itemId) {
     const next = lifeGoals.map((goal) => goal.id === goalId ? { ...goal, items: goal.items.filter((item) => item.id !== itemId) } : goal);
     setLifeGoals(next);
-    writeStorage("lifeGoals", next);
+    persist("lifeGoals", next);
   }
 
   function updateLifeItem(goalId, itemId, title) {
     const next = lifeGoals.map((goal) => goal.id === goalId ? { ...goal, items: goal.items.map((item) => item.id === itemId ? { ...item, title } : item) } : goal);
     setLifeGoals(next);
-    writeStorage("lifeGoals", next);
+    persist("lifeGoals", next);
   }
 
   function deleteLifeGoal(goalId) {
     const next = lifeGoals.filter((goal) => goal.id !== goalId);
     setLifeGoals(next);
-    writeStorage("lifeGoals", next);
+    persist("lifeGoals", next);
   }
 
   function addAnniversary(event) {
@@ -7429,6 +7436,7 @@ export default function Workbench() {
       exerciseRecords,
       weightRecords,
       anniversaries,
+      lifeGoals,
       waterTarget,
       habits,
       deletedHabitIds: readStorage("deletedHabitIds", []),
@@ -7500,6 +7508,10 @@ export default function Workbench() {
       if (Array.isArray(payload.anniversaries)) {
         setAnniversaries(payload.anniversaries);
         persist("anniversaries", payload.anniversaries);
+      }
+      if (Array.isArray(payload.lifeGoals)) {
+        setLifeGoals(payload.lifeGoals);
+        persist("lifeGoals", payload.lifeGoals);
       }
       if (Number(payload.waterTarget)) {
         setWaterTarget(Number(payload.waterTarget));
