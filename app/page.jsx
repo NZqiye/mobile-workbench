@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { hasSupabaseConfig, supabase } from "../lib/supabase";
 import { thiingsIconByKey, thiingsIconCategories } from "../lib/thiings-icons";
 
 const storagePrefix = "qiyeworkbench:";
@@ -1239,52 +1238,26 @@ function migrateLegacyData() {
 }
 
 async function loadCloudItems(session) {
-  if (!supabase || !session) return {};
-  const { data, error } = await supabase
-    .from("workbench_records")
-    .select("title,note,created_at")
-    .eq("page", statePage)
-    .like("title", `${session.user.id}:%`)
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-
-  const latest = new Map();
-  data.forEach((row) => {
-    const name = row.title.replace(`${session.user.id}:`, "");
-    if (!latest.has(name)) latest.set(name, row.note);
-  });
-
-  return Object.fromEntries(Array.from(latest.entries()).map(([name, value]) => {
-    try {
-      return [name, JSON.parse(value)];
-    } catch {
-      return [name, value];
-    }
-  }));
+  if (!session) return {};
+  const response = await fetch("/api/sync", { headers: { Accept: "application/json" } });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || "云同步读取失败");
+  return payload.items || {};
 }
 
 let cloudWriteQueue = Promise.resolve();
 
 async function saveCloudItem(session, name, value) {
-  if (!supabase || !session) return;
-  const title = userKey(session, name);
+  if (!session) return;
   const task = cloudWriteQueue.then(async () => {
-    const { data, error: insertError } = await supabase.from("workbench_records").insert({
-      page: statePage,
-      title,
-      meta: nowText(),
-      note: JSON.stringify(value),
-    }).select("id");
-    if (insertError) throw insertError;
-    const newId = data?.[0]?.id;
-    if (newId) {
-      const { error: deleteError } = await supabase
-        .from("workbench_records")
-        .delete()
-        .eq("page", statePage)
-        .eq("title", title)
-        .neq("id", newId);
-      if (deleteError) throw deleteError;
+    const response = await fetch("/api/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, value }),
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.error || "云同步写入失败");
     }
   });
   cloudWriteQueue = task.catch(() => {});
@@ -1292,7 +1265,7 @@ async function saveCloudItem(session, name, value) {
 }
 
 async function saveMergedCloudCollection(session, name, value) {
-  if (!supabase || !session) return value;
+  if (!session) return value;
   await cloudWriteQueue.catch(() => {});
   const cloud = await loadCloudItems(session);
   const merged = mergeSyncedItems(name, value, cloud[name], cloud);
@@ -1504,8 +1477,7 @@ function SyncPanel({ session, syncStatus, onLogin, onLogout, onSync, onExport })
           <button className="chip-button" type="button" onClick={onExport}>导出</button>
         </div>
       </div>
-      {!hasSupabaseConfig && <p className="empty">还没有配置 Supabase，先在 `.env.local` 填入地址和 anon key。</p>}
-      {hasSupabaseConfig && !session && (
+            {!session && (
         <form className="stack-form" onSubmit={submit}>
           <input type="password" value={accessCode} onChange={(event) => setAccessCode(event.target.value)} placeholder="输入固定访问码" required />
           <button type="submit" disabled={busy}>{busy ? "验证中" : "解锁云同步"}</button>
@@ -6484,7 +6456,7 @@ export default function Workbench() {
     loadTmdbRecommendations();
     const timer = setInterval(() => setClock(clockText()), 1000);
 
-    if (supabase && localStorage.getItem(key("accessUnlocked")) === "true") {
+    if (localStorage.getItem(key("accessUnlocked")) === "true") {
       setSession(fixedSession);
       syncFromCloud(fixedSession);
     }
@@ -7570,7 +7542,6 @@ export default function Workbench() {
   }
 
   async function login(accessCode) {
-    if (!supabase) return;
     try {
       const response = await fetch("/api/access", {
         method: "POST",
