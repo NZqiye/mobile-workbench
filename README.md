@@ -76,27 +76,22 @@ http://localhost:3000
 
 ## 当前同步方式
 
-为了沿用旧表，当前同步使用 `workbench_records` 表里的 `app_state` 记录：
+云端读写全部走服务端代理，浏览器不再直连数据库：
 
 ```text
-page = app_state
-title = 用户ID:数据项名称
-note = JSON 数据
+浏览器  --(访问码解锁后带 workbench_session Cookie)-->  /api/sync
+                                                          |
+                                          service_role（绕过 RLS）
+                                                          v
+                                          Supabase workbench_records
 ```
 
-会同步：
-
-```text
-饮食记录
-待办记录
-每日复盘
-树洞记录
-习惯列表
-今日打卡状态
-自选资产
-```
-
-行情数据只做本地缓存，不写入数据库。
+- `app/api/sync`：GET 读取当前状态包，POST 写入单个数据项（插入新行并清理同 key 的旧行）
+- `lib/sync-server.js`：服务端 Supabase 客户端（`SUPABASE_SERVICE_ROLE_KEY`）+ 用户标识 `personal-workbench`
+- 数据格式不变：`page = 'app_state'`，`title = 'personal-workbench:<数据项名>'`，`note = JSON`
+- 门禁：`WORKBENCH_ACCESS_CODE` 换 `workbench_session` 会话 Cookie（`lib/access-auth.js` 校验签名），未解锁一律 401
+- 需要的服务端环境变量：`NEXT_PUBLIC_SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`、`WORKBENCH_ACCESS_CODE`、`WORKBENCH_SESSION_SECRET`
+- 部署后即可删除 `workbench_records` 上三条 `{public}` 策略（详见 `Supabase权限风险与整改方案.md`）
 
 ## 国内行情数据
 
