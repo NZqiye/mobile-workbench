@@ -63,7 +63,7 @@ Authentication → URL Configuration → Redirect URLs 加你的正式网址
 1. 在 Supabase SQL Editor 执行项目根目录的 `supabase-push.sql`。
 2. 生成一对 VAPID 密钥，并在 Vercel 配置 `SUPABASE_SERVICE_ROLE_KEY`、`VAPID_PUBLIC_KEY`、`VAPID_PRIVATE_KEY`、`VAPID_SUBJECT`、`CRON_SECRET`、`WORKBENCH_ACCESS_CODE` 和至少 32 位随机的 `WORKBENCH_SESSION_SECRET`。
 3. 部署到 HTTPS 域名后，在手机 PWA 的“设置”中点击“开启提醒”。
-4. 新建任务时填写提醒时间；Vercel Cron 每天北京时间 10:00 左右检查到期任务并发送推送（Hobby 计划可能延迟约 59 分钟）。
+4. 新建任务时填写提醒时间；Vercel Cron 每天北京时间 10:00 和 15:00 各检查一次到期任务并发送推送（Hobby 计划下实际触发会落在整点后的 1 小时窗口内，例如 10:00 那条可能在 10:00–10:59 之间发出）。
 
 `SUPABASE_SERVICE_ROLE_KEY` 和 `VAPID_PRIVATE_KEY` 只能放在服务端环境变量，不能提交到仓库。
 
