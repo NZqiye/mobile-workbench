@@ -114,9 +114,8 @@ sz300750    宁德时代
 当前版本使用国内公开行情源作为个人学习和工作台展示用途，不建议作为交易下单或商用数据源。
 
 ## 部署到 Vercel
-
-1. 把 `next-mobile-workbench` 推到 GitHub。
-2. 在 Vercel 新建项目，选择这个目录。
-3. 在 Vercel 的 Environment Variables 里添加 Supabase、推送、Cron 和访问控制所需的服务端变量（完整清单见上文）。
+1. 本仓库根目录就是 Next.js 应用根目录（`app/`、`lib/`、`package.json`、`vercel.json` 都在根）。
+2. 把改动提交到 `main`，Vercel 会自动触发 Production 部署。
+3. 在 Vercel 的 Environment Variables 里配置 Supabase、推送、Cron 和访问控制所需的服务端变量（完整清单见上文）。其中 `WORKBENCH_SESSION_SECRET`（≥32 位随机值）和 `WORKBENCH_ACCESS_CODE` 缺一不可：会话密钥缺失时 `/api/access` 会直接返回 500，任何访问码都无法解锁。
 4. 部署完成后，把 Vercel 域名填进 Supabase 的 Site URL 和 Redirect URLs。
 5. 手机打开网址，添加到主屏幕。
