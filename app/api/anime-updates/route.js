@@ -1,359 +1,263 @@
 import { fetchTmdb, mapTmdbResult, tmdbToken } from "../../../lib/tmdb";
 
+export const maxDuration = 30;
+
 const BANGUMI_API = "https://api.bgm.tv";
-const BANGUMI_USER_AGENT = "Codex-MobileWorkbench/1.0 (personal anime ranking)";
 const SECTION_LIMIT = 60;
-const TMDB_CONCURRENCY = 8;
-const UPDATE_INTERVAL = 12 * 60 * 60 * 1000;
-const STALE_INTERVAL = 7 * 24 * 60 * 60 * 1000;
-const TMDB_MATCH_INTERVAL = 12 * 60 * 60 * 1000;
-const tmdbMatchCache = new Map();
+const UPDATE_INTERVAL = 15 * 60 * 1000;
+const STALE_INTERVAL = 24 * 60 * 60 * 1000;
 let cache = null;
+let pending = null;
+const tmdbMatches = new Map();
 
-function hasChinese(text) {
-  return /[\u3400-\u9fff]/.test(String(text || ""));
+function titleKey(title) {
+  return String(title || "").normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
 }
 
-function normalizeTitle(text) {
-  return String(text || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\u3400-\u9fff]+/gi, "");
+function chineseText(text) {
+  return /[\u3400-\u9fff]/.test(text || "") && !/[\u3040-\u30ff]/.test(text || "") ? text : "";
 }
 
-function cleanDescription(text) {
-  return String(text || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-}
-
-function animeTitleCandidates(...titles) {
-  const candidates = [];
-  for (const value of titles) {
-    const raw = String(value || "").trim();
-    if (!raw) continue;
-    candidates.push(raw);
-    const stripped = raw
-      .replace(/\s*[:：-]?\s*(?:season|第\s*[0-9一二三四五六七八九十]+\s*季|[0-9]+(?:st|nd|rd|th)\s+season|part\s*[0-9ivx]+|cour\s*[0-9]+).*$/i, "")
-      .replace(/\s*[:：-]?\s*(?:2nd|3rd|4th|final|the final).*$/i, "")
-      .trim();
-    if (stripped && stripped !== raw) candidates.push(stripped);
-    const mainTitle = raw.split(/\s*[:：]\s*/)[0].trim();
-    if (mainTitle && mainTitle !== raw && mainTitle.length >= 2) candidates.push(mainTitle);
-  }
-  return [...new Set(candidates)];
-}
-
-async function fetchBangumiJson(url, options = {}) {
-  let response;
-  try {
-    response = await fetch(url, {
-      ...options,
-      headers: {
-        "User-Agent": BANGUMI_USER_AGENT,
-        Accept: "application/json",
-        ...(options.body ? { "Content-Type": "application/json" } : {}),
-        ...(options.headers || {}),
-      },
-      cache: "no-store",
-      signal: AbortSignal.timeout(12000),
+async function matchTmdb(item, signal) {
+  const queries = [...new Set([item.bangumiName, item.bangumiNameCn].filter(Boolean))];
+  const names = new Set(queries.map(titleKey));
+  for (const query of queries) {
+    const url = new URL("https://api.themoviedb.org/3/search/multi");
+    url.searchParams.set("query", query);
+    url.searchParams.set("language", "zh-CN");
+    url.searchParams.set("include_adult", "false");
+    const response = await fetchTmdb(url, { signal: AbortSignal.any([signal, AbortSignal.timeout(2500)]) });
+    if (!response.ok) throw new Error(`TMDB ${response.status}`);
+    const data = await response.json();
+    const matches = (Array.isArray(data.results) ? data.results : []).filter((candidate) => {
+      const year = (candidate.first_air_date || candidate.release_date || "").slice(0, 4);
+      return candidate.id && ["tv", "movie"].includes(candidate.media_type) && !candidate.adult
+        && candidate.genre_ids?.includes(16)
+        && [candidate.name, candidate.title, candidate.original_name, candidate.original_title].some((name) => name && names.has(titleKey(name)))
+        && year && item.year && Math.abs(Number(year) - Number(item.year)) <= 1;
     });
-  } catch (error) {
-    throw new Error(`Bangumi \u7f51\u7edc\u8bf7\u6c42\u5931\u8d25: ${error?.cause?.code || error?.message || "fetch failed"}`);
-  }
-  const text = await response.text();
-  const data = text ? JSON.parse(text) : {};
-  if (!response.ok) {
-    const message = data?.title || data?.message || data?.description || `HTTP ${response.status}`;
-    throw new Error(`Bangumi ${response.status}: ${message}`);
-  }
-  return data;
-}
-
-async function searchBangumiSubjects(sort, keyword = "") {
-  const url = new URL(`${BANGUMI_API}/v0/search/subjects`);
-  url.searchParams.set("limit", String(SECTION_LIMIT));
-  url.searchParams.set("offset", "0");
-  return fetchBangumiJson(url.toString(), {
-    method: "POST",
-    body: JSON.stringify({
-      keyword,
-      sort,
-      filter: { type: [2], nsfw: false },
-    }),
-  });
-}
-
-async function fetchBangumiSubjects(sort) {
-  try {
-    return await searchBangumiSubjects(sort, "");
-  } catch (error) {
-    if (!/40[0-9]|422/.test(String(error?.message || ""))) throw error;
-    return searchBangumiSubjects(sort, "\u52a8\u753b");
-  }
-}
-
-async function fetchBangumiCalendar() {
-  return fetchBangumiJson(`${BANGUMI_API}/calendar`);
-}
-
-function subjectHeat(item) {
-  const collection = item?.collection || {};
-  return ["wish", "collect", "doing", "on_hold", "dropped"]
-    .reduce((sum, key) => sum + Number(collection[key] || 0), 0);
-}
-
-function subjectRank(item) {
-  const rank = Number(item?.rating?.rank || item?.rank || 0);
-  return rank > 0 ? rank : Number.MAX_SAFE_INTEGER;
-}
-
-function subjectScore(item) {
-  const score = Number(item?.rating?.score || 0);
-  return Number.isFinite(score) ? score : 0;
-}
-
-function normalizeBangumiSubject(item, index) {
-  const date = String(item?.date || item?.air_date || "");
-  return {
-    id: `bangumi-${item?.id || index}`,
-    bangumiId: Number(item?.id || 0),
-    bangumiType: Number(item?.type || 0),
-    nsfw: Boolean(item?.nsfw),
-    bangumiName: String(item?.name || ""),
-    bangumiNameCn: String(item?.name_cn || ""),
-    bangumiSummary: cleanDescription(item?.summary || ""),
-    bangumiRank: subjectRank(item),
-    bangumiScore: subjectScore(item),
-    bangumiHeat: subjectHeat(item),
-    bangumiUrl: item?.id ? `https://bgm.tv/subject/${item.id}` : "",
-    airWeekday: Number(item?.air_weekday || 0),
-    title: String(item?.name_cn || item?.name || "").trim(),
-    titleZh: hasChinese(item?.name_cn) ? String(item.name_cn).trim() : "",
-    originalTitle: String(item?.name || "").trim(),
-    allowOriginalTitle: false,
-    year: date.slice(0, 4),
-    type: "\u52a8\u6f2b",
-    category: "anime",
-    platform: "Bangumi",
-    source: "Bangumi",
-    sourceLabel: "Bangumi",
-    tmdbMediaType: "tv",
-    posterUrl: "",
-    backdropUrl: "",
-    tmdbRating: "",
-    airDate: date,
-    nextAirDate: date,
-    summary: "",
-    summaryZh: "",
-    review: "",
-    tags: Array.isArray(item?.meta_tags) ? item.meta_tags : [],
-    rank: index + 1,
-  };
-}
-
-function dedupeBangumiSubjects(items) {
-  const byId = new Map();
-  for (const item of items) {
-    if (!item?.bangumiId || item.nsfw || (item.bangumiType && item.bangumiType !== 2)) continue;
-    const current = byId.get(item.bangumiId);
-    if (!current) {
-      byId.set(item.bangumiId, item);
-      continue;
+    // 多个同名、同年动画时保留原资料，避免绑定错误作品。
+    if (matches.length > 1) return null;
+    if (matches.length === 1) {
+      const mapped = mapTmdbResult(matches[0]);
+      const titleZh = chineseText(mapped.title);
+      const summaryZh = chineseText(mapped.summary);
+      return {
+        tmdbId: mapped.tmdbId, tmdbMediaType: mapped.tmdbMediaType,
+        tmdbRating: mapped.tmdbRating,
+        ...(titleZh ? { title: titleZh, titleZh } : {}),
+        ...(summaryZh ? { summary: summaryZh, summaryZh } : {}),
+        ...(mapped.posterUrl ? { posterUrl: mapped.posterUrl } : {}),
+        platform: "TMDB", metadataSource: "TMDB", sourceLabel: "Bangumi 榜单 · TMDB 资料",
+      };
     }
-    const score = [item.titleZh, item.bangumiSummary, item.bangumiHeat]
-      .filter(Boolean).length;
-    const currentScore = [current.titleZh, current.bangumiSummary, current.bangumiHeat]
-      .filter(Boolean).length;
-    if (score > currentScore) byId.set(item.bangumiId, item);
   }
-  return [...byId.values()];
+  return null;
 }
 
-function shanghaiWeekday() {
-  const weekday = new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Shanghai", weekday: "short" }).format(new Date());
-  return { Sun: 7, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[weekday] || 7;
-}
-
-function weekdayDistance(day) {
-  const value = Number(day || 0);
-  if (value < 1 || value > 7) return 99;
-  const today = shanghaiWeekday();
-  return value >= today ? value - today : 7 - today + value;
-}
-
-function sortBangumiSubjects(items, kind) {
-  return [...items].sort((a, b) => {
-    if (kind === "hot") return b.bangumiHeat - a.bangumiHeat || a.bangumiRank - b.bangumiRank || b.bangumiScore - a.bangumiScore;
-    if (kind === "history") return a.bangumiRank - b.bangumiRank || b.bangumiScore - a.bangumiScore || b.bangumiHeat - a.bangumiHeat;
-    return weekdayDistance(a.airWeekday) - weekdayDistance(b.airWeekday) || b.bangumiHeat - a.bangumiHeat;
-  });
-}
-
-function scoreTmdbMatch(item, subject) {
-  const sourceTitles = animeTitleCandidates(subject.bangumiNameCn, subject.bangumiName).map(normalizeTitle).filter(Boolean);
-  const names = [item?.name, item?.original_name, item?.title, item?.original_title].map(normalizeTitle).filter(Boolean);
-  const exact = names.some((name) => sourceTitles.includes(name));
-  const related = names.some((name) => sourceTitles.some((title) => name.includes(title) || title.includes(name)));
-  const animation = Array.isArray(item?.genre_ids) && item.genre_ids.includes(16);
-  const japanese = String(item?.original_language || "").toLowerCase() === "ja";
-  const sourceYear = Number(String(subject.airDate || "").slice(0, 4) || 0);
-  const tmdbYear = Number(String(item?.first_air_date || "").slice(0, 4) || 0);
-  const yearScore = sourceYear && tmdbYear ? (sourceYear === tmdbYear ? 20 : Math.abs(sourceYear - tmdbYear) <= 1 ? 8 : -20) : 0;
-  return (exact ? 100 : related ? 55 : 0) + (animation ? 35 : 0) + (japanese ? 20 : 0) + yearScore + Number(item?.popularity || 0) / 1000;
-}
-
-async function searchTmdb(title) {
-  const url = new URL("https://api.themoviedb.org/3/search/tv");
-  url.searchParams.set("query", title);
-  url.searchParams.set("language", "zh-CN");
-  url.searchParams.set("include_adult", "false");
-  const response = await fetchTmdb(url, { signal: AbortSignal.timeout(6000) });
-  const text = await response.text();
-  const data = text ? JSON.parse(text) : {};
-  if (!response.ok) throw new Error(data.status_message || "TMDB search failed");
-  return Array.isArray(data.results) ? data.results : [];
-}
-
-async function findTmdbAnime(subject) {
-  if (!tmdbToken) return null;
-  const cached = tmdbMatchCache.get(subject.bangumiId);
-  if (cached && cached.expiresAt > Date.now()) return cached.promise;
-  const promise = (async () => {
-    const titles = animeTitleCandidates(subject.bangumiNameCn, subject.bangumiName);
-    const results = [];
-    for (const title of titles) {
+async function enrichWithTmdb(sections) {
+  if (!tmdbToken) return "TMDB 尚未配置，当前显示 Bangumi 资料";
+  const unique = new Map();
+  // 交错处理各榜单，优先补齐每组最先显示的卡片。
+  for (let index = 0; sections.some((section) => index < section.items.length); index++) {
+    for (const section of sections) {
+      const item = section.items[index];
+      if (item && !unique.has(item.bangumiId)) unique.set(item.bangumiId, item);
+    }
+  }
+  for (const [id, match] of tmdbMatches) {
+    if (match.expiresAt <= Date.now()) tmdbMatches.delete(id);
+  }
+  const signal = AbortSignal.timeout(12000);
+  const items = [...unique.values()];
+  const metadata = new Map();
+  let cursor = 0;
+  let incomplete = false;
+  await Promise.all(Array.from({ length: Math.min(8, items.length) }, async () => {
+    while (cursor < items.length) {
+      const item = items[cursor++];
+      const signature = JSON.stringify([item.bangumiName, item.bangumiNameCn, item.year]);
+      const cached = tmdbMatches.get(item.bangumiId);
+      if (cached?.signature === signature) {
+        metadata.set(item.bangumiId, cached.value);
+        continue;
+      }
+      if (signal.aborted) { incomplete = true; continue; }
       try {
-        results.push(...await searchTmdb(title));
+        const value = await matchTmdb(item, signal);
+        metadata.set(item.bangumiId, value);
+        tmdbMatches.set(item.bangumiId, { signature, value, expiresAt: Date.now() + (value ? STALE_INTERVAL : UPDATE_INTERVAL) });
       } catch {
-        // Try the next title candidate.
+        incomplete = true;
       }
     }
-    const candidates = [...new Map(results.filter((item) => item?.id).map((item) => [item.id, item])).values()];
-    const best = candidates
-      .map((item) => ({ item, score: scoreTmdbMatch(item, subject) }))
-      .sort((a, b) => b.score - a.score)[0];
-    return best && best.score >= 60 ? best.item : null;
-  })().catch((error) => {
-    tmdbMatchCache.delete(subject.bangumiId);
-    throw error;
-  });
-  tmdbMatchCache.set(subject.bangumiId, { expiresAt: Date.now() + TMDB_MATCH_INTERVAL, promise });
-  return promise;
-}
-
-async function enrichWithTmdb(subject) {
-  const matched = await findTmdbAnime(subject);
-  if (!matched) return null;
-  const mapped = mapTmdbResult({ ...matched, media_type: "tv" });
-  const tmdbTitle = mapped.title || matched.name || matched.original_name || "";
-  const title = hasChinese(tmdbTitle) ? tmdbTitle : subject.bangumiNameCn || tmdbTitle;
-  return {
-    ...subject,
-    ...mapped,
-    id: `bangumi-${subject.bangumiId}`,
-    title,
-    titleZh: hasChinese(title) ? title : "",
-    originalTitle: matched.original_name || subject.bangumiName,
-    allowOriginalTitle: false,
-    platform: "Bangumi",
-    source: "Bangumi",
-    sourceLabel: "Bangumi",
-    dataSource: "TMDB",
-    tmdbMediaType: "tv",
-    posterUrl: mapped.posterUrl || "",
-    backdropUrl: matched.backdrop_path ? `https://image.tmdb.org/t/p/w780${matched.backdrop_path}` : "",
-    tmdbRating: mapped.tmdbRating || "",
-    summary: cleanDescription(mapped.summary || ""),
-    summaryZh: cleanDescription(mapped.summaryZh || ""),
-    review: cleanDescription(mapped.review || ""),
-    year: mapped.year || subject.year,
-    airDate: subject.airDate,
-    nextAirDate: subject.airDate,
-    bangumiRank: subject.bangumiRank,
-    bangumiScore: subject.bangumiScore,
-    bangumiHeat: subject.bangumiHeat,
-    bangumiUrl: subject.bangumiUrl,
-    rank: subject.rank,
-  };
-}
-
-async function mapWithConcurrency(items, limit, mapper) {
-  const results = new Array(items.length);
-  let cursor = 0;
-  async function worker() {
-    while (cursor < items.length) {
-      const index = cursor++;
-      results[index] = await mapper(items[index], index);
-    }
+  }));
+  for (const section of sections) {
+    section.items = section.items.map((item) => ({ ...item, ...metadata.get(item.bangumiId) }));
   }
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-  return results;
+  return incomplete ? "部分 TMDB 资料暂未获取，已保留 Bangumi 资料，可稍后刷新重试" : "";
 }
 
-function dedupeMatchedAnime(items) {
-  const seenTmdb = new Set();
-  const seenBangumi = new Set();
-  return items.filter((item) => {
-    const tmdbKey = item?.tmdbId ? `tmdb:${item.tmdbId}` : "";
-    const bangumiKey = item?.bangumiId ? `bangumi:${item.bangumiId}` : "";
-    if ((tmdbKey && seenTmdb.has(tmdbKey)) || (bangumiKey && seenBangumi.has(bangumiKey))) return false;
-    if (tmdbKey) seenTmdb.add(tmdbKey);
-    if (bangumiKey) seenBangumi.add(bangumiKey);
-    return true;
-  });
+function shanghaiDate(now = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(now);
 }
 
-async function loadSection(id, title, kind) {
-  const payload = kind === "upcoming" ? await fetchBangumiCalendar() : await fetchBangumiSubjects(kind === "hot" ? "heat" : "rank");
-  const raw = kind === "upcoming"
-    ? (Array.isArray(payload) ? payload : []).flatMap((day) => Array.isArray(day?.items) ? day.items : [])
-    : (Array.isArray(payload?.data) ? payload.data : []);
-  const normalized = raw.map(normalizeBangumiSubject);
-  const candidates = sortBangumiSubjects(dedupeBangumiSubjects(normalized), kind).slice(0, SECTION_LIMIT);
-  const enriched = await mapWithConcurrency(candidates, TMDB_CONCURRENCY, enrichWithTmdb);
+function seasonRange(date) {
+  const [year, month] = date.split("-").map(Number);
+  const startMonth = Math.floor((month - 1) / 3) * 3 + 1;
   return {
-    id,
-    title,
-    items: dedupeMatchedAnime(enriched.filter(Boolean)),
+    start: `${year}-${String(startMonth).padStart(2, "0")}-01`,
+    end: startMonth === 10 ? `${year + 1}-01-01` : `${year}-${String(startMonth + 3).padStart(2, "0")}-01`,
+    label: `${year} 年 ${startMonth} 月新番`,
   };
 }
 
-function json(payload, status = 200, cacheState = "") {
-  return new Response(JSON.stringify(cacheState ? { ...payload, cache: cacheState } : payload), {
-    status,
+async function fetchBangumiJson(path, body) {
+  const response = await fetch(`${BANGUMI_API}${path}`, {
+    method: body ? "POST" : "GET",
     headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": status === 200 ? "public, s-maxage=43200, stale-while-revalidate=3600" : "no-store",
+      "User-Agent": "QiyeWorkbench/1.0 (https://github.com/NZqiye/mobile-workbench)",
+      Accept: "application/json",
+      ...(body ? { "Content-Type": "application/json" } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+    cache: "no-store",
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) throw new Error(`Bangumi ${response.status}`);
+  return response.json();
+}
+
+function searchBangumi(sort, range) {
+  return fetchBangumiJson(`/v0/search/subjects?limit=${SECTION_LIMIT}&offset=0`, {
+    keyword: "",
+    sort,
+    filter: {
+      type: [2], nsfw: false,
+      ...(sort === "rank" ? { rank: [">0", "<=99999"] } : {}),
+      ...(range ? { air_date: [`>=${range.start}`, `<${range.end}`] } : {}),
     },
   });
 }
 
-export async function GET() {
-  const now = Date.now();
-  if (cache && cache.expiresAt > now) return json(cache.payload, 200, "hit");
+function normalizeSubject(item, index) {
+  const date = String(item.date || item.air_date || "");
+  const title = String(item.name_cn || item.name || "").trim();
+  const summary = String(item.summary || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+  const images = item.images || {};
+  const collection = item.collection || {};
+  return {
+    id: `bangumi-${item.id}`,
+    bangumiId: Number(item.id),
+    bangumiName: String(item.name || ""),
+    bangumiNameCn: String(item.name_cn || ""),
+    bangumiUrl: `https://bgm.tv/subject/${item.id}`,
+    bangumiScore: Number(item.rating?.score || 0),
+    bangumiRank: Number(item.rating?.rank || item.rank || 0),
+    bangumiHeat: ["wish", "collect", "doing", "on_hold", "dropped"].reduce((sum, key) => sum + Number(collection[key] || 0), 0),
+    airWeekday: Number(item.air_weekday || 0),
+    title,
+    titleZh: /[\u3400-\u9fff]/.test(item.name_cn || "") ? item.name_cn : "",
+    originalTitle: item.name || title,
+    allowOriginalTitle: true,
+    year: date.slice(0, 4),
+    airDate: date,
+    type: "动漫",
+    category: "anime",
+    platform: "Bangumi",
+    source: "Bangumi",
+    sourceLabel: "Bangumi",
+    posterUrl: images.large || images.common || images.medium || images.small || "",
+    summary,
+    summaryZh: /[\u3400-\u9fff]/.test(summary) ? summary : "",
+    tags: Array.isArray(item.meta_tags) ? item.meta_tags : [],
+    rank: index + 1,
+  };
+}
 
-  try {
-    if (!tmdbToken) throw new Error("\u7f3a\u5c11 TMDB_ACCESS_TOKEN\uff0c\u65e0\u6cd5\u8865\u5168 Bangumi \u52a8\u6f2b\u6570\u636e");
-    const sections = [];
-    sections.push(await loadSection("animeHot", "\u52a8\u6f2b\u00b7\u5f53\u524d\u70ed\u64ad", "hot"));
-    sections.push(await loadSection("animeUpcoming", "\u52a8\u6f2b\u00b7\u5373\u5c06\u4e0a\u7ebf", "upcoming"));
-    sections.push(await loadSection("animeHistory", "\u52a8\u6f2b\u00b7\u5386\u53f2\u70ed\u699c", "history"));
-    if (!sections.some((section) => section.items.length)) {
-      throw new Error("\u5f53\u524d\u65e0\u6cd5\u83b7\u53d6 Bangumi \u699c\u5355\u6216 TMDB \u4e2d\u6587\u6570\u636e");
+function normalizeSubjects(items) {
+  const seen = new Set();
+  return items.filter((item) => {
+    if (!item?.id || item.nsfw || (item.type && item.type !== 2) || seen.has(item.id)) return false;
+    seen.add(item.id);
+    return Boolean(item.name_cn || item.name);
+  }).map(normalizeSubject);
+}
+
+async function loadRecommendations(date) {
+  const range = seasonRange(date);
+  const weekday = new Date(`${date}T12:00:00+08:00`).getUTCDay() || 7;
+  const [season, calendar, history] = await Promise.allSettled([
+    searchBangumi("heat", range),
+    fetchBangumiJson("/calendar"),
+    searchBangumi("rank"),
+  ]);
+  const warnings = [];
+  const sections = [];
+  if (season.status === "fulfilled" && Array.isArray(season.value.data)) {
+    const items = normalizeSubjects(season.value.data).filter((item) => item.airDate >= range.start && item.airDate < range.end);
+    sections.push({ id: "animeHot", title: "当季热门", items });
+    sections.push({ id: "animeSeason", title: "当季新番", items: [...items].sort((a, b) => b.airDate.localeCompare(a.airDate)) });
+  } else {
+    warnings.push("当季新番暂时获取失败");
+  }
+  if (calendar.status === "fulfilled" && Array.isArray(calendar.value)) {
+    const day = calendar.value.find((entry) => Number(entry.weekday?.id) === weekday);
+    if (day && Array.isArray(day.items)) {
+      const items = normalizeSubjects(day.items).map((item) => ({ ...item, airWeekday: weekday, scheduleDate: date }));
+      sections.push({ id: "animeToday", title: "今日放送", items });
+    } else {
+      warnings.push("今日放送暂时获取失败");
     }
-    const payload = {
-      ok: true,
-      source: "Bangumi",
-      sourceNote: "Bangumi \u52a8\u6f2b\u699c\u5355\u00b7TMDB \u4e2d\u6587\u6807\u9898\u3001\u4e2d\u6587\u7b80\u4ecb\u4e0e\u6d77\u62a5\u00b7\u5df2\u53bb\u91cd",
-      generatedAt: new Date().toISOString(),
-      nextUpdateAt: new Date(now + UPDATE_INTERVAL).toISOString(),
-      items: sections[0]?.items || [],
-      sections,
-    };
-    cache = { payload, expiresAt: now + UPDATE_INTERVAL, staleUntil: now + STALE_INTERVAL };
-    return json(payload, 200, "miss");
+  } else {
+    warnings.push("今日放送暂时获取失败");
+  }
+  if (history.status === "fulfilled" && Array.isArray(history.value.data)) {
+    sections.push({ id: "animeHistory", title: "高分经典", items: normalizeSubjects(history.value.data) });
+  } else {
+    warnings.push("高分榜暂时获取失败");
+  }
+  if (!sections.length) throw new Error("Bangumi 暂时不可用，请稍后刷新");
+  const metadataNote = await enrichWithTmdb(sections);
+  const generatedAt = new Date().toISOString();
+  return {
+    ok: true, source: "Bangumi", date,
+    sourceNote: `${range.label} · Bangumi 榜单与排期 · TMDB 中文资料优先`,
+    metadataNote,
+    generatedAt,
+    nextUpdateAt: new Date(Date.parse(generatedAt) + UPDATE_INTERVAL).toISOString(),
+    warnings,
+    items: sections.find((section) => section.id === "animeHot")?.items || [],
+    sections: sections.map((section) => ({ ...section, generatedAt, scheduleDate: date })),
+  };
+}
+
+function json(payload, status = 200) {
+  return Response.json(payload, { status, headers: { "Cache-Control": "no-store" } });
+}
+
+export async function GET(request) {
+  const now = Date.now();
+  const date = shanghaiDate();
+  const refresh = request && new URL(request.url).searchParams.get("refresh") === "1";
+  if (cache?.payload.date === date && cache.expiresAt > now && (!refresh || now - cache.loadedAt < 60000)) {
+    return json({ ...cache.payload, cache: "hit" });
+  }
+  try {
+    if (!pending) {
+      pending = loadRecommendations(date).then((payload) => {
+        const loadedAt = Date.now();
+        cache = { payload, loadedAt, expiresAt: loadedAt + UPDATE_INTERVAL, staleUntil: loadedAt + STALE_INTERVAL };
+        return payload;
+      }).finally(() => { pending = null; });
+    }
+    return json({ ...await pending, cache: "miss" });
   } catch (error) {
     if (cache && cache.staleUntil > now) {
-      return json({ ...cache.payload, stale: true, warning: error.message || "Bangumi \u66f4\u65b0\u5931\u8d25" }, 200, "stale");
+      return json({ ...cache.payload, stale: true, warning: "更新失败，正在显示上次获取的资料", cache: "stale" });
     }
-    return json({ ok: false, error: error.message || "\u52a8\u6f2b\u699c\u5355\u6682\u65f6\u4e0d\u53ef\u7528" }, 502);
+    return json({ ok: false, error: error.message || "动漫推荐暂时不可用" }, 502);
   }
 }
