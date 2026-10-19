@@ -6651,17 +6651,18 @@ textarea::placeholder {
 }
 
 .phone-shell.mobile-shell.page-consultations .watch-mobile-titlebar {
-  min-height: 54px;
+  grid-template-columns: 44px minmax(0, 1fr) 64px;
+  min-height: 56px;
   margin: 0 -14px;
-  padding: 4px 2px 8px;
+  padding: 6px 12px;
   border-bottom-color: rgba(255, 224, 190, 0.14);
-  background: linear-gradient(180deg, rgba(58, 14, 22, 0.98), rgba(58, 14, 22, 0.86));
+  background: var(--theme-soft);
 }
 
 .phone-shell.mobile-shell.page-consultations .watch-mobile-titlebar > button,
 .phone-shell.mobile-shell.page-consultations .watch-mobile-titlebar > span {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
 }
 
 .phone-shell.mobile-shell.page-consultations .watch-mobile-titlebar > button {
@@ -6672,8 +6673,10 @@ textarea::placeholder {
   box-shadow: none;
 }
 
-.phone-shell.mobile-shell.page-consultations .watch-mobile-titlebar > button[aria-label="鎼滅储浣滃搧"] {
-  width: 54px;
+.phone-shell.mobile-shell.page-consultations .watch-mobile-titlebar > .watch-mobile-search-button {
+  width: 64px;
+  padding-inline: 8px;
+  white-space: nowrap;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 900;
@@ -6979,7 +6982,7 @@ textarea::placeholder {
   padding: 8px 10px;
   border-color: rgba(255, 224, 190, 0.24);
   color: #fff5f0;
-  background: rgba(61, 12, 20, 0.78);
+  background: var(--theme-soft) !important;
 }
 
 .phone-shell.mobile-shell.page-consultations .watch-rating-syncbar span {

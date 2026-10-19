@@ -4322,7 +4322,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
                     <h3>{mobileRatingView === "episodes" ? `第 ${seasonNumber} 季` : detailTitle}</h3>
                     {mobileRatingView === "episodes" && <small>{detailTitle}</small>}
                   </div>
-                  <button type="button" onClick={() => setMobileLibraryOpen(true)} aria-label="搜索作品">搜索</button>
+                  <button type="button" className="watch-mobile-search-button" onClick={() => setMobileLibraryOpen(true)} aria-label="搜索作品">搜索</button>
                 </div>
                 {detailsLoading && <p className="watch-rating-status">正在读取 TMDB 详情…</p>}
                 {detailStatus && <p className="watch-rating-status error">{detailStatus}</p>}
