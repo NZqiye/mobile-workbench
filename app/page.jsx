@@ -101,14 +101,12 @@ function mergeRecommendationSources(baseSections = [], mediaData, animeData) {
   replaceSectionItems("tvUpcoming", upcomingItems.filter((item) => item.category === "tv"));
   replaceSectionItems("varietyHot", liveItems.filter((item) => item.category === "variety" && isPreferredVarietyCountry(item)));
   replaceSectionItems("varietyUpcoming", upcomingItems.filter((item) => item.category === "variety" && isPreferredVarietyCountry(item)));
-  replaceSectionItems("animeHot", liveItems.filter((item) => item.category === "anime"));
-  replaceSectionItems("animeUpcoming", upcomingItems.filter((item) => item.category === "anime"));
 
   for (const section of Array.isArray(animeData?.sections) ? animeData.sections : []) {
     const items = Array.isArray(section.items) ? section.items.filter((item) => item?.title) : [];
     const existing = sections.find((entry) => entry.id === section.id);
     if (existing) {
-      existing.items = mergeRecommendationItems(items, existing.items);
+      Object.assign(existing, section, { items: [...items] });
     } else {
       sections.push({ ...section, items: [...items] });
     }
@@ -3735,6 +3733,7 @@ function dayUpdateLabel(updates, expanded) {
 }
 
 function mediaAirText(item) {
+  if (item?.scheduleDate) return `${item.scheduleDate.slice(5).replace("-", "月")}日放送排期`;
   if (!item?.airDate) return "播出日期待定";
   const [, month, day] = String(item.airDate).split("-");
   if (!month || !day) return item.airDate;
@@ -4633,7 +4632,7 @@ function MediaGallery({ item }) {
   );
 }
 
-function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked, onDeleteItem, onWatchCheckin, onSyncTmdbRating, onRemoveCheckin, onRefreshWatchCheckins, syncStatus = "", watchCheckins = [] }) {
+function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, animeRecommendationInfo, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked, onDeleteItem, onWatchCheckin, onSyncTmdbRating, onRemoveCheckin, onRefreshWatchCheckins, syncStatus = "", watchCheckins = [] }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
   const [tmdbQuery, setTmdbQuery] = useState("");
@@ -4713,7 +4712,8 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
     { id: "varietyUpcoming", title: "即将上线", items: [] },
     { id: "varietyHistory", title: "历史热榜", items: [] },
     { id: "animeHot", title: "近期热播", items: [] },
-    { id: "animeUpcoming", title: "即将上线", items: [] },
+    { id: "animeToday", title: "今日放送", items: [] },
+    { id: "animeSeason", title: "当季新番", items: [] },
     { id: "animeHistory", title: "历史热榜", items: [] },
   ];
   const sectionsWithDefaults = recommendationSections.length
@@ -4724,7 +4724,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
     movies: ["movieHot", "movieUpcoming", "movieHistory"],
     tv: ["tvHot", "tvUpcoming", "tvHistory"],
     variety: ["varietyHot", "varietyUpcoming", "varietyHistory"],
-    anime: ["animeHot", "animeUpcoming", "animeHistory"],
+    anime: ["animeHot", "animeToday", "animeSeason", "animeHistory"],
   };
   const activeRecommendationOptions = (recommendationGroups[activeView] || [])
     .map((id) => visibleRecommendationSections.find((section) => section.id === id))
@@ -4739,7 +4739,9 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
           ? animeSectionId
           : "";
   const selectedSourceSection = activeRecommendationOptions.find((section) => section.id === selectedRecommendationId) || activeRecommendationOptions[0];
-  const recommendationModeLabels = {
+  const recommendationModeLabels = activeView === "anime" ? {
+    hot: "当季热门", high: "高分经典", rising: "今日放送", personal: "当季新番",
+  } : {
     hot: "热门",
     high: "高分",
     rising: "上升",
@@ -4748,13 +4750,14 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
   const recommendationModeSectionId = {
     hot: activeRecommendationOptions.find((section) => section.id.endsWith("Hot"))?.id,
     high: activeRecommendationOptions.find((section) => section.id.endsWith("History"))?.id,
-    rising: activeRecommendationOptions.find((section) => section.id.endsWith("Upcoming"))?.id,
+    rising: activeView === "anime" ? "animeToday" : activeRecommendationOptions.find((section) => section.id.endsWith("Upcoming"))?.id,
+    personal: activeView === "anime" ? "animeSeason" : selectedRecommendationId,
   };
-  const modeSourceSection = recommendationMode === "personal"
+  const modeSourceSection = recommendationMode === "personal" && activeView !== "anime"
     ? selectedSourceSection
     : activeRecommendationOptions.find((section) => section.id === recommendationModeSectionId[recommendationMode]) || selectedSourceSection;
   const modeItems = Array.isArray(modeSourceSection?.items) ? modeSourceSection.items : [];
-  const personalItems = recommendationMode === "personal"
+  const personalItems = recommendationMode === "personal" && activeView !== "anime"
     ? [...modeItems, ...activeRecommendationOptions.flatMap((section) => Array.isArray(section.items) ? section.items : [])]
       .filter((item, index, list) => {
         const key = recommendationItemKey(item);
@@ -4780,8 +4783,15 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
     if (activeView === "tv") setTvSectionId(id);
     if (activeView === "variety") setVarietySectionId(id);
     if (activeView === "anime") setAnimeSectionId(id);
+    if (activeView === "anime") setRecommendationMode({ animeHot: "hot", animeHistory: "high", animeToday: "rising", animeSeason: "personal" }[id] || "hot");
     setRecommendationMenuOpen(false);
   }
+  useEffect(() => {
+    if (activeView !== "anime") return undefined;
+    onLoadRecommendations({ animeOnly: true });
+    const timer = setInterval(() => onLoadRecommendations({ animeOnly: true }), 15 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [activeView]);
   function removeWatchItem(item) {
     if (!onDeleteItem) return;
     if (window.confirm(`确定把《${item.title}》移出片单吗？`)) onDeleteItem(item.id);
@@ -5003,20 +5013,27 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
                 )}
               </div>
               <span className="recommendation-count">{selectedRecommendationCount} 条</span>
-              <button className="chip-button" type="button" onClick={onLoadRecommendations}>刷新片单</button>
+              <button className="chip-button" type="button" onClick={() => onLoadRecommendations({ refreshAnime: true, animeOnly: activeView === "anime" })} disabled={activeView === "anime" && animeRecommendationInfo?.loading}>刷新片单</button>
             </div>
           </div>
+          {activeView === "anime" && <p className="media-updates-scale" role="status">
+            {animeRecommendationInfo?.loading ? "正在更新动漫推荐…" : animeRecommendationInfo?.error || (animeRecommendationInfo?.generatedAt ? `Bangumi 榜单 · TMDB 中文资料优先 · 更新于 ${new Date(animeRecommendationInfo.generatedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false })} · 每 15 分钟刷新` : "正在加载动漫推荐…")}
+            {animeRecommendationInfo?.metadataNote && ` · ${animeRecommendationInfo.metadataNote}`}
+            {animeRecommendationInfo?.stale && " · 更新失败，显示上次缓存"}
+            {animeRecommendationInfo?.warnings?.length > 0 && ` · ${animeRecommendationInfo.warnings.join("；")}`}
+            {recommendationMode === "rising" && " · 放送排期不代表播放平台已更新"}
+          </p>}
           <div className="tmdb-section">
             <div className="tmdb-feed">
-              {(Array.isArray(selectedRecommendationSection.items) ? selectedRecommendationSection.items : []).length === 0 && <p className="empty">暂无片单，稍后点刷新片单重试。</p>}
+              {(Array.isArray(selectedRecommendationSection.items) ? selectedRecommendationSection.items : []).length === 0 && <p className="empty">{activeView === "anime" && recommendationMode === "rising" && !animeRecommendationInfo?.loading && !animeRecommendationInfo?.error && !animeRecommendationInfo?.warnings?.length ? "今日暂无放送排期。" : "暂无片单，稍后点刷新片单重试。"}</p>}
               {visibleRecommendationItems.map((item) => (
                 <div className="media-feed-card" role="button" tabIndex={0} key={`${selectedRecommendationSection.id}-${item.tmdbId || item.id || item.title}`} onClick={() => onImportTmdb(item)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onImportTmdb(item); } }}>
                   <MediaGallery item={item} />
                   <strong className="media-feed-title">{mediaTitle(item)}</strong>
                   <span className="media-air">{mediaAirText(item)}</span>
-                  <small className="media-meta">{[item.year, item.type || "剧集", item.platform || "TMDB"].filter(Boolean).join(" / ")}</small>
+                  <small className="media-meta">{[item.year, item.type || "剧集", item.platform || "TMDB", item.bangumiScore > 0 ? `Bangumi ${item.bangumiScore.toFixed(1)} 分` : ""].filter(Boolean).join(" / ")}</small>
                   <small className="media-recommendation-reason">
-                    {recommendationMode === "hot" ? "近期讨论度较高" : recommendationMode === "high" ? "高分作品，适合收藏" : recommendationMode === "rising" ? "近期值得关注" : "根据你的观影片单精选"}
+                    {activeView === "anime" ? (recommendationMode === "hot" ? "当季新番热度榜" : recommendationMode === "high" ? "Bangumi 高分作品" : recommendationMode === "rising" ? "今日放送排期" : "本季度首播新番") : recommendationMode === "hot" ? "近期讨论度较高" : recommendationMode === "high" ? "高分作品，适合收藏" : recommendationMode === "rising" ? "近期值得关注" : "根据你的观影片单精选"}
                   </small>
                   <details className="media-summary-details" onClick={(event) => event.stopPropagation()}><summary>简介</summary><p className="media-summary">{mediaDescription(item)}</p></details>
                 </div>
@@ -6117,6 +6134,9 @@ export default function Workbench() {
   const [tmdbResults, setTmdbResults] = useState([]);
   const [tmdbStatus, setTmdbStatus] = useState("输入剧名搜索，点击结果即可加入观影列表");
   const [tmdbSections, setTmdbSections] = useState([]);
+  const [animeRecommendationInfo, setAnimeRecommendationInfo] = useState({ loading: true });
+  const animeRequestRef = useRef(0);
+  const recommendationRequestRef = useRef(0);
   const [tmdbRecommendationStatus, setTmdbRecommendationStatus] = useState("正在准备电影和电视剧片单");
   const [consultationView, setConsultationView] = useState("today");
   const [marketView, setMarketView] = useState("stocks");
@@ -6560,61 +6580,52 @@ export default function Workbench() {
     changePetSupply(type, -1, item.action, type);
   }
 
-  async function loadTmdbRecommendations() {
-    setTmdbSections([]);
-    setTmdbRecommendationStatus("正在加载影视发现片单...");
+  async function loadTmdbRecommendations({ refreshAnime = false, animeOnly = false } = {}) {
+    const requestId = animeOnly ? recommendationRequestRef.current : ++recommendationRequestRef.current;
+    const currentRequest = () => recommendationRequestRef.current === requestId;
+    const animeRequestId = ++animeRequestRef.current;
+    const currentAnimeRequest = () => animeRequestRef.current === animeRequestId;
+    setAnimeRecommendationInfo((current) => ({ ...current, loading: true, error: "" }));
+    if (!animeOnly) setTmdbRecommendationStatus("正在加载影视发现片单...");
+    const animePromise = (async () => {
+      try {
+        const response = await fetch(`/api/anime-updates${refreshAnime ? "?refresh=1" : ""}`, { cache: "no-store", signal: AbortSignal.timeout(30000) });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.error || "动漫推荐加载失败");
+        if (!currentAnimeRequest()) return;
+        setTmdbSections((current) => mergeRecommendationSources(current.filter((section) => !section.id.startsWith("anime")), null, data));
+        setAnimeRecommendationInfo({ loading: false, generatedAt: data.generatedAt, stale: data.stale, warnings: data.warnings || [], metadataNote: data.metadataNote });
+      } catch (error) {
+        if (currentAnimeRequest()) setAnimeRecommendationInfo((current) => ({ ...current, loading: false, error: "动漫推荐更新失败，请点刷新片单重试", stale: Boolean(current.generatedAt) }));
+      }
+    })();
+    if (animeOnly) {
+      await animePromise;
+      return;
+    }
     try {
       const response = await fetch("/api/tmdb/recommendations");
       const text = await response.text();
       const data = text ? JSON.parse(text) : {};
       const sections = response.ok && data.ok === true && Array.isArray(data.sections) ? data.sections : [];
       if (!sections.length) throw new Error(data.error || "TMDB 没有返回真实影视数据");
-      setTmdbSections(sections);
-      setTmdbRecommendationStatus("正在补充 TVMaze 排期和 AniList 动漫数据...");
-
-      const fetchSupplement = (url, timeoutMs = 15000) => {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), timeoutMs);
-        return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
-      };
-      const readResult = async (result) => {
-        if (result.status !== "fulfilled" || !result.value.ok) return null;
-        try {
-          return await result.value.json();
-        } catch {
-          return null;
-        }
-      };
-      const attachSupplement = async (url, timeoutMs, kind) => {
-        const [result] = await Promise.allSettled([fetchSupplement(url, timeoutMs)]);
-        const data = await readResult(result);
-        if (data) {
-          setTmdbSections((current) => mergeRecommendationSources(current.length ? current : sections, kind === "media" ? data : null, kind === "anime" ? data : null));
-        }
-        return data;
-      };
-      const mediaPromise = attachSupplement("/api/media-updates?days=7&compact=1", 15000, "media");
-      const animePromise = attachSupplement("/api/anime-updates", 30000, "anime");
-      const [mediaData, animeData] = await Promise.all([mediaPromise, animePromise]);
-      const sources = ["TMDB"];
-      if (mediaData?.ok) sources.push("TVMaze");
-      if (animeData?.ok) sources.push(animeData.source || "AniList");
-      setTmdbRecommendationStatus(`${sources.join(" + ")} 在线片单 · 每组默认展示 20 条`);
-    } catch (error) {
-      // TMDB 失败时不要清空已经加载成功的 AniList/Kitsu 动漫数据。
-      setTmdbRecommendationStatus(error.message || "片单暂时不可用，请点刷新片单重试");
-      // TMDB 整体不可用时，单独尝试动漫数据源，避免动漫标签整页空白。
+      if (!currentRequest()) return;
+      setTmdbSections((current) => mergeRecommendationSources(sections, null, { sections: current.filter((section) => section.id.startsWith("anime")) }));
+      setTmdbRecommendationStatus("TMDB 在线片单 · 正在补充 TVMaze 排期");
       try {
-        const animeResponse = await fetch("/api/anime-updates");
-        const animeData = await animeResponse.json();
-        if (animeResponse.ok && animeData?.ok) {
-          setTmdbSections((current) => mergeRecommendationSources(current, null, animeData));
-          setTmdbRecommendationStatus(`${animeData.source || "AniList"} 动漫片单在线 · TMDB 暂不可用`);
+        const mediaResponse = await fetch("/api/media-updates?days=7&compact=1", { signal: AbortSignal.timeout(15000) });
+        const mediaData = await mediaResponse.json();
+        if (currentRequest() && mediaResponse.ok && mediaData.ok) {
+          setTmdbSections((current) => mergeRecommendationSources(current, mediaData, null));
+          setTmdbRecommendationStatus("TMDB + TVMaze 在线片单 · 每组默认展示 20 条");
         }
       } catch {
-        // 动漫备用数据也不可用时，保留原有错误提示。
+        if (currentRequest()) setTmdbRecommendationStatus("TMDB 在线片单 · TVMaze 排期暂不可用");
       }
+    } catch (error) {
+      if (currentRequest()) setTmdbRecommendationStatus(error.message || "片单暂时不可用，请点刷新片单重试");
     }
+    await animePromise;
   }
 
   function syncDeletedTmdbWatchlistToCloud() {
@@ -6645,7 +6656,7 @@ export default function Workbench() {
     setTmdbStatus(`正在读取《${item.titleZh || item.title}》的详情...`);
     let details = {};
     let omdbDetails = {};
-    let watchlistStatus = "";
+    let watchlistStatus = item.bangumiId && !item.tmdbId ? " · 尚未匹配 TMDB，已保留 Bangumi 资料" : "";
     const mediaType = tmdbMediaType(item);
     if (item.tmdbId) {
       try {
@@ -7746,6 +7757,7 @@ export default function Workbench() {
                 tmdbStatus={tmdbStatus}
                 tmdbSections={tmdbSections}
                 tmdbRecommendationStatus={tmdbRecommendationStatus}
+                animeRecommendationInfo={animeRecommendationInfo}
                 onSearchTmdb={searchTmdb}
                 onImportTmdb={importTmdb}
                 onLoadRecommendations={loadTmdbRecommendations}
