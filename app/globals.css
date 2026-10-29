@@ -1756,6 +1756,7 @@ select:focus-visible {
   --ios-panel-muted: #f5f6f8;
   --ios-ink: #1d1d1f;
   --ios-muted: #6e6e73;
+  --ios-muted-strong: #4d5866;
   --ios-separator: rgba(60, 60, 67, 0.16);
   --ios-blue: #0a84ff;
   --ios-blue-soft: rgba(10, 132, 255, 0.12);
@@ -9109,3 +9110,49 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
   background: var(--ios-blue) !important;
   box-shadow: 0 7px 16px color-mix(in srgb, var(--ios-blue) 24%, transparent) !important;
 }
+
+/* Keep asset artwork readable against every theme surface. */
+.ios18-shell .asset-row,
+.ios18-shell .asset-form,
+.ios18-shell .asset-icon-picker {
+  border-color: color-mix(in srgb, var(--ios-blue) 18%, var(--ios-separator)) !important;
+}
+.ios18-shell .asset-icon-btn,
+.ios18-shell .asset-row-icon,
+.ios18-shell .asset-icon-cell {
+  border-color: color-mix(in srgb, var(--ios-blue) 16%, var(--ios-separator)) !important;
+  background: color-mix(in srgb, var(--ios-panel) 86%, var(--ios-blue-soft)) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.46), 0 4px 12px rgba(30, 43, 60, 0.08);
+}
+.ios18-shell .asset-icon-img {
+  filter: saturate(1.42) contrast(1.22) brightness(0.98) drop-shadow(0 2px 3px rgba(21, 35, 52, 0.28));
+}
+.ios18-shell .asset-icon-cell:hover,
+.ios18-shell .asset-icon-cell:focus-visible,
+.ios18-shell .asset-icon-cell.selected {
+  border-color: var(--ios-blue) !important;
+  background: color-mix(in srgb, var(--ios-blue-soft) 88%, var(--ios-panel)) !important;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ios-blue) 30%, transparent), 0 6px 16px rgba(30, 43, 60, 0.14);
+}
+.ios18-shell .asset-row-info strong,
+.ios18-shell .asset-row-cost strong {
+  color: var(--ios-ink) !important;
+  font-weight: 800;
+}
+.ios18-shell .asset-row-info small,
+.ios18-shell .asset-row-cost small,
+.ios18-shell .asset-field,
+.ios18-shell .asset-icon-tabs button {
+  color: var(--ios-muted-strong) !important;
+}
+.ios18-shell .asset-status-tag {
+  color: var(--ios-ink) !important;
+  background: color-mix(in srgb, var(--ios-blue-soft) 88%, var(--ios-panel)) !important;
+  border: 1px solid color-mix(in srgb, var(--ios-blue) 22%, var(--ios-separator));
+}
+.ios18-shell .asset-status-tag.active {
+  color: var(--ios-blue) !important;
+  background: color-mix(in srgb, var(--ios-blue-soft) 92%, var(--ios-panel)) !important;
+  border-color: color-mix(in srgb, var(--ios-blue) 38%, var(--ios-separator));
+}
+.ios18-shell .asset-retired { opacity: 0.88; }

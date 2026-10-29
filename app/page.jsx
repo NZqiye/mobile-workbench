@@ -3739,14 +3739,28 @@ function AssetIcon({ name, size = 20 }) {
   return <img className="asset-icon-img" src={src} width={size} height={size} alt="" loading="eager" decoding="async" onError={() => setErr(true)} />;
 }
 
-const assetIconCategories = thiingsIconCategories.map((category) => ({
-  ...category,
-  icons: category.id === "sport"
-    ? ["thiings:badminton-racket", ...category.icons]
-    : category.id === "health"
-      ? ["thiings:medicine-bottle", ...category.icons]
-      : category.icons,
-}));
+const assetIconCategories = [
+  {
+    id: "common",
+    label: "常用图标",
+    icons: [
+      "thiings:smartphone", "thiings:laptop", "thiings:camera", "thiings:headphones",
+      "thiings:smartwatch", "thiings:house", "thiings:key", "thiings:lamp",
+      "thiings:sofa", "thiings:coffee", "thiings:mug", "thiings:water-bottle-1",
+      "thiings:backpack", "thiings:wallet", "thiings:credit-card", "thiings:calculator",
+      "thiings:book", "thiings:notebook-223yak", "thiings:bicycle", "thiings:car",
+      "thiings:airplane", "thiings:umbrella-kpw0ub", "thiings:medicine-capsule", "thiings:fitness-tracker",
+    ],
+  },
+  ...thiingsIconCategories.map((category) => ({
+    ...category,
+    icons: category.id === "sport"
+      ? ["thiings:badminton-racket", ...category.icons]
+      : category.id === "health"
+        ? ["thiings:medicine-bottle", ...category.icons]
+        : category.icons,
+  })),
+];
 const assetCategoryOptions = assetIconCategories.map((category) => category.label);
 
 function assetCategory(item) {
@@ -3778,7 +3792,7 @@ function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelet
   const [formNotes, setFormNotes] = useState("");
   const [formIcon, setFormIcon] = useState("thiings:box");
   const [showIconPicker, setShowIconPicker] = useState(false);
-  const [iconTab, setIconTab] = useState("digital");
+  const [iconTab, setIconTab] = useState("common");
   const assetList = Array.isArray(items) ? items : [];
   const activeItems = assetList.filter((item) => item.status === "服役中");
   const visibleItems = assetList.filter((item) => (item.status || "服役中") === status);
@@ -3795,7 +3809,7 @@ function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelet
   }, 0);
 
   function resetForm() {
-    setFormName(""); setFormPrice(""); setFormDate(todayKey()); setFormCategory("数码科技"); setFormStatus(status); setFormSaleDate(""); setFormSalePrice(""); setFormRetirementDate(""); setFormNotes(""); setFormIcon("thiings:box"); setShowIconPicker(false); setEditingId(null); setShowForm(false);
+    setFormName(""); setFormPrice(""); setFormDate(todayKey()); setFormCategory("数码科技"); setFormStatus(status); setFormSaleDate(""); setFormSalePrice(""); setFormRetirementDate(""); setFormNotes(""); setFormIcon("thiings:box"); setIconTab("common"); setShowIconPicker(false); setEditingId(null); setShowForm(false);
   }
 
   function handleSubmit(e) {
