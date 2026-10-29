@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { thiingsIconByKey, thiingsIconCategories } from "../lib/thiings-icons";
+import WorkbenchSelect, { SelectChevron } from "./components/workbench-select";
 
 const storagePrefix = "qiyeworkbench:";
 
@@ -154,6 +155,7 @@ const ponyThemes = [
   { id: "blue", name: "星蓝", note: "深空极光", primary: "#2563eb", accent: "#c084fc" },
   { id: "pine", name: "森岚", note: "雾森松绿", primary: "#1f7a4d", accent: "#e8b85c" },
   { id: "bw", name: "黑白", note: "极简黑白", primary: "#18181b", accent: "#f4f4f5" },
+  { id: "moon", name: "月白", note: "雾蓝月光", primary: "#496b82", accent: "#b9d3dc" },
 ];
 const noteTypes = [
   { value: "life", label: "生活" },
@@ -712,10 +714,9 @@ function CrewNavIcon({ name }) {
 }
 
 function PonyMark({ theme = "rmb", compact = false }) {
+  const ponyAsset = theme === "jade" ? "/pony/celadon-pony.png" : theme === "pine" ? "/pony/pine-pony.png" : "/pony/forest-pony-base.png";
   return (
-    <svg className={compact ? "pony-mark compact" : "pony-mark"} viewBox="0 0 24 24" aria-hidden="true">
-      <path className="pony-body" d="M22 6v3.5l-1.5.5l-1.54-2.46c-.13-.21-.46-.12-.46.13v3.58c0 .98-.39 1.86-1 2.53V21H15v-6h-.25c-.21 0-.42-.03-.62-.06l-4.44-.74l-1.12 2.01l.96 4.79H7l-1-4.75c-.03-.3 0-.6.16-.86l1.02-1.81a3.27 3.27 0 0 1-1.68-2.77c-.04.15-.06.37-.03.69c.03.44.14 1.09.07 1.81c-.04.72-.37 1.46-.79 1.95c-.43.49-.9.83-1.4 1.09l-.7-.7c.19-.47.38-.89.42-1.28c.06-.37-.01-.67-.12-.94l-.53-1.13c-.21-.51-.47-1.25-.42-2.12c.03-.85.5-1.96 1.39-2.57c.9-.61 1.87-.69 2.66-.53c.5.1 1.01.34 1.45.68c.37-.17.8-.26 1.25-.26h5.75V7c0-2.21 1.79-4 4-4H22l-.89 1.34c.54.36.89.97.89 1.66" />
-    </svg>
+    <img className={`pony-mark ${compact ? "compact" : ""} theme-${theme}`} src={ponyAsset} alt="" aria-hidden="true" loading="lazy" />
   );
 }
 
@@ -727,7 +728,7 @@ function CultivationAvatar() {
 
 function PonyThemePanel({ value, onChange }) {
   return (
-    <section className="panel">
+    <section className="panel pony-theme-panel">
       <div className="panel-head">
         <div>
           <h2>主题小马</h2>
@@ -740,16 +741,25 @@ function PonyThemePanel({ value, onChange }) {
           <button
             className={`pony-theme-card theme-${theme.id} ${value === theme.id ? "active" : ""}`}
             type="button"
+            aria-pressed={value === theme.id}
             key={theme.id}
             onClick={() => onChange(theme.id)}
           >
             <PonyMark theme={theme.id} compact />
-            <strong>{theme.name}</strong>
-            <small>{theme.note}</small>
-            <span>
+            <div className="pony-theme-copy">
+              <strong>{theme.name}</strong>
+              <small>{theme.note}</small>
+            </div>
+            <span className="pony-theme-swatches">
               <i style={{ background: theme.primary }} />
               <i style={{ background: theme.accent }} />
             </span>
+            {value === theme.id && (
+              <span className="pony-theme-status">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+                当前主题
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -2412,11 +2422,11 @@ function MarketBoard({ compact = false, onAssetsChange }) {
         <>
           <p className="market-refresh-note">每小时自动更新，也可以随时手动刷新；拖动左侧把手调整自选顺序。</p>
           <form className="market-add-form" onSubmit={addStock}>
-            <select value={stockMarket} onChange={(event) => setStockMarket(event.target.value)} aria-label="股票类型">
+            <WorkbenchSelect value={stockMarket} onChange={(event) => setStockMarket(event.target.value)} aria-label="股票类型">
               <option value="a">A股</option>
               <option value="hk">港股</option>
               <option value="us">美股</option>
-            </select>
+            </WorkbenchSelect>
             <input value={stockInput} onChange={(event) => setStockInput(event.target.value)} placeholder={stockMarket === "hk" ? "例如 00700" : stockMarket === "us" ? "例如 AAPL" : "例如 600584"} />
             <button className="chip-button" type="submit">添加</button>
           </form>
@@ -2724,18 +2734,18 @@ function IndexTrackerBoard({ onItemsChange }) {
         <form className="index-add-form" onSubmit={addIndexItem}>
           <label className="index-add-wide">
             <span>常用指数</span>
-            <select value={draft.preset} onChange={(event) => chooseIndexPreset(event.target.value)}>
+            <WorkbenchSelect value={draft.preset} onChange={(event) => chooseIndexPreset(event.target.value)}>
               {indexTrackerPresets.map((preset) => (
                 <option value={preset.value} key={preset.value || "custom"}>{preset.label}</option>
               ))}
-            </select>
+            </WorkbenchSelect>
           </label>
           <label className="index-add-kind">
             <span>类型</span>
-            <select value={draft.kind} onChange={(event) => updateDraft("kind", event.target.value)}>
+            <WorkbenchSelect value={draft.kind} onChange={(event) => updateDraft("kind", event.target.value)}>
               <option value="market">行情代码</option>
               <option value="fund">基金代码</option>
-            </select>
+            </WorkbenchSelect>
           </label>
           <label>
             <span>名称</span>
@@ -2948,7 +2958,6 @@ function FundBoard({ onPortfolioChange }) {
   const [tradeShares, setTradeShares] = useState("");
   const [tradeProfit, setTradeProfit] = useState("");
   const [tradeNote, setTradeNote] = useState("");
-  const [fundMenuOpen, setFundMenuOpen] = useState(false);
   const fundRequestRef = useRef(0);
 
   const summary = useMemo(() => funds.reduce((acc, fund) => ({
@@ -3035,12 +3044,10 @@ function FundBoard({ onPortfolioChange }) {
     if (portfolio.some((item) => item.code === nextFund)) {
       setFundInput("");
       setTradeCode(nextFund);
-      setFundMenuOpen(false);
       return;
     }
     const nextPortfolio = savePortfolio([...portfolio, { code: nextFund, name: "", trades: [] }]);
     setTradeCode(nextFund);
-    setFundMenuOpen(false);
     setFundInput("");
     setStatus(`已添加 ${nextFund}`);
     loadFunds(true, nextPortfolio);
@@ -3053,7 +3060,6 @@ function FundBoard({ onPortfolioChange }) {
     if (tradeCode === code) {
       setTradeCode(nextPortfolio[0]?.code || defaultFundCodes.split(",")[0]);
     }
-    setFundMenuOpen(false);
     setStatus(`\u5df2\u5220\u9664 ${code}`);
     loadFunds(true, nextPortfolio);
   }
@@ -3153,7 +3159,6 @@ function FundBoard({ onPortfolioChange }) {
   function openTrade(code, mode) {
     setTradeCode(code);
     setTradeMode(mode);
-    setFundMenuOpen(false);
     setStatus(mode === "sell" ? "请输入卖出金额或份额" : mode === "import" ? "请输入已有持仓市值、份额和收益" : mode === "calibrate" ? "请输入支付宝当前市值和持有收益" : "请输入定投金额");
   }
 
@@ -3172,7 +3177,6 @@ function FundBoard({ onPortfolioChange }) {
     currentPrice: 0,
   }));
   const fundMenuOptions = tradeOptions.length ? tradeOptions : [{ code: "", name: "暂无基金" }];
-  const selectedTradeOption = fundMenuOptions.find((item) => item.code === tradeCode) || fundMenuOptions[0];
 
   return (
     <section className="market-panel fund-panel">
@@ -3226,31 +3230,9 @@ function FundBoard({ onPortfolioChange }) {
           </div>
         </div>
         <form className={`fund-trade-form ${tradeMode === "import" || tradeMode === "calibrate" ? "fund-trade-form-import" : ""}`} onSubmit={recordTrade}>
-          <div className={`recommendation-menu fund-select-menu ${fundMenuOpen ? "open" : ""}`}>
-            <button className="recommendation-menu-trigger fund-select-trigger" type="button" onClick={() => setFundMenuOpen(!fundMenuOpen)} aria-expanded={fundMenuOpen}>
-              <span><i aria-hidden="true" />{selectedTradeOption?.name || selectedTradeOption?.code || "暂无基金"}</span>
-              <b aria-hidden="true">⌄</b>
-            </button>
-            {fundMenuOpen && (
-              <div className="recommendation-menu-list fund-select-list">
-                {fundMenuOptions.map((item) => (
-                  <button
-                    className={item.code === tradeCode ? "active" : ""}
-                    type="button"
-                    key={item.code || "empty-fund"}
-                    onClick={() => {
-                      setTradeCode(item.code);
-                      setFundMenuOpen(false);
-                    }}
-                    disabled={!item.code}
-                  >
-                    <i aria-hidden="true" />
-                    <span>{item.name || item.code}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <WorkbenchSelect className="fund-select-control" aria-label="选择交易基金" value={tradeCode} onChange={(event) => setTradeCode(event.target.value)} disabled={!tradeOptions.length}>
+            {fundMenuOptions.map((item) => <option value={item.code} key={item.code || "empty-fund"}>{item.name || item.code}</option>)}
+          </WorkbenchSelect>
           <input value={tradeAmount} onChange={(event) => setTradeAmount(event.target.value)} type="number" min="0" step="0.01" placeholder={tradeMode === "sell" ? "卖出金额，可不填" : tradeMode === "import" ? "当前持有市值（元）" : tradeMode === "calibrate" ? "支付宝当前市值" : "定投金额（元）"} />
           <input value={tradeShares} onChange={(event) => setTradeShares(event.target.value)} type="number" step="0.01" placeholder={tradeMode === "sell" ? "卖出份额，可不填" : tradeMode === "import" ? "当前持有份额" : tradeMode === "calibrate" ? "支付宝今日收益（可不填）" : "份额（可不填）"} />
           {(tradeMode === "import" || tradeMode === "calibrate") && <input value={tradeProfit} onChange={(event) => setTradeProfit(event.target.value)} type="number" step="0.01" placeholder={tradeMode === "calibrate" ? "支付宝持有收益" : "已有持有收益（元）"} />}
@@ -3323,39 +3305,9 @@ function itemMatchesQuery(item, query, fields) {
     .some((value) => String(value).toLowerCase().includes(keyword));
 }
 
-function FormMenuSelect({ name, value, options, open, onToggle, onSelect, className = "", ariaLabel }) {
-  const selected = options.find((option) => option.value === value) || options[0];
-
-  return (
-    <div className={`recommendation-menu anniversary-menu ${className} ${open ? "open" : ""}`.trim()}>
-      <input type="hidden" name={name} value={value} />
-      <button className="recommendation-menu-trigger anniversary-menu-trigger" type="button" onClick={onToggle} aria-label={ariaLabel} aria-expanded={open}>
-        <span>{selected?.label || value}</span>
-        <i aria-hidden="true" className="menu-caret" />
-      </button>
-      {open && (
-        <div className="recommendation-menu-list anniversary-menu-list">
-          {options.map((option) => (
-            <button
-              className={option.value === value ? "active" : ""}
-              type="button"
-              key={option.value}
-              onClick={() => onSelect(option.value)}
-            >
-              <span>{option.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onToggleHabit, onDeleteHabit, onAddTask, onToggleTask, onDeleteTask, onAddAnniversary, onDeleteAnniversary }) {
   const [anniversaryType, setAnniversaryType] = useState("countdown");
   const [anniversaryCalendarType, setAnniversaryCalendarType] = useState("solar");
-  const [anniversaryTypeOpen, setAnniversaryTypeOpen] = useState(false);
-  const [anniversaryCalendarOpen, setAnniversaryCalendarOpen] = useState(false);
   const unfinishedTasks = tasks.filter((task) => task.status !== "已完成").slice(0, 8);
   const sortedAnniversaries = [...anniversaries].sort((a, b) => (anniversaryMeta(a).nextDays ?? 99999) - (anniversaryMeta(b).nextDays ?? 99999));
   const isElapsedThisYear = (item) => {
@@ -3478,41 +3430,21 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
           <input name="title" placeholder="名称，例如 高考、结婚纪念、生日、春节" required />
           <div className="anniversary-fields">
             <input name="date" type="date" required />
-            <FormMenuSelect
+            <WorkbenchSelect
               name="type"
               value={anniversaryType}
-              options={anniversaryTypes.map((type) => ({ value: type.id, label: type.label }))}
-              open={anniversaryTypeOpen}
-              onToggle={() => {
-                setAnniversaryTypeOpen((current) => !current);
-                setAnniversaryCalendarOpen(false);
-              }}
-              onSelect={(value) => {
-                setAnniversaryType(value);
-                setAnniversaryTypeOpen(false);
-              }}
+              onChange={(event) => setAnniversaryType(event.target.value)}
               className="anniversary-type-menu"
-              ariaLabel="选择纪念日类型"
-            />
-            <FormMenuSelect
+              aria-label="选择纪念日类型"
+            >{anniversaryTypes.map((type) => <option value={type.id} key={type.id}>{type.label}</option>)}</WorkbenchSelect>
+            <WorkbenchSelect
               name="calendarType"
               value={anniversaryCalendarType}
-              options={[
-                { value: "solar", label: "公历" },
-                { value: "lunar", label: "农历" },
-              ]}
-              open={anniversaryCalendarOpen}
-              onToggle={() => {
-                setAnniversaryCalendarOpen((current) => !current);
-                setAnniversaryTypeOpen(false);
-              }}
-              onSelect={(value) => {
-                setAnniversaryCalendarType(value);
-                setAnniversaryCalendarOpen(false);
-              }}
+              onChange={(event) => setAnniversaryCalendarType(event.target.value)}
               className="anniversary-calendar-menu"
-              ariaLabel="选择日历类型"
-            />          </div>
+              aria-label="选择日历类型"
+            ><option value="solar">公历</option><option value="lunar">农历</option></WorkbenchSelect>
+          </div>
           <button type="submit">添加纪念日</button>
         </form>
         <div className="anniversary-sections">
@@ -3592,7 +3524,7 @@ function NoteForm({ onSave, editing, onCancel }) {
         <input name="title" defaultValue={item?.title || ""} placeholder="这条记录的标题" required />
         <div className="inline-fields">
           <input name="date" type="date" defaultValue={getItemDate(item)} />
-          <select name="type" defaultValue={item?.type || "life"}>{noteTypes.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select>
+          <WorkbenchSelect name="type" defaultValue={item?.type || "life"}>{noteTypes.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</WorkbenchSelect>
         </div>
         <input name="mood" defaultValue={item?.mood || ""} placeholder="心情，可选" />
         <input name="tags" defaultValue={(item?.tags || []).join(",")} placeholder="标签，用逗号分隔" />
@@ -3616,10 +3548,10 @@ function NoteList({ notes, onDelete, onEdit }) {
       <div className="panel-head"><h2>记录列表</h2><span className="tag">{filteredNotes.length}/{notes.length} 条</span></div>
       <div className="filter-panel">
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索标题、内容、标签" />
-        <select value={type} onChange={(event) => setType(event.target.value)}>
+        <WorkbenchSelect value={type} onChange={(event) => setType(event.target.value)}>
           <option value="all">全部类型</option>
           {noteTypes.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}
-        </select>
+        </WorkbenchSelect>
       </div>
       <div className="record-list">
         {notes.length === 0 && <p className="empty">还没有记录，先写一条。</p>}
@@ -3937,12 +3869,12 @@ function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelet
           <input value={formPrice} onChange={(e) => setFormPrice(e.target.value)} type="number" step="0.01" placeholder="价格" required />
           <input value={formDate} onChange={(e) => setFormDate(e.target.value)} type="date" required />
           <div className="asset-form-row">
-            <select value={formCategory} onChange={(e) => { const category = assetIconCategories.find((item) => item.label === e.target.value); setFormCategory(e.target.value); if (category) setIconTab(category.id); }}>
+            <WorkbenchSelect value={formCategory} onChange={(e) => { const category = assetIconCategories.find((item) => item.label === e.target.value); setFormCategory(e.target.value); if (category) setIconTab(category.id); }}>
               {assetIconCategories.map((category) => <option value={category.label} key={category.id}>{category.label}</option>)}
-            </select>
-            <select value={formStatus} onChange={(e) => setFormStatus(e.target.value)}>
+            </WorkbenchSelect>
+            <WorkbenchSelect value={formStatus} onChange={(e) => setFormStatus(e.target.value)}>
               <option value="服役中">服役中</option><option value="退役">退役</option><option value="已出售">已出售</option>
-            </select>
+            </WorkbenchSelect>
           </div>
           {formStatus === "已出售" && (
             <div className="asset-form-row">
@@ -4291,7 +4223,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
                 ) : (
                 <>
                   <div className="watch-rating-season-head">
-                    <label>选择季数<select value={seasonNumber} onChange={(event) => setSeasonNumber(event.target.value)} disabled={!seasonOptions.length}><option value="">选择季</option>{seasonOptions.map((season) => <option value={season.seasonNumber} key={season.seasonNumber}>第 {season.seasonNumber} 季{season.episodeCount ? ` · ${season.episodeCount} 集` : ""}</option>)}</select></label>
+                    <label>选择季数<WorkbenchSelect value={seasonNumber} onChange={(event) => setSeasonNumber(event.target.value)} disabled={!seasonOptions.length}><option value="">选择季</option>{seasonOptions.map((season) => <option value={season.seasonNumber} key={season.seasonNumber}>第 {season.seasonNumber} 季{season.episodeCount ? ` · ${season.episodeCount} 集` : ""}</option>)}</WorkbenchSelect></label>
                     <div className="watch-rating-season-stats"><strong>{checkedCount}/{episodeCount || episodes.length} 集</strong><small>本季已看</small></div>
                     {episodes.length > 0 && <button type="button" className="secondary" onClick={toggleAllEpisodes}>{allEpisodesChecked ? "取消全选" : "全选本季"}</button>}
                   </div>
@@ -4643,7 +4575,6 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
   const [tvSectionId, setTvSectionId] = useState("tvHot");
   const [varietySectionId, setVarietySectionId] = useState("varietyHot");
   const [animeSectionId, setAnimeSectionId] = useState("animeHot");
-  const [recommendationMenuOpen, setRecommendationMenuOpen] = useState(false);
   const [recommendationMode, setRecommendationMode] = useState("hot");
   const [recommendationExpanded, setRecommendationExpanded] = useState(false);
   const allItems = Array.isArray(items) ? items : [];
@@ -4775,7 +4706,6 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
   const visibleRecommendationItems = recommendationExpanded ? selectedRecommendationItems : selectedRecommendationItems.slice(0, 20);
   const selectedRecommendationIcon = activeView === "anime" ? "spark" : activeView === "variety" ? "screen" : selectedRecommendationSection?.id?.startsWith("movie") ? "movie" : "tv";
   useEffect(() => {
-    setRecommendationMenuOpen(false);
     setRecommendationExpanded(false);
   }, [activeView, selectedRecommendationId]);
   function selectRecommendationSection(id) {
@@ -4784,7 +4714,6 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
     if (activeView === "variety") setVarietySectionId(id);
     if (activeView === "anime") setAnimeSectionId(id);
     if (activeView === "anime") setRecommendationMode({ animeHot: "hot", animeHistory: "high", animeToday: "rising", animeSeason: "personal" }[id] || "hot");
-    setRecommendationMenuOpen(false);
   }
   useEffect(() => {
     if (activeView !== "anime") return undefined;
@@ -4878,10 +4807,10 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
               <h2>{monthTitle(selected.date)}</h2>
               <div className="calendar-actions">
                 <button className="chip-button" type="button" onClick={onRefreshTmdbTracked}>刷新更新</button>
-                <button className="calendar-toggle" type="button" onClick={() => setExpanded(!expanded)}>{expanded ? "⌃" : "⌄"}</button>
+                <button className="calendar-toggle" type="button" aria-label={expanded ? "收起月历" : "展开月历"} aria-expanded={expanded} aria-controls="watch-calendar-days" onClick={() => setExpanded(!expanded)}><SelectChevron /></button>
               </div>
             </div>
-            <div className={expanded ? "week-grid month-grid" : "week-grid"}>
+            <div id="watch-calendar-days" className={expanded ? "week-grid month-grid" : "week-grid"} key={expanded ? "month" : "week"}>
               {calendarDays.map((day) => (
                 <button className={`${day.dateKey === selectedDate ? "week-day active" : "week-day"} ${day.inMonth === false ? "outside-month" : ""}`} type="button" key={day.dateKey} onClick={() => setSelectedDate(day.dateKey)}>
                   <span>{weekdayText(day.date)}</span>
@@ -4934,7 +4863,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
                 <h2>我的片单</h2>
                 <p>已加入 {managedWatchCount} 部，默认收起；搜索或展开后再管理</p>
               </div>
-              <button className="chip-button" type="button" onClick={() => setWatchListOpen(!watchListOpen)}>
+              <button className="chip-button" type="button" aria-expanded={watchListOpen} aria-controls="watch-list-entries" onClick={() => setWatchListOpen(!watchListOpen)}>
                 {watchListOpen ? "收起片单" : "管理片单"}
               </button>
             </div>
@@ -4952,7 +4881,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
               ))}
             </div>
             {(watchListOpen || hasActiveWatchFilter) ? (
-              <div className="watch-list">
+              <div className="watch-list" id="watch-list-entries">
                 {managedWatchItems.length === 0 && <p className="empty">还没有加入影视，先搜索或从电影/电视剧里添加。</p>}
                 {managedWatchItems.length > 0 && filteredWatchItems.length === 0 && <p className="empty">没有找到匹配的片单条目。</p>}
                 {visibleWatchItems.map((item) => (
@@ -4996,22 +4925,9 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
               <h2 className="icon-heading"><MotionIcon name={selectedRecommendationIcon} />{selectedRecommendationSection.title}</h2>
             </div>
             <div className="recommendation-actions">
-              <div className={`recommendation-menu ${recommendationMenuOpen ? "open" : ""}`}>
-                <button className="recommendation-menu-trigger" type="button" onClick={() => setRecommendationMenuOpen(!recommendationMenuOpen)} aria-expanded={recommendationMenuOpen}>
-                  <span><MotionIcon name={selectedRecommendationIcon} />{selectedRecommendationSection.title}</span>
-                  <i aria-hidden="true">⌄</i>
-                </button>
-                {recommendationMenuOpen && (
-                  <div className="recommendation-menu-list">
-                    {activeRecommendationOptions.map((section) => (
-                      <button className={section.id === selectedRecommendationSection.id ? "active" : ""} type="button" key={section.id} onClick={() => selectRecommendationSection(section.id)}>
-                        <MotionIcon name={section.id.startsWith("anime") ? "spark" : section.id.startsWith("variety") ? "screen" : section.id.startsWith("movie") ? "movie" : "tv"} />
-                        <span>{section.title}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <WorkbenchSelect aria-label="选择推荐榜单" value={selectedRecommendationSection.id} onChange={(event) => selectRecommendationSection(event.target.value)}>
+                {activeRecommendationOptions.map((section) => <option value={section.id} key={section.id}>{section.title}</option>)}
+              </WorkbenchSelect>
               <span className="recommendation-count">{selectedRecommendationCount} 条</span>
               <button className="chip-button" type="button" onClick={() => onLoadRecommendations({ refreshAnime: true, animeOnly: activeView === "anime" })} disabled={activeView === "anime" && animeRecommendationInfo?.loading}>刷新片单</button>
             </div>
@@ -5093,8 +5009,8 @@ function ConsultationForm({ onSave, editing, onCancel }) {
       <form className="stack-form" onSubmit={submit}>
         <input name="title" defaultValue={item?.title || ""} placeholder="剧名 / 电影名 / 动漫名" required />
         <div className="inline-fields">
-          <select name="status" defaultValue={item?.status || "想看的剧"}>{consultationStatuses.map((item) => <option key={item}>{item}</option>)}</select>
-          <select name="type" defaultValue={item?.type || "剧集"}><option>剧集</option><option>电影</option><option>动漫</option><option>纪录片</option><option>综艺</option></select>
+          <WorkbenchSelect name="status" defaultValue={item?.status || "想看的剧"}>{consultationStatuses.map((item) => <option key={item}>{item}</option>)}</WorkbenchSelect>
+          <WorkbenchSelect name="type" defaultValue={item?.type || "剧集"}><option>剧集</option><option>电影</option><option>动漫</option><option>纪录片</option><option>综艺</option></WorkbenchSelect>
         </div>
         <div className="inline-fields">
           <input name="year" defaultValue={item?.year || ""} placeholder="年份，例如 2026" />
@@ -5110,7 +5026,7 @@ function ConsultationForm({ onSave, editing, onCancel }) {
         </div>
         <input name="updateEpisodes" defaultValue={item?.updateEpisodes || ""} placeholder="本次更新集数，例如 9,10 或 9-10" />
         <div className="inline-fields">
-          <select name="rating" defaultValue={item?.rating || ""}>
+          <WorkbenchSelect name="rating" defaultValue={item?.rating || ""}>
             <option value="">暂不评分</option>
             <option value="10">10 分</option>
             <option value="9">9 分</option>
@@ -5119,7 +5035,7 @@ function ConsultationForm({ onSave, editing, onCancel }) {
             <option value="6">6 分</option>
             <option value="5">5 分</option>
             <option value="4">4 分及以下</option>
-          </select>
+          </WorkbenchSelect>
           <input name="watchedDate" type="date" defaultValue={item?.watchedDate || ""} />
         </div>
         <div className="inline-fields">
@@ -5148,10 +5064,10 @@ function ConsultationList({ consultations, onDelete, onEdit }) {
       <div className="panel-head"><h2>观影记录</h2><span className="tag">{filteredConsultations.length}/{consultations.length} 部</span></div>
       <div className="filter-panel">
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索剧名、评价、平台、标签" />
-        <select value={status} onChange={(event) => setStatus(event.target.value)}>
+        <WorkbenchSelect value={status} onChange={(event) => setStatus(event.target.value)}>
           <option value="all">全部分类</option>
           {consultationStatuses.map((item) => <option key={item}>{item}</option>)}
-        </select>
+        </WorkbenchSelect>
       </div>
       <div className="record-list">
         {consultations.length === 0 && <p className="empty">还没有观影记录，先添加一部想看的剧。</p>}
@@ -5493,10 +5409,10 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
           <div className="asset-form-row">
             <label className="subscription-field">
               <span>购买类型</span>
-              <select value={purchaseType} onChange={(event) => setPurchaseType(event.target.value)}>
+              <WorkbenchSelect value={purchaseType} onChange={(event) => setPurchaseType(event.target.value)}>
                 <option value="订阅会员">订阅会员</option>
                 <option value="永久会员">永久会员</option>
-              </select>
+              </WorkbenchSelect>
             </label>
             <label className="subscription-field">
               <span>购买日期</span>
@@ -5507,11 +5423,11 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
             <div className="asset-form-row">
               <label className="subscription-field">
                 <span>购买周期</span>
-                <select value={billingCycle} onChange={(event) => setBillingCycle(event.target.value)}>
+                <WorkbenchSelect value={billingCycle} onChange={(event) => setBillingCycle(event.target.value)}>
                   <option value="每月">每月</option>
                   <option value="每季">每季</option>
                   <option value="每年">每年</option>
-                </select>
+                </WorkbenchSelect>
               </label>
               <label className="subscription-field">
                 <span>订阅结束日期</span>
@@ -7596,7 +7512,7 @@ export default function Workbench() {
   ];
 
   return (
-    <main className={`phone-shell ${displayMode === "desktop" ? "desktop-shell desktop-redesign" : "mobile-shell"} ${menuOpen ? "menu-open" : ""} page-${activePage} pony-theme-${ponyTheme}`}>
+    <main className={`phone-shell ios18-shell ${displayMode === "desktop" ? "desktop-shell desktop-redesign" : "mobile-shell"} ${menuOpen ? "menu-open" : ""} page-${activePage} pony-theme-${ponyTheme}`}>
       <div className="phone-status">
         <button className="menu-toggle" type="button" aria-label="打开菜单" onClick={() => setMenuOpen(true)}>☰</button>
         <strong>{clock}</strong>
@@ -7610,15 +7526,23 @@ export default function Workbench() {
             <strong>七夜online</strong>
           </button>
           <div className="side-nav-list">
-            {pages.filter((page) => page.id !== "settings").map((page) => (
-              <button className={`nav-item ${activePage === page.id ? "active" : ""}`} type="button" key={page.id} onClick={() => switchPage(page.id)}>
+            <span className="nav-section-label">工作台</span>
+            {pages.filter((page) => ["today", "plans", "market", "consultations", "news"].includes(page.id)).map((page) => (
+              <button className={`nav-item ${activePage === page.id ? "active" : ""}`} aria-current={activePage === page.id ? "page" : undefined} type="button" key={page.id} onClick={() => switchPage(page.id)}>
+                <span className="nav-symbol"><CrewNavIcon name={page.icon} /></span>
+                <small>{page.name}</small>
+              </button>
+            ))}
+            <span className="nav-section-label">记录</span>
+            {pages.filter((page) => ["diet", "assets", "exercise", "life"].includes(page.id)).map((page) => (
+              <button className={`nav-item ${activePage === page.id ? "active" : ""}`} aria-current={activePage === page.id ? "page" : undefined} type="button" key={page.id} onClick={() => switchPage(page.id)}>
                 <span className="nav-symbol"><CrewNavIcon name={page.icon} /></span>
                 <small>{page.name}</small>
               </button>
             ))}
           </div>
           <div className="side-nav-bottom">
-            <button className={`nav-item settings-nav-item ${activePage === "settings" ? "active" : ""}`} type="button" onClick={() => switchPage("settings")}>
+            <button className={`nav-item settings-nav-item ${activePage === "settings" ? "active" : ""}`} aria-current={activePage === "settings" ? "page" : undefined} type="button" onClick={() => switchPage("settings")}>
               <span className="nav-symbol"><CrewNavIcon name="settings" /></span>
               <small>设置</small>
             </button>
@@ -7664,6 +7588,16 @@ export default function Workbench() {
           )}
 
         <section className="content">
+          {activePage === "today" && (
+            <header className="ios-page-intro">
+              <div>
+                <span className="ios-eyebrow">{dateKey}</span>
+                <h1>今天</h1>
+                <p>把重要的事，放在眼前。</p>
+              </div>
+              <button className="ios-intro-action" type="button" onClick={() => setOverviewOpen(true)} aria-label="打开工作台总览">总览</button>
+            </header>
+          )}
           {activePage === "today" && (
             <>
               <TodayTimePanel clock={clock} />
@@ -7858,6 +7792,26 @@ export default function Workbench() {
           onChangeTheme={changePonyTheme}
         />
       </section>
+      <nav className="bottom-nav" aria-label="主要导航">
+        {[
+          { id: "today", label: "今日速看", icon: "home" },
+          { id: "plans", label: "每日安排", icon: "checklist" },
+          { id: "market", label: "股市行情", icon: "trend" },
+          { id: "consultations", label: "观影记录", icon: "chat" },
+          { id: "more", label: "更多", icon: "settings" },
+        ].map((item) => (
+          <button
+            className={`bottom-nav-item ${item.id === activePage || (item.id === "more" && !["today", "plans", "market", "consultations"].includes(activePage)) ? "active" : ""}`}
+            type="button"
+            key={item.id}
+            onClick={() => item.id === "more" ? setMenuOpen(true) : switchPage(item.id)}
+            aria-label={item.label}
+          >
+            <span><CrewNavIcon name={item.icon} /></span>
+            <small>{item.label}</small>
+          </button>
+        ))}
+      </nav>
       <SkillOverview
         open={overviewOpen}
         skills={skillSummaries}
