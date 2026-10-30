@@ -48,6 +48,7 @@ async function matchTmdb(item, signal) {
         ...(titleZh ? { title: titleZh, titleZh } : {}),
         ...(summaryZh ? { summary: summaryZh, summaryZh } : {}),
         ...(mapped.posterUrl ? { posterUrl: mapped.posterUrl } : {}),
+        ...(mapped.backdropUrl ? { backdropUrl: mapped.backdropUrl } : {}),
         platform: "TMDB", metadataSource: "TMDB", sourceLabel: "Bangumi 榜单 · TMDB 资料",
       };
     }
