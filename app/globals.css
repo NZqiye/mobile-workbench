@@ -9330,6 +9330,113 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
 .travel-checkin time, .travel-checkin > small { color: var(--ios-muted, var(--muted)); font-size: 13px; }
 .travel-checkin p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
 .travel-rating-readout { color: var(--ios-blue, var(--theme-main)); font-size: 13px; font-weight: 700; }
+
+/* The countdown board follows the supplied teal glass and rose reference. */
+.ios18-shell .arrange-card.daybook-board {
+  --daybook-ink: #f5fffe; --daybook-muted: #c5dedc; --daybook-pink: #ffc0d9; --daybook-line: #ffffff30;
+  --ios-ink: var(--daybook-ink); --ios-muted: var(--daybook-muted); --ios-blue: var(--daybook-pink);
+  --ios-panel: #285553; --ios-panel-muted: #ffffff12; --ios-blue-soft: #ffffff1c; --ios-separator: var(--daybook-line);
+  gap: 20px; padding: 22px; border: 1px solid #95cebf50 !important; border-radius: 30px !important;
+  color: var(--daybook-ink); background: radial-gradient(ellipse at 95% 0, #5fa39960, transparent 60%), linear-gradient(155deg, #245d60, #153a3b 80%) !important;
+  box-shadow: 0 16px 32px #123a3820 !important;
+}
+.ios18-shell .daybook-board .panel-head { align-items: center; margin: 0; padding: 0; border: 0; }
+.ios18-shell .daybook-board .panel-head h2 { color: var(--daybook-ink) !important; font-size: 20px; }
+.ios18-shell .daybook-board .panel-head p { color: var(--daybook-muted) !important; font-size: 12px; }
+.daybook-total { flex: 0 0 auto; color: var(--daybook-muted); font-size: 12px; }
+.daybook-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.ios18-shell .daybook-filters button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; padding: 8px 10px; border: 1px solid transparent; border-radius: 12px; color: var(--daybook-muted); background: #ffffff0d; font-size: 12px; font-weight: 600; transition: background 180ms ease-out; }
+.ios18-shell .daybook-filters button span { font-size: 11px; font-variant-numeric: tabular-nums; }
+.ios18-shell .daybook-filters button[aria-pressed="true"] { color: var(--daybook-ink); border-color: #ffd2e292; background: #f2b2cd24; }
+.daybook-filter-icon { display: block; flex: 0 0 auto; width: 22px; height: 22px; object-fit: contain; }
+.daybook-events { display: grid; gap: 12px; min-width: 0; }
+.ios18-shell .daybook-entry { display: grid; gap: 8px; min-width: 0; padding: 14px 14px 6px; border: 1px solid #cae5df55; border-radius: 22px; color: var(--daybook-ink); background: #b8d8d32b; overflow: hidden; }
+.daybook-entry-main { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.ios18-shell .daybook-icon { display: grid; place-items: center; flex: 0 0 auto; width: 44px; min-height: 44px; height: 44px; padding: 0; border: 1px solid #f4c3d66b; border-radius: 50%; background: #ffffff1a; cursor: pointer; transition: background 160ms ease-out; }
+.daybook-icon img { display: block; width: 36px; height: 36px; object-fit: contain; }
+.daybook-copy { display: grid; gap: 3px; min-width: 0; }
+.ios18-shell .daybook-copy h3 { margin: 0; color: var(--daybook-ink); font-size: 16px; font-weight: 750; line-height: 1.4; overflow-wrap: anywhere; }
+.ios18-shell .daybook-copy time, .ios18-shell .daybook-copy p { margin: 0; color: var(--daybook-muted); font-size: 11px; line-height: 1.5; }
+.daybook-number { display: grid; gap: 2px; justify-items: center; align-content: center; min-width: 58px; min-height: 58px; padding: 8px; border-radius: 50%; background: #c56d961f; font-variant-numeric: tabular-nums; }
+.ios18-shell .daybook-number b { color: var(--daybook-pink); font-size: 28px; font-weight: 750; line-height: 1; letter-spacing: -0.025em; }
+.ios18-shell .daybook-number span { color: var(--daybook-ink); font-size: 11px; font-weight: 550; }
+.ios18-shell .daybook-entry.daybook-featured { gap: 18px; padding: 22px 18px 6px; border-radius: 26px; background: linear-gradient(135deg, #b8dbd34d, #8bbfb530); }
+.daybook-featured .daybook-entry-main { grid-template-columns: 54px minmax(0, 1fr) auto; gap: 12px; }
+.ios18-shell .daybook-featured .daybook-icon { width: 54px; min-height: 54px; height: 54px; background: #ffffff20; }
+.daybook-featured .daybook-icon img { width: 44px; height: 44px; }
+.ios18-shell .daybook-featured .daybook-copy h3 { font-size: 21px; }
+.daybook-featured .daybook-number { background: transparent; padding: 0; }
+.ios18-shell .daybook-featured .daybook-number b { font-size: clamp(38px, 5vw, 64px); }
+.daybook-timeline { display: grid; gap: 8px; }
+.daybook-track { height: 5px; overflow: hidden; border-radius: 20px; background: #effffb26; }
+.daybook-track > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #fff3f8, #ed9fc5); transition: width 480ms cubic-bezier(.16,1,.3,1); }
+.daybook-featured .daybook-track { height: 9px; }
+.daybook-progress-copy { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; color: var(--daybook-muted); font-size: 11px; }
+.daybook-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.daybook-metrics > div { display: grid; gap: 6px; padding: 12px 8px; border-radius: 12px; background: #e3fff20d; }
+.daybook-metrics strong { color: var(--daybook-ink); font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.daybook-metrics small { font-size: 12px; font-weight: 500; }
+.daybook-metrics span { color: var(--daybook-muted); font-size: 11px; }
+.daybook-entry-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 30px; color: var(--daybook-muted); font-size: 11px; }
+.ios18-shell .daybook-delete { min-width: 44px; min-height: 30px; padding: 4px; border: 0; border-radius: 8px; color: var(--daybook-muted); background: transparent; font-size: 11px; }
+.ios18-shell .daybook-delete:hover, .ios18-shell .daybook-icon:hover { background: #ffffff24; }
+.ios18-shell .daybook-past .daybook-number { border-radius: 12px; background: transparent; }
+.ios18-shell .daybook-past .daybook-number .daybook-past-label { max-width: 86px; font-size: 14px; text-align: right; line-height: 1.5; letter-spacing: 0; }
+.daybook-archive { margin-top: 4px; }
+.ios18-shell .daybook-archive > summary, .ios18-shell .daybook-add > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 8px 2px; color: var(--daybook-muted); font-size: 13px; font-weight: 650; cursor: pointer; list-style: none; }
+.daybook-archive > summary::-webkit-details-marker, .daybook-add > summary::-webkit-details-marker { display: none; }
+.daybook-archive > summary b { margin-inline-start: 6px; font-variant-numeric: tabular-nums; }
+.daybook-archive-toggle { display: flex; align-items: center; gap: 6px; }
+.daybook-archive summary svg, .daybook-add summary svg { width: 16px; height: 16px; transition: transform 220ms ease-out; }
+.daybook-archive[open] > summary svg, .daybook-add[open] > summary svg { transform: rotate(180deg); }
+.ios18-shell .daybook-add { border-top: 1px solid var(--daybook-line); }
+.ios18-shell .daybook-add > summary { padding: 14px 2px; color: var(--daybook-pink); font-size: 14px; }
+.ios18-shell .daybook-add .anniversary-form { margin: 4px 0 0; }
+.ios18-shell .daybook-empty { margin: 0; padding: 18px 4px; color: var(--daybook-muted); text-align: center; font-size: 13px; line-height: 1.8; }
+.daybook-board :is(button, summary):focus-visible { outline: 2px solid var(--daybook-pink); outline-offset: 3px; }
+.daybook-icon-library { display: grid; gap: 18px; padding: 12px 0; }
+.daybook-icon-library fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.ios18-shell .daybook-icon-library legend { margin-bottom: 10px; padding: 0; color: var(--daybook-muted); font-size: 13px; font-weight: 650; }
+.daybook-icon-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
+.ios18-shell .daybook-icon-options button { display: grid; justify-items: center; align-content: center; gap: 6px; min-width: 0; min-height: 88px; padding: 10px 4px; border: 1px solid transparent; border-radius: 12px; color: var(--daybook-ink); background: #ffffff12; font-size: 12px; font-weight: 600; transition: background 160ms ease-out, border-color 160ms ease-out; }
+.daybook-icon-options img { display: block; object-fit: contain; }
+.ios18-shell .daybook-icon-options button:hover { background: #ffffff24; }
+.ios18-shell .daybook-icon-options button[aria-pressed="true"] { border-color: var(--daybook-pink); background: #f2b2cd26; box-shadow: inset 0 0 0 1px var(--daybook-pink); }
+.ios18-shell .daybook-icon-library > a { justify-self: start; color: var(--daybook-muted); font-size: 12px; text-underline-offset: 3px; }
+.daybook-inline-picker { min-width: 0; padding-block: 12px; border-top: 1px solid var(--daybook-line); }
+.daybook-picker-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ios18-shell .daybook-picker-head strong { font-size: 14px; color: var(--daybook-ink); }
+.ios18-shell .daybook-picker-head button { min-height: 40px; padding: 8px; border: 0; background: transparent; color: var(--daybook-pink); font-size: 13px; }
+.daybook-form-icons { min-width: 0; }
+.ios18-shell .daybook-form-icons > summary { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px; min-height: 48px; border-radius: 12px; color: var(--daybook-ink); background: #ffffff12; font-size: 13px; cursor: pointer; list-style: none; }
+.daybook-form-icons > summary::-webkit-details-marker { display: none; }
+.daybook-form-icons > summary span { display: flex; align-items: center; gap: 6px; }
+.daybook-form-icons > summary img { display: block; object-fit: contain; }
+.daybook-form-icons[open] > summary svg { transform: rotate(180deg); }
+.daybook-start-date { display: grid; gap: 8px; color: var(--daybook-ink); font-size: 13px; }
+.daybook-start-date small { color: var(--daybook-muted); font-size: 11px; }
+.ios18-shell .daybook-board .anniversary-form input:not([type="hidden"]), .ios18-shell .daybook-board .ui-select-trigger { color: #f5fffe !important; border-color: #ffffff40 !important; background: #153c3d !important; color-scheme: dark; }
+.ios18-shell .daybook-board .anniversary-form input::placeholder { color: #c5dedc !important; opacity: 1; }
+.ios18-shell .daybook-board .anniversary-form > button { color: #442236 !important; background: #ffc0d9 !important; border: 0; }
+.ios18-shell .daybook-board .anniversary-form .daybook-icon-options button { color: var(--daybook-ink) !important; background: #ffffff12 !important; box-shadow: none !important; }
+.ios18-shell .daybook-board .anniversary-form .daybook-icon-options button[aria-pressed="true"] { color: var(--daybook-ink) !important; background: #f2b2cd26 !important; box-shadow: inset 0 0 0 1px var(--daybook-pink) !important; }
+.ios18-shell .daybook-board .anniversary-form .daybook-icon-options button:hover { background: #ffffff24 !important; }
+.ios18-shell .daybook-board .anniversary-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ios18-shell .daybook-board .anniversary-fields .anniversary-type-menu { grid-column: auto; }
+@media (max-width: 480px) {
+  .ios18-shell .arrange-card.daybook-board { padding: 18px 14px; border-radius: 26px !important; }
+  .ios18-shell .daybook-filters button { flex: 1 0 auto; padding-inline: 8px; }
+  .ios18-shell .daybook-entry { padding-inline: 12px; }
+  .ios18-shell .daybook-entry.daybook-featured { padding: 18px 14px 6px; }
+  .daybook-featured .daybook-entry-main { grid-template-columns: 44px minmax(0,1fr); gap: 10px; }
+  .ios18-shell .daybook-featured .daybook-icon { width: 44px; height: 44px; min-height: 44px; }
+  .daybook-featured .daybook-number { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: flex-end; gap: 8px; min-height: 0; }
+  .ios18-shell .daybook-featured .daybook-number b { font-size: 56px; }
+  .ios18-shell .daybook-featured .daybook-copy h3 { font-size: 20px; }
+  .daybook-total { font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) { .daybook-board *, .daybook-board *::before, .daybook-board *::after { transition: none !important; } }
+
 @media (max-width: 480px) {
   .travel-board { padding: 16px; }
   .travel-summary { gap: 8px; }

@@ -6,6 +6,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { thiingsIconByKey, thiingsIconCategories } from "../lib/thiings-icons";
 import TravelBoard from "./components/travel-board";
 import WorkbenchSelect, { SelectChevron } from "./components/workbench-select";
+import AnniversaryIconPicker from "./components/anniversary-icon-picker";
+import { anniversaryIcon, anniversaryIcons } from "../lib/anniversary-icons";
+import { anniversaryProgress } from "../lib/anniversary-progress";
 
 const storagePrefix = "qiyeworkbench:";
 
@@ -170,10 +173,10 @@ const noteTypes = [
 ];
 const consultationStatuses = ["想看的剧", "正在看", "看过的剧", "暂停/弃剧"];
 const anniversaryTypes = [
-  { id: "countdown", label: "倒计时", note: "未来值得期待的日子" },
-  { id: "memory", label: "纪念日", note: "每年值得纪念的日子" },
-  { id: "birthday", label: "生日", note: "重要的人的生日" },
-  { id: "festival", label: "节日", note: "仪式感的节日" },
+  { id: "countdown", label: "倒计时", note: "未来值得期待的日子", icon: "thiings:alarm-clock" },
+  { id: "memory", label: "纪念日", note: "每年值得纪念的日子", icon: "thiings:ring" },
+  { id: "birthday", label: "生日", note: "重要的人的生日", icon: "thiings:cake" },
+  { id: "festival", label: "节日", note: "仪式感的节日", icon: "thiings:party-popper" },
 ];
 const defaultChineseHolidays2026 = [
   { id: "holiday-2026-new-year", title: "2026 元旦假期（1/1-1/3）", date: "2026-01-01", type: "festival", calendarType: "solar" },
@@ -3310,64 +3313,57 @@ function itemMatchesQuery(item, query, fields) {
     .some((value) => String(value).toLowerCase().includes(keyword));
 }
 
-function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onToggleHabit, onDeleteHabit, onAddTask, onToggleTask, onDeleteTask, onAddAnniversary, onDeleteAnniversary }) {
+function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onToggleHabit, onDeleteHabit, onAddTask, onToggleTask, onDeleteTask, onAddAnniversary, onDeleteAnniversary, onUpdateAnniversaryIcon }) {
   const [anniversaryType, setAnniversaryType] = useState("countdown");
   const [anniversaryCalendarType, setAnniversaryCalendarType] = useState("solar");
+  const [anniversaryFilter, setAnniversaryFilter] = useState("all");
+  const [selectedAnniversaryIcon, setSelectedAnniversaryIcon] = useState("");
+  const [editingAnniversaryIcon, setEditingAnniversaryIcon] = useState(null);
+  const formIcon = anniversaryIcon({ type: anniversaryType, icon: selectedAnniversaryIcon });
   const unfinishedTasks = tasks.filter((task) => task.status !== "已完成").slice(0, 8);
   const sortedAnniversaries = [...anniversaries].sort((a, b) => (anniversaryMeta(a).nextDays ?? 99999) - (anniversaryMeta(b).nextDays ?? 99999));
-  const isElapsedThisYear = (item) => {
-    const type = item.type || "memory";
-    if (type === "countdown") return false;
+  const filteredAnniversaries = sortedAnniversaries.filter((item) => anniversaryFilter === "all" || (item.type || "memory") === anniversaryFilter);
+  const isPastAnniversary = (item) => {
     const meta = anniversaryMeta(item);
-    return meta.thisYearPassed || false;
+    return meta.nextDays === null || ((item.type || "memory") === "countdown" ? meta.nextDays < 0 : meta.thisYearPassed);
   };
-  const sortByNextDays = (items) => [...items].sort((a, b) => (anniversaryMeta(a).nextDays ?? 99999) - (anniversaryMeta(b).nextDays ?? 99999));
-  const renderAnniversaryCards = (items, type) => (
-    <div className="anniversary-grid">
-      {items.map((item) => {
-        const progress = formatAnniversaryProgress(item);
-        const calendarLabel = item.calendarType === "lunar" ? "农历" : "公历";
-        return (
-          <div className={`anniversary-card ${type.id}`} key={item.id}>
-            <span>{item.date} · {calendarLabel}</span>
-            <strong>{item.title}</strong>
-            <div className="anniversary-days">
-              <b>{progress.primary}</b>
-              <small>{progress.secondary}</small>
-            </div>
-            <button type="button" onClick={() => onDeleteAnniversary(item.id)}>删除</button>
-          </div>
-        );
-      })}
-    </div>
-  );
-  const renderAnniversaryGroup = (items, type, emptyText) => {
-    if (type.id === "countdown") {
-      const upcoming = sortByNextDays(items.filter((item) => (anniversaryMeta(item).nextDays ?? 99999) >= 0));
-      return upcoming.length === 0 ? <p className="anniversary-empty">{emptyText}</p> : renderAnniversaryCards(upcoming, type);
-    }
-    const activeItems = sortByNextDays(items.filter((item) => !isElapsedThisYear(item)));
-    const elapsedItems = sortByNextDays(items.filter(isElapsedThisYear));
-    const archiveTitle = type.id === "birthday" ? "今年已过生日" : "今年已过";
+  const upcomingAnniversaries = filteredAnniversaries.filter((item) => !isPastAnniversary(item));
+  const pastAnniversaries = filteredAnniversaries.filter(isPastAnniversary);
+  const featuredAnniversary = upcomingAnniversaries[0];
+  const renderAnniversary = (item, featured = false, archived = false) => {
+    const { meta, primary, secondary } = formatAnniversaryProgress(item);
+    const type = item.type || "memory";
+    const typeInfo = anniversaryTypes.find((entry) => entry.id === type) || anniversaryTypes[1];
+    const icon = anniversaryIcon(item);
+    const calendarLabel = item.calendarType === "lunar" ? "农历" : "公历";
+    const targetDate = archived ? item.date : meta.nextDate || item.date;
+    const timeline = archived ? null : anniversaryProgress(item, targetDate, todayKey());
     return (
-      <>
-        {activeItems.length === 0 ? <p className="anniversary-empty">{emptyText}</p> : renderAnniversaryCards(activeItems, type)}
-        {elapsedItems.length > 0 && (
-          <details className="anniversary-archive">
-            <summary>{archiveTitle} {elapsedItems.length} 个</summary>
-            {renderAnniversaryCards(elapsedItems, type)}
-          </details>
-      )}
-    </>
-  );
+      <article className={`daybook-entry${featured ? " daybook-featured" : ""}${archived ? " daybook-past" : ""}`} key={item.id}>
+        <div className="daybook-entry-main">
+            <button className="daybook-icon" type="button" aria-label={`更换${item.title}的图标`} aria-expanded={editingAnniversaryIcon === item.id} onClick={() => setEditingAnniversaryIcon(editingAnniversaryIcon === item.id ? null : item.id)}><img src={icon.image} width="48" height="48" alt="" /></button>
+          <div className="daybook-copy">
+            <h3>{item.title}</h3>
+            <time dateTime={targetDate}>{targetDate.replaceAll("-", ".")} · {new Date(`${targetDate}T00:00:00`).toLocaleDateString("zh-CN", { weekday: "long" })}</time>
+            <p>{typeInfo.label} · {calendarLabel}{secondary ? ` · ${secondary}` : ""}</p>
+          </div>
+          <div className="daybook-number" aria-label={primary}>
+            {archived || meta.nextDays === null ? <b className="daybook-past-label">{primary}</b> : <><b>{meta.nextDays === 0 ? "今天" : meta.nextDays}</b><span>{meta.nextDays === 0 ? ["memorial", "qingming"].includes(icon.id) ? "留一份思念" : "好日子就在此刻" : "天后"}</span></>}
+          </div>
+        </div>
+        {timeline && <div className="daybook-timeline"><div className="daybook-track" role="progressbar" aria-label={`${item.title}日期进度`} aria-valuenow={timeline.percent} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${timeline.percent}%` }} /></div>{featured && <div className="daybook-progress-copy"><span>已过 {timeline.elapsed}/{timeline.total} 天 · {timeline.percent}%</span><span>按自然日计算</span></div>}</div>}
+        {featured && <div className="daybook-metrics"><div><strong>{timeline ? `${timeline.percent}%` : targetDate.slice(5).replace("-", ".")}</strong><span>{timeline ? "日期进度" : "目标日期"}</span></div><div><strong>{Math.floor(meta.nextDays / 7)} <small>周</small></strong><span>余 {meta.nextDays % 7} 天</span></div><div><strong>{meta.nextDays.toLocaleString()}</strong><span>剩余天数</span></div></div>}
+        <div className="daybook-entry-actions"><span>{featured ? ["memorial", "qingming"].includes(icon.id) ? "把思念，留给重要的人" : meta.nextDays === 0 ? "今天，记得好好珍惜" : "下一份期待，正在靠近" : ""}</span><button className="daybook-delete" type="button" aria-label={`删除${item.title}`} onClick={() => onDeleteAnniversary(item.id)}>删除</button></div>
+        {editingAnniversaryIcon === item.id && <div className="daybook-inline-picker"><div className="daybook-picker-head"><strong>选择日子图标</strong><button type="button" onClick={() => setEditingAnniversaryIcon(null)}>收起</button></div><AnniversaryIconPicker value={icon.id} onChange={(iconId) => { onUpdateAnniversaryIcon(item.id, iconId); setEditingAnniversaryIcon(null); }} /></div>}
+      </article>
+    );
   };
 
   function submitAnniversary(event) {
-    onAddAnniversary(event);
+    if (onAddAnniversary(event) === false) return;
     setAnniversaryType("countdown");
     setAnniversaryCalendarType("solar");
-    setAnniversaryTypeOpen(false);
-    setAnniversaryCalendarOpen(false);
+    setSelectedAnniversaryIcon("");
   }
 
   return (
@@ -3424,13 +3420,27 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
         </div>
       </section>
 
-      <section className="arrange-card">
+      <section className="arrange-card daybook-board">
         <div className="panel-head">
           <div>
             <h2>倒数纪念日</h2>
-            <p>倒计时、纪念日、生日、节日。</p>
+            <p>把值得期待的日子，认真记下来。</p>
           </div>
+          <span className="daybook-total">共 {anniversaries.length} 个日子</span>
         </div>
+        <div className="daybook-filters" role="group" aria-label="筛选纪念日">
+          {[{ id: "all", label: "全部日子", icon: "thiings:notebook-223yak" }, ...anniversaryTypes].map((type) => (
+            <button key={type.id} type="button" aria-pressed={anniversaryFilter === type.id} onClick={() => setAnniversaryFilter(type.id)}><img className="daybook-filter-icon" src={thiingsIconByKey[type.icon]} width="24" height="24" alt="" />{type.label}<span>{anniversaries.filter((item) => type.id === "all" || (item.type || "memory") === type.id).length}</span></button>
+          ))}
+        </div>
+        <div className="daybook-events">
+          {featuredAnniversary && renderAnniversary(featuredAnniversary, true)}
+          {upcomingAnniversaries.slice(1).map((item) => renderAnniversary(item))}
+          {upcomingAnniversaries.length === 0 && <p className="daybook-empty">{anniversaries.length === 0 ? "还没有记录，添加一个值得期待的日子吧。" : filteredAnniversaries.length === 0 ? "还没有这类日子，可以在下方添加。" : "暂时没有未到的日子，已过记录收在下方。"}</p>}
+          {pastAnniversaries.length > 0 && <details className="daybook-archive"><summary><span>已过日子 <b>{pastAnniversaries.length}</b></span><span className="daybook-archive-toggle">查看记录 <SelectChevron /></span></summary><div className="daybook-events">{pastAnniversaries.map((item) => renderAnniversary(item, false, true))}</div></details>}
+        </div>
+        <details className="daybook-add" open={anniversaries.length === 0 ? true : undefined}>
+          <summary><span>添加纪念日</span><SelectChevron /></summary>
         <form className="anniversary-form" onSubmit={submitAnniversary}>
           <input name="title" placeholder="名称，例如 高考、结婚纪念、生日、春节" required />
           <div className="anniversary-fields">
@@ -3450,48 +3460,15 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
               aria-label="选择日历类型"
             ><option value="solar">公历</option><option value="lunar">农历</option></WorkbenchSelect>
           </div>
+          {anniversaryType === "countdown" && <label className="daybook-start-date">倒数起始日期<input name="startDate" type="date" defaultValue={todayKey()} onInput={(event) => event.currentTarget.setCustomValidity("")} required /><small>用于计算已过天数和日期进度</small></label>}
+          <input type="hidden" name="icon" value={formIcon.id} />
+          <details className="daybook-form-icons">
+            <summary><span><img src={formIcon.image} width="32" height="32" alt="" />日子图标 · {formIcon.label}</span><span>更换 <SelectChevron /></span></summary>
+            <AnniversaryIconPicker value={formIcon.id} onChange={setSelectedAnniversaryIcon} />
+          </details>
           <button type="submit">添加纪念日</button>
         </form>
-        <div className="anniversary-sections">
-          {sortedAnniversaries.length === 0 && <p className="empty">还没有纪念日。先添加一个吧。</p>}
-          {anniversaryTypes.map((type) => {
-            const items = sortedAnniversaries.filter((item) => (item.type || "memory") === type.id);
-            return (
-              <section className="anniversary-section" key={type.id}>
-                <div className="anniversary-section-head">
-                  <div>
-                    <strong>{type.label}</strong>
-                    <span>{type.note}</span>
-                  </div>
-                  <b>{items.length}</b>
-                </div>
-                {items.length === 0 ? (
-                  <p className="anniversary-empty">暂无{type.label}</p>
-                ) : type.id === "birthday" ? (
-                  <div className="birthday-groups">
-                    {[
-                      { id: "solar", label: "公历生日" },
-                      { id: "lunar", label: "农历生日" },
-                    ].map((group) => {
-                      const birthdayItems = items.filter((item) => (item.calendarType || "solar") === group.id);
-                      return (
-                        <section className="birthday-group" key={group.id}>
-                          <div className="birthday-group-head">
-                            <strong>{group.label}</strong>
-                            <span>{birthdayItems.length}</span>
-                          </div>
-                          {birthdayItems.length === 0 ? <p className="anniversary-empty">暂无{group.label}</p> : renderAnniversaryGroup(birthdayItems, type, `暂无未到的${group.label}`)}
-                        </section>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  renderAnniversaryGroup(items, type, `暂无未到的${type.label}`)
-                )}
-              </section>
-            );
-          })}
-        </div>
+        </details>
       </section>
     </section>
   );
@@ -6999,11 +6976,26 @@ export default function Workbench() {
     const date = String(data.get("date") || "");
     const type = String(data.get("type") || "countdown");
     const calendarType = String(data.get("calendarType") || "solar");
+    const icon = anniversaryIcon({ type, icon: String(data.get("icon") || "") }).id;
+    const startDate = type === "countdown" ? String(data.get("startDate") || "") : "";
     if (!title || !date) return;
-    const next = [{ id: crypto.randomUUID(), title, date, type, calendarType }, ...anniversaries];
+    if (startDate && startDate > date) {
+      event.currentTarget.elements.namedItem("startDate").setCustomValidity("起始日期不能晚于目标日期");
+      event.currentTarget.reportValidity();
+      return false;
+    }
+    const next = [stampItem({ id: crypto.randomUUID(), title, date, type, calendarType, icon, startDate }), ...anniversaries];
     setAnniversaries(next);
     persist("anniversaries", next);
     event.currentTarget.reset();
+    return true;
+  }
+
+  function updateAnniversaryIcon(id, icon) {
+    if (!anniversaryIcons.some((entry) => entry.id === icon)) return;
+    const next = anniversaries.map((item) => item.id === id ? stampItem({ ...item, icon }) : item);
+    setAnniversaries(next);
+    persist("anniversaries", next);
   }
 
   function deleteAnniversary(id) {
@@ -7764,6 +7756,7 @@ export default function Workbench() {
               onDeleteTask={deletePlan}
               onAddAnniversary={addAnniversary}
               onDeleteAnniversary={deleteAnniversary}
+              onUpdateAnniversaryIcon={updateAnniversaryIcon}
             />
           )}
 
