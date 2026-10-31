@@ -5062,6 +5062,7 @@ textarea::placeholder {
 }
 
 .phone-shell.mobile-shell .module-tabs.consultation-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -5069,6 +5070,12 @@ textarea::placeholder {
   min-height: 34px;
   padding-inline: 8px;
   font-size: 11px;
+}
+
+.phone-shell.mobile-shell .module-tabs.consultation-tabs button {
+  min-height: 44px;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .phone-shell.mobile-shell.page-today .today-time-panel {
