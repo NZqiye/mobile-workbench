@@ -9199,6 +9199,23 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
 .travel-delete-confirm span { margin-right: auto; }
 .travel-delete-confirm button:last-child, .travel-error { color: var(--red); }
 .travel-error { margin: 0; font-size: 14px; }
+.ios18-shell .quick-note-bar {
+  color: var(--ios-ink);
+  border: 1px solid var(--ios-separator);
+  background: var(--ios-panel) !important;
+  box-shadow: var(--ios-shadow);
+}
+.ios18-shell .pet-card { background: var(--ios-panel-muted) !important; }
+.ios18-shell .quick-note-bar input { color: var(--ios-ink); }
+.ios18-shell .today-subscriptions { grid-column: 1 / -1; }
+.subscription-expiry-list { display: grid; }
+.subscription-expiry-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 12px 0; border: 0; border-bottom: 1px solid var(--ios-separator, var(--line)); background: transparent; color: var(--ios-ink, var(--ink)); text-align: left; }
+.subscription-expiry-row:last-child { border-bottom: 0; }
+.subscription-expiry-row > span { display: grid; gap: 5px; flex: 1; min-width: 0; }
+.subscription-expiry-row strong { font-size: 14px; overflow-wrap: anywhere; }
+.subscription-expiry-row small { color: var(--ios-muted, var(--muted)); font-size: 12px; }
+.subscription-expiry-row b { color: var(--ios-blue, var(--theme-main)); font-size: 13px; white-space: nowrap; }
+.subscription-expiry-row b.urgent { color: var(--ios-red, #b42332); }
 .ios18-shell .weather-motion-icon {
   --weather-sun: #e8a326;
   --weather-line: color-mix(in srgb, var(--ios-blue) 68%, var(--ios-ink));

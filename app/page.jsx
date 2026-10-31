@@ -1,5 +1,7 @@
 "use client";
 
+import { upcomingSubscriptions } from "../lib/subscriptions";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { thiingsIconByKey, thiingsIconCategories } from "../lib/thiings-icons";
 import TravelBoard from "./components/travel-board";
@@ -4559,10 +4561,10 @@ function MediaGallery({ item }) {
     setPosterUrl(item?.posterUrl || "");
     attempted.current = false;
     fallbackImages.current = [];
-  }, [item?.backdropUrl, item?.posterUrl, item?.tmdbId, item?.tvmazeId]);
+  }, [item?.backdropUrl, item?.posterUrl, item?.tmdbId, item?.tvmazeId, item?.bangumiId]);
 
   useEffect(() => {
-    if (backdropUrl || attempted.current || (!item?.tmdbId && !item?.tvmazeId) || !galleryRef.current) return;
+    if (backdropUrl || attempted.current || (!item?.tmdbId && !item?.tvmazeId && !item?.bangumiId) || !galleryRef.current) return;
     const controller = new AbortController();
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) return;
@@ -4570,6 +4572,12 @@ function MediaGallery({ item }) {
       const params = new URLSearchParams({ type: item.tmdbMediaType === "movie" ? "movie" : "tv" });
       if (item.tmdbId) params.set("id", item.tmdbId);
       if (item.tvmazeId) params.set("tvmazeId", item.tvmazeId);
+      if (item.bangumiId) {
+        params.set("bangumiId", item.bangumiId);
+        params.set("name", item.bangumiName || item.originalTitle || item.title || "");
+        params.set("nameCn", item.bangumiNameCn || item.titleZh || "");
+        params.set("year", item.year || "");
+      }
       fetch(`/api/media-artwork?${params}`, { signal: controller.signal })
         .then((response) => response.ok ? response.json() : { images: [] })
         .then((data) => {
@@ -4581,7 +4589,7 @@ function MediaGallery({ item }) {
     }, { rootMargin: "200px" });
     observer.observe(galleryRef.current);
     return () => { observer.disconnect(); controller.abort(); };
-  }, [backdropUrl, item?.tmdbId, item?.tvmazeId, item?.tmdbMediaType, item?.backdropUrl]);
+  }, [backdropUrl, item?.tmdbId, item?.tvmazeId, item?.bangumiId, item?.tmdbMediaType, item?.backdropUrl, item?.bangumiName, item?.originalTitle, item?.title, item?.bangumiNameCn, item?.titleZh, item?.year]);
 
   if (!backdropUrl && !posterUrl) return null;
   return (
@@ -7570,6 +7578,7 @@ export default function Workbench() {
 
   const sortedRecent = [...recent].sort((a, b) => String(b.time || "").localeCompare(String(a.time || "")));
   const dateKey = visibleTodayKey(clock);
+  const expiringSubscriptions = upcomingSubscriptions(subscriptionRecords, dateKey);
   const skillSummaries = [
     { id: "today", name: "今日速看", icon: "home", badge: "首页", summary: `打卡 ${stats.checkin}` },
     { id: "consultations", name: "观影记录", icon: "chat", badge: "观影", summary: `${stats.consultations} 条` },
@@ -7702,6 +7711,10 @@ export default function Workbench() {
                     </button>
                   ))}
                 </div>
+              </section>
+              <section className="panel today-subscriptions">
+                <div className="panel-head"><div><h2>订阅到期</h2><p>未来 30 天内到期</p></div><button className="chip-button" type="button" onClick={() => { setAssetSection("subscriptions"); switchPage("assets"); }}>管理订阅</button></div>
+                {expiringSubscriptions.length === 0 ? <p className="empty">未来 30 天暂无到期订阅。</p> : <div className="subscription-expiry-list">{expiringSubscriptions.map((item) => <button className="subscription-expiry-row" type="button" key={item.id} onClick={() => { setAssetSection("subscriptions"); switchPage("assets"); }}><AssetIcon name={item.icon || "thiings-subscribe:credit-card"} size={36} /><span><strong>{item.title}</strong><small>{item.endDate} 到期{item.billingCycle ? ` · ${item.billingCycle}` : ""}</small></span><b className={item.daysRemaining <= 7 ? "urgent" : ""}>{item.daysRemaining === 0 ? "今天到期" : `剩 ${item.daysRemaining} 天`}</b></button>)}</div>}
               </section>
               <section className="stats-grid">
                 <StatButton label="今日速看" value="看板" onClick={() => switchPage("today")} />

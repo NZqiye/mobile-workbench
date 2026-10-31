@@ -47,3 +47,20 @@ test("unavailable artwork and invalid identity leave no invented replacement", a
   assert.deepEqual((await route.get("id=../wrong&type=tv")).images, []);
   assert.equal(route.calls.length, count);
 });
+
+test("Bangumi-only anime matches Kitsu by exact title and year without confusing seasons", async () => {
+  const route = artworkRoute(() => ({ data: [
+    { id: "1", attributes: { titles: { en: "Cyberpunk: Edgerunners" }, startDate: "2022-09-13", coverImage: { large: "wrong-season" } } },
+    { id: "2", attributes: { titles: { en: "Cyberpunk: Edgerunners II" }, startDate: "2026-10-20", coverImage: { large: "right-season" } } },
+  ] }));
+  const result = await route.get("bangumiId=10&name=Cyberpunk%3A%20Edgerunners%20II&year=2026");
+  assert.deepEqual(result.images, ["right-season"]);
+  assert.equal(route.calls.length, 1);
+  assert.ok(route.calls[0].includes("kitsu.app"));
+});
+
+test("ambiguous anime matches never borrow another show's artwork", async () => {
+  const candidate = { attributes: { titles: { en: "Same Title" }, startDate: "2026-01-01", coverImage: { large: "ambiguous" } } };
+  const route = artworkRoute(() => ({ data: [candidate, candidate] }));
+  assert.deepEqual((await route.get("bangumiId=11&name=Same%20Title&year=2026")).images, []);
+});
