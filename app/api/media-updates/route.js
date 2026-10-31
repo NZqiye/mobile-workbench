@@ -193,8 +193,9 @@ async function normalizeEpisode(episode, compact = false) {
     titleZh: titleZh.titleZh,
     summaryZh: titleZh.summaryZh,
     tmdbId: titleZh.tmdbId,
-    posterUrl: titleZh.posterUrl || "",
-    backdropUrl: titleZh.backdropUrl || "",
+    tvmazeId: show.id || "",
+    posterUrl: titleZh.posterUrl || show.image?.original || show.image?.medium || "",
+    backdropUrl: titleZh.backdropUrl || episode.image?.original || episode.image?.medium || "",
     titleSource: titleZh.titleSource,
   };
 }

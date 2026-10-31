@@ -1,0 +1,62 @@
+import { fetchTmdb, tmdbToken } from "../../../lib/tmdb";
+
+const cache = new Map();
+
+async function readJson(url, tmdb = false) {
+  const options = { signal: AbortSignal.timeout(8000) };
+  const response = await (tmdb ? fetchTmdb(url, options) : fetch(url, options));
+  if (!response.ok) throw new Error("Artwork unavailable");
+  return response.json();
+}
+
+async function loadArtwork(id, type, tvmazeId) {
+  const urls = [];
+  if (id && tmdbToken) {
+    try {
+      const details = await readJson(`https://api.themoviedb.org/3/${type}/${id}?append_to_response=images&include_image_language=null,en,zh`, true);
+      const paths = [details.backdrop_path, ...(details.images?.backdrops || []).map((image) => image.file_path)];
+      if (type === "tv") {
+        paths.push(details.last_episode_to_air?.still_path, details.next_episode_to_air?.still_path);
+        if (!paths.some(Boolean)) {
+          const seasonNumber = details.last_episode_to_air?.season_number || details.seasons?.find((season) => season.season_number > 0)?.season_number;
+          if (seasonNumber) {
+            const season = await readJson(`https://api.themoviedb.org/3/tv/${id}/season/${seasonNumber}`, true);
+            paths.push(...(season.episodes || []).map((episode) => episode.still_path));
+          }
+        }
+      }
+      urls.push(...paths.filter(Boolean).map((path) => `https://image.tmdb.org/t/p/w780${path}`));
+    } catch { /* Keep the original poster when a source is unavailable. */ }
+  }
+  if (tvmazeId && !urls.length) {
+    const results = await Promise.allSettled([
+      readJson(`https://api.tvmaze.com/shows/${tvmazeId}/images`),
+      readJson(`https://api.tvmaze.com/shows/${tvmazeId}/episodes`),
+    ]);
+    const images = results[0].status === "fulfilled" ? results[0].value : [];
+    const episodes = results[1].status === "fulfilled" ? results[1].value : [];
+    urls.push(...images.filter((image) => image.type === "background").map((image) => image.resolutions?.original?.url));
+    urls.push(...episodes.map((episode) => episode.image?.original || episode.image?.medium));
+  }
+  return [...new Set(urls.filter(Boolean))].slice(0, 8);
+}
+
+export async function GET(request) {
+  const params = new URL(request.url).searchParams;
+  const id = params.get("id") || "";
+  const tvmazeId = params.get("tvmazeId") || "";
+  const type = params.get("type") || "tv";
+  if ((!id && !tvmazeId) || (id && !/^[1-9]\d*$/.test(id)) || (tvmazeId && !/^[1-9]\d*$/.test(tvmazeId)) || !["tv", "movie"].includes(type)) {
+    return Response.json({ images: [] }, { status: 400 });
+  }
+  const key = `${type}:${id}:${tvmazeId}`;
+  const cached = cache.get(key);
+  if (cached && cached.expires > Date.now()) return Response.json({ images: await cached.images });
+  const images = loadArtwork(id, type, tvmazeId);
+  const entry = { images, expires: Date.now() + 15000 };
+  cache.set(key, entry);
+  if (cache.size > 500) cache.delete(cache.keys().next().value);
+  const result = await images;
+  entry.expires = Date.now() + (result.length ? 15 * 60 * 1000 : 15000);
+  return Response.json({ images: result });
+}

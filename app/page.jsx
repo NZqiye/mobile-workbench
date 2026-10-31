@@ -67,6 +67,7 @@ function normalizeTvmazeRecommendation(item) {
     tmdbMediaType: "tv",
     posterUrl: item.posterUrl || "",
     backdropUrl: item.backdropUrl || "",
+    tvmazeId: item.tvmazeId || "",
     review: item.summaryZh || (item.number ? `第${item.number}集 · TVMaze 实时排期` : "TVMaze 实时排期"),
     summary: item.summaryZh || (item.number ? `第${item.number}集 · TVMaze 实时排期` : "TVMaze 实时排期"),
     summaryZh: item.summaryZh || "",
@@ -495,35 +496,38 @@ function MotionIcon({ name, tone = "default" }) {
 }
 
 function weatherMotionType(code) {
+  if (code == null) return "unknown";
   const value = Number(code);
-  if ([0, 1].includes(value)) return "sun";
-  if ([2, 3].includes(value)) return "cloud";
+  if (value === 0) return "sun";
+  if ([1, 2].includes(value)) return "partly";
+  if (value === 3) return "cloud";
   if ([45, 48].includes(value)) return "fog";
-  if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(value)) return "rain";
+  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(value)) return "rain";
   if ([71, 73, 75, 77, 85, 86].includes(value)) return "snow";
   if ([95, 96, 99].includes(value)) return "storm";
-  return "partly";
+  return "unknown";
 }
 
 function WeatherMotionIcon({ code }) {
   const type = weatherMotionType(code);
   const cloud = (
-    <path className="weather-cloud" d="M7.2 17.5h10.1a3.4 3.4 0 0 0 .4-6.8A5.1 5.1 0 0 0 8 9.2a3.9 3.9 0 0 0-.8 8.3z" />
+    <path className="weather-cloud" d="M9 21h14a5 5 0 0 0 .1-10 7 7 0 0 0-13.3-1.6A5.8 5.8 0 0 0 9 21Z" />
   );
 
   return (
     <svg className={`weather-motion-icon weather-${type}`} viewBox="0 0 32 32" aria-hidden="true">
       {["sun", "partly"].includes(type) && (
-        <>
+        <g transform={type === "sun" ? "translate(3 4)" : undefined}>
           <circle className="weather-sun-core" cx="13" cy="12" r="5" />
           <path className="weather-sun-rays" d="M13 2v4M13 18v4M3 12h4M19 12h4M5.9 4.9l2.8 2.8M17.3 16.3l2.8 2.8M20.1 4.9l-2.8 2.8M8.7 16.3l-2.8 2.8" />
-        </>
+        </g>
       )}
+      {["partly", "cloud", "rain", "snow", "storm", "fog"].includes(type) && cloud}
       {type === "rain" && (
         <g className="weather-drops">
-          <path d="M10 21v4" />
-          <path d="M16 21v5" />
-          <path d="M22 21v4" />
+          <path d="m11 24-1 3" />
+          <path d="m17 24-1 4" />
+          <path d="m23 24-1 3" />
         </g>
       )}
       {type === "snow" && (
@@ -533,13 +537,14 @@ function WeatherMotionIcon({ code }) {
           <circle cx="22" cy="23" r="1" />
         </g>
       )}
-      {type === "storm" && <path className="weather-bolt" d="M16 18h5l-4 5h4l-7 7 2-6h-4z" />}
+      {type === "storm" && <path className="weather-bolt" d="M17 18h5l-4 5h3l-7 7 2-7h-3z" />}
       {type === "fog" && (
         <g className="weather-fog-lines">
           <path d="M7 21h18" />
           <path d="M5 25h17" />
         </g>
       )}
+      {type === "unknown" && <path className="weather-fog-lines" d="M10 16h12" />}
     </svg>
   );
 }
@@ -1573,8 +1578,9 @@ function WeatherCard({ compact = false, clock = "--:--" }) {
         {(weather?.forecast || []).slice(0, 5).map((day) => (
           <div key={day.date}>
             <span>{day.date.slice(5).replace("-", "/")}</span>
+            <WeatherMotionIcon code={day.code} />
             <strong>{weatherLabel(day.code)}</strong>
-            <small>{day.min ?? "--"}°/{day.max ?? "--"}°</small>
+            <small>{day.min ?? "--"}° /<wbr /> {day.max ?? "--"}°</small>
           </div>
         ))}
       </div>
@@ -1589,13 +1595,7 @@ function WeatherCard({ compact = false, clock = "--:--" }) {
 }
 
 function weatherIcon(code) {
-  if ([0, 1].includes(Number(code))) return "☀️";
-  if ([2, 3].includes(Number(code))) return "☁️";
-  if ([45, 48].includes(Number(code))) return "🌫️";
-  if ([51, 53, 55, 61, 63, 65, 80, 81, 82].includes(Number(code))) return "🌧️";
-  if ([71, 73, 75, 77, 85, 86].includes(Number(code))) return "❄️";
-  if ([95, 96, 99].includes(Number(code))) return "⛈️";
-  return "🌤️";
+  return <WeatherMotionIcon code={code} />;
 }
 
 function outfitAdvice(day) {
@@ -1840,22 +1840,24 @@ function TodayTimePanel({ clock = "--:--:--" }) {
   const safeHour = Number.isFinite(hour) ? hour % 12 : 0;
   const safeMinute = Number.isFinite(minute) ? minute : 0;
   const safeSecond = Number.isFinite(second) ? second : 0;
+  const timeParts = hasLiveClock(clock) ? clock.split(":") : ["--", "--", "--"];
 
   return (
     <section className="today-time-panel" aria-label="今日时间">
       <svg className="clock-dial" viewBox="0 0 100 100" aria-hidden="true">
-        <circle className="clock-dial-ring" cx="50" cy="50" r="45" />
-        {Array.from({ length: 12 }, (_, index) => (
+        <circle className="clock-dial-ring" cx="50" cy="50" r="48" />
+        {Array.from({ length: 60 }, (_, index) => (
           <line
             key={index}
-            className={index % 3 === 0 ? "clock-tick clock-tick-major" : "clock-tick"}
+            className={index % 5 === 0 ? "clock-tick clock-tick-major" : "clock-tick"}
             x1="50"
-            y1="9"
+            y1="7"
             x2="50"
-            y2="15"
-            transform={`rotate(${index * 30} 50 50)`}
+            y2={index % 5 === 0 ? "13" : "9"}
+            transform={`rotate(${index * 6} 50 50)`}
           />
         ))}
+        <g className="clock-numerals"><text x="50" y="25">12</text><text x="77" y="53">3</text><text x="50" y="81">6</text><text x="23" y="53">9</text></g>
         <line
           className="clock-hour-hand"
           x1="50"
@@ -1874,7 +1876,7 @@ function TodayTimePanel({ clock = "--:--:--" }) {
         />
         <line
           className="clock-second-hand"
-          x1="52"
+          x1="50"
           y1="58"
           x2="50"
           y2="18"
@@ -1883,9 +1885,8 @@ function TodayTimePanel({ clock = "--:--:--" }) {
         <circle className="clock-center" cx="50" cy="50" r="3.2" />
       </svg>
       <div className="clock-copy">
-        <strong>{clock}</strong>
-        <span>{visibleTodayDisplay(clock)}</span>
-        <small>七夜online · 今日速递</small>
+        <time className="clock-digital" aria-label={clock}><strong>{timeParts[0]}:{timeParts[1]}</strong><span className="clock-seconds">{timeParts[2]}</span></time>
+        <span className="clock-calendar">{visibleTodayDisplay(clock)}</span>
       </div>
     </section>
   );
@@ -4549,31 +4550,50 @@ function AnimeUpdates() {
 function MediaGallery({ item }) {
   const [backdropUrl, setBackdropUrl] = useState(item?.backdropUrl || "");
   const [posterUrl, setPosterUrl] = useState(item?.posterUrl || "");
+  const galleryRef = useRef(null);
+  const attempted = useRef(false);
+  const fallbackImages = useRef([]);
 
   useEffect(() => {
     setBackdropUrl(item?.backdropUrl || "");
     setPosterUrl(item?.posterUrl || "");
-  }, [item?.backdropUrl, item?.posterUrl]);
+    attempted.current = false;
+    fallbackImages.current = [];
+  }, [item?.backdropUrl, item?.posterUrl, item?.tmdbId, item?.tvmazeId]);
+
+  useEffect(() => {
+    if (backdropUrl || attempted.current || (!item?.tmdbId && !item?.tvmazeId) || !galleryRef.current) return;
+    const controller = new AbortController();
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      observer.disconnect();
+      const params = new URLSearchParams({ type: item.tmdbMediaType === "movie" ? "movie" : "tv" });
+      if (item.tmdbId) params.set("id", item.tmdbId);
+      if (item.tvmazeId) params.set("tvmazeId", item.tvmazeId);
+      fetch(`/api/media-artwork?${params}`, { signal: controller.signal })
+        .then((response) => response.ok ? response.json() : { images: [] })
+        .then((data) => {
+          if (controller.signal.aborted) return;
+          attempted.current = true;
+          fallbackImages.current = (data.images || []).filter((url) => url !== item.backdropUrl);
+          setBackdropUrl(fallbackImages.current.shift() || "");
+        }).catch(() => { if (!controller.signal.aborted) attempted.current = true; });
+    }, { rootMargin: "200px" });
+    observer.observe(galleryRef.current);
+    return () => { observer.disconnect(); controller.abort(); };
+  }, [backdropUrl, item?.tmdbId, item?.tvmazeId, item?.tmdbMediaType, item?.backdropUrl]);
 
   if (!backdropUrl && !posterUrl) return null;
-  if (!backdropUrl) {
-    return (
-      <div className="media-gallery media-gallery-poster-only">
-        <div className="media-poster-thumb">
-          <img src={posterUrl} alt="" loading="lazy" onError={() => setPosterUrl("")} />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="media-gallery">
-      <div className="media-still">
-        <img src={backdropUrl} alt="" loading="lazy" onError={() => setBackdropUrl("")} />
-      </div>
+    <div ref={galleryRef} className={`media-gallery${!backdropUrl ? " media-gallery-poster-only" : !posterUrl ? " media-gallery-single" : ""}`}>
       {posterUrl && (
         <div className="media-poster-thumb">
           <img src={posterUrl} alt="" loading="lazy" onError={() => setPosterUrl("")} />
+        </div>
+      )}
+      {backdropUrl && (
+        <div className="media-still">
+          <img src={backdropUrl} alt="" loading="lazy" onError={() => setBackdropUrl(fallbackImages.current.shift() || "")} />
         </div>
       )}
     </div>
