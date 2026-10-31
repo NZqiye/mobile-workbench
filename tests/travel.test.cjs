@@ -35,6 +35,37 @@ test("travel validation distinguishes unknown cost from zero and rejects invalid
   }
 });
 
+test("city check-ins keep personal reviews, validate ratings and stay inside trip dates", () => {
+  const trip = { destination: "上海周末", city: "上海", startDate: "2026-11-01", endDate: "2026-11-03", checkins: [{ id: "spot-1", name: " 外滩 ", date: "2026-11-02", rating: 4, review: " 夜景不错 " }] };
+  const result = travel.normalizeTravelRecord(trip);
+  assert.equal(result.city, "上海");
+  assert.equal(result.checkins[0].name, "外滩");
+  assert.equal(result.checkins[0].review, "夜景不错");
+  assert.equal(result.checkins[0].id, "spot-1");
+  assert.equal(travel.normalizeTravelRecord({ ...trip, checkins: [{ ...trip.checkins[0], rating: null }] }).checkins[0].rating, null);
+  assert.equal(travel.normalizeTravelRecord({ ...trip, checkins: undefined }).checkins.length, 0);
+  for (const override of [{ name: " " }, { rating: 6 }, { rating: 0 }, { rating: 2.5 }, { date: "2026-11-04" }, { date: "2026-02-30" }]) {
+    assert.throws(() => travel.normalizeTravelRecord({ ...trip, checkins: [{ ...trip.checkins[0], ...override }] }));
+  }
+});
+
+test("preset cities have unique attraction shortcuts and valid local illustrations", async () => {
+  const context = vm.createContext({});
+  const data = fs.readFileSync(path.join(__dirname, "../lib/travel-places.js"), "utf8").replaceAll("export const", "const").replaceAll("export function", "function");
+  vm.runInContext(`${data}\nthis.cities = travelCities;`, context);
+  const sharp = require("sharp");
+  assert.equal(new Set(context.cities.map((city) => city.name)).size, context.cities.length);
+  const images = new Set();
+  for (const city of context.cities) {
+    assert.equal(new Set(city.places).size, city.places.length);
+    images.add(context.travelCityImage(city.name));
+  }
+  images.add(context.travelPlaceImage("北京", "八达岭长城"));
+  images.add(context.travelCityImage("自定义城市"));
+  for (const image of images) await sharp(path.join(__dirname, "../public", image)).raw().toBuffer();
+  assert.equal(context.travelCityImage("自定义城市"), "/assets-icons/thiings/fashion/suitcase.webp");
+});
+
 test("travel mutations persist timestamps and deleted records stay deleted after merging", () => {
   let records = [];
   const removed = new Set();

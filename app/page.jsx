@@ -7354,7 +7354,7 @@ export default function Workbench() {
       ...subscriptionRecords.map((item) => `- ${item.title} ¥${item.price} · ${item.purchaseType}${item.billingCycle ? ` · ${item.billingCycle}` : ""} · 购买日期 ${item.purchaseDate}${item.endDate ? ` · 结束日期 ${item.endDate}` : ""}${item.usageNote ? ` · 使用说明：${item.usageNote}` : ""}`),
       "",
       "## 旅游记录",
-      ...travelRecords.map((item) => `### ${item.destination}\n\n${item.startDate} 至 ${item.endDate || item.startDate}\n\n费用：${item.cost == null ? "未记录" : `¥${item.cost}`}\n\n${item.notes || ""}\n`),
+      ...travelRecords.map((item) => `### ${item.destination}\n\n${item.city ? `城市：${item.city}\n\n` : ""}${item.startDate} 至 ${item.endDate || item.startDate}\n\n费用：${item.cost == null ? "未记录" : `¥${item.cost}`}\n\n${item.notes || ""}\n\n${(Array.isArray(item.checkins) ? item.checkins : []).map((spot) => `- ${spot.date} ${spot.name} · ${spot.rating ? `${spot.rating}/5 星` : "未评分"}\n  ${spot.review || ""}`).join("\n")}\n`),
       "",
       "## 体重记录",
       ...weightRecords.map((item) => `- ${item.date} ${item.time} ${formatWeight(item.weight)}kg`),

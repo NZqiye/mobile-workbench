@@ -9196,6 +9196,32 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
 .travel-delete-confirm span { margin-right: auto; }
 .travel-delete-confirm button:last-child, .travel-error { color: var(--red); }
 .travel-error { margin: 0; font-size: 14px; }
+.travel-city-preview, .travel-record-place { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.travel-city-preview img, .travel-record-place img { flex: 0 0 auto; object-fit: contain; }
+.travel-city-preview > div, .travel-record-place > div { display: grid; gap: 4px; min-width: 0; }
+.travel-city-preview small, .travel-record-place small { color: var(--ios-muted, var(--muted)); font-size: 13px; }
+.travel-checkin-editor { display: grid; gap: 14px; min-width: 0; margin: 8px 0 0; padding: 16px 0 0; border: 0; border-top: 1px solid var(--ios-separator, var(--line)); }
+.travel-checkin-editor legend { padding: 0 8px 0 0; color: var(--ios-ink, var(--ink)); font-size: 16px; font-weight: 750; }
+.travel-checkin-hint { margin: 0; color: var(--ios-muted, var(--muted)); font-size: 14px; line-height: 1.6; }
+.travel-place-shortcuts { display: flex; flex-wrap: wrap; gap: 7px; }
+.travel-place-shortcuts button, .travel-add-checkin { min-height: 40px; padding: 8px 12px; border: 1px solid var(--ios-separator, var(--line)); border-radius: 9px; color: var(--ios-blue, var(--theme-main)); background: var(--ios-blue-soft, var(--soft)); font-size: 14px; font-weight: 650; }
+.travel-place-shortcuts button:disabled { color: var(--ios-muted, var(--muted)); background: transparent; cursor: default; }
+.travel-checkin-fields { display: grid; gap: 12px; padding-block: 16px; border-block: 1px solid var(--ios-separator, var(--line)); }
+.travel-checkin-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.travel-checkin-top strong { overflow-wrap: anywhere; }
+.travel-checkin-top > button { min-height: 36px; padding: 6px; border: 0; color: var(--ios-muted, var(--muted)); background: transparent; font-size: 13px; }
+.travel-rating-field { display: grid; gap: 6px; color: var(--ios-ink, var(--ink)); font-size: 14px; font-weight: 650; }
+.travel-rating-field small { color: var(--ios-muted, var(--muted)); font-weight: 500; }
+.travel-rating-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; }
+.travel-rating-buttons button { display: grid; place-items: center; width: 40px; min-height: 42px; padding: 6px; border: 0; border-radius: 8px; color: var(--ios-blue, var(--theme-main)); background: transparent; }
+.travel-rating-buttons button:hover, .travel-rating-buttons button[aria-pressed="true"] { background: var(--ios-blue-soft, var(--soft)); }
+.travel-rating-buttons .travel-rating-clear { width: auto; margin-inline-start: 4px; color: var(--ios-muted, var(--muted)); font-size: 13px; }
+.travel-checkins { display: grid; gap: 12px; }
+.travel-checkins h4 { margin: 0; color: var(--ios-muted, var(--muted)); font-size: 14px; }
+.travel-checkin { display: grid; gap: 6px; min-width: 0; padding-block: 10px; border-top: 1px solid var(--ios-separator, var(--line)); font-size: 14px; }
+.travel-checkin time, .travel-checkin > small { color: var(--ios-muted, var(--muted)); font-size: 13px; }
+.travel-checkin p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+.travel-rating-readout { color: var(--ios-blue, var(--theme-main)); font-size: 13px; font-weight: 700; }
 @media (max-width: 480px) {
   .travel-board { padding: 16px; }
   .travel-summary { gap: 8px; }
