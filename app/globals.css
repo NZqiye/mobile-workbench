@@ -1420,7 +1420,7 @@ select:focus-visible {
 .asset-icon-cell.selected { border-color: var(--theme-main); background: rgba(0, 0, 0, 0.06); }
 .asset-row-icon { width: 40px; height: 40px; border-radius: 8px; background: rgba(0, 0, 0, 0.04); display: grid; place-items: center; font-size: 22px; flex-shrink: 0; }
 .asset-workspace { display: grid; gap: 12px; }
-.asset-section-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 5px; border: 1px solid rgba(234, 215, 208, 0.72); border-radius: 12px; background: rgba(255, 255, 255, 0.82); }
+.asset-section-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 5px; border: 1px solid rgba(234, 215, 208, 0.72); border-radius: 12px; background: rgba(255, 255, 255, 0.82); }
 .asset-section-tabs button, .asset-status-tabs button { min-height: 42px; border: 0; border-radius: 8px; color: var(--muted); background: transparent; font-size: 13px; font-weight: 900; }
 .asset-section-tabs button.active { color: #fff; background: linear-gradient(135deg, var(--theme-main), var(--theme-accent)); }
 .asset-status-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
@@ -9158,3 +9158,46 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
   border-color: color-mix(in srgb, var(--ios-blue) 38%, var(--ios-separator));
 }
 .ios18-shell .asset-retired { opacity: 0.88; }
+
+.travel-board { display: grid; gap: 18px; min-width: 0; padding: 20px; border: 1px solid var(--ios-separator, var(--line)); border-radius: 12px; color: var(--ios-ink, var(--ink)); background: var(--ios-panel, var(--panel)); }
+.travel-intro { display: flex; gap: 12px; align-items: center; }
+.travel-intro img { flex: 0 0 auto; object-fit: contain; }
+.travel-intro h2 { margin: 0; font-size: 20px; }
+.travel-intro p { margin: 5px 0 0; color: var(--ios-muted, var(--muted)); font-size: 14px; line-height: 1.5; }
+.travel-summary { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 12px; padding-block: 14px; border-block: 1px solid var(--ios-separator, var(--line)); }
+.travel-summary > div { display: grid; gap: 7px; min-width: 0; }
+.travel-summary span { color: var(--ios-muted, var(--muted)); font-size: 13px; }
+.travel-summary strong { overflow-wrap: anywhere; font-size: 22px; font-variant-numeric: tabular-nums; }
+.travel-summary small { font-size: 12px; font-weight: 500; }
+.travel-board .asset-add-btn { margin: 0; }
+.travel-form label { display: grid; gap: 7px; min-width: 0; color: var(--ios-ink, var(--ink)); font-size: 14px; font-weight: 650; }
+.travel-form input, .travel-form textarea { width: 100%; min-width: 0; font-size: 16px; }
+.travel-form textarea { resize: vertical; line-height: 1.6; }
+.travel-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.travel-filters button, .travel-actions button, .travel-delete-confirm button { min-height: 36px; padding: 6px 12px; border: 1px solid transparent; border-radius: 8px; color: var(--ios-muted, var(--muted)); background: transparent; font-size: 14px; font-weight: 650; }
+.travel-filters button.active { color: var(--ios-blue, var(--theme-main)); border-color: var(--ios-separator, var(--line)); background: var(--ios-blue-soft, var(--theme-soft)); }
+.travel-filters button:hover, .travel-actions button:hover { background: var(--ios-panel-muted, var(--soft)); }
+.travel-empty { padding: 26px 8px; text-align: center; }
+.travel-empty h3 { margin: 0; font-size: 17px; }
+.travel-empty p { margin: 8px 0 0; color: var(--ios-muted, var(--muted)); font-size: 14px; line-height: 1.6; }
+.travel-list { display: grid; }
+.travel-record { display: grid; gap: 12px; min-width: 0; padding-block: 20px; border-top: 1px solid var(--ios-separator, var(--line)); }
+.travel-record:first-child { padding-top: 0; border-top: 0; }
+.travel-record-head { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
+.travel-record h3 { min-width: 0; margin: 0; overflow-wrap: anywhere; font-size: 18px; line-height: 1.4; }
+.travel-status { flex: 0 0 auto; padding: 4px 9px; border-radius: 7px; color: var(--ios-blue, var(--theme-main)); background: var(--ios-blue-soft, var(--theme-soft)); font-size: 12px; font-weight: 700; }
+.travel-dates { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; color: var(--ios-muted, var(--muted)); font-size: 14px; font-variant-numeric: tabular-nums; }
+.travel-notes { max-width: 70ch; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.7; }
+.travel-record-foot { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; }
+.travel-record-foot > strong { color: var(--ios-blue, var(--theme-main)); font-size: 16px; }
+.travel-actions { display: flex; gap: 4px; }
+.travel-actions button { color: var(--ios-blue, var(--theme-main)); }
+.travel-delete-confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px; border-radius: 8px; background: var(--ios-panel-muted, var(--soft)); font-size: 14px; }
+.travel-delete-confirm span { margin-right: auto; }
+.travel-delete-confirm button:last-child, .travel-error { color: var(--red); }
+.travel-error { margin: 0; font-size: 14px; }
+@media (max-width: 480px) {
+  .travel-board { padding: 16px; }
+  .travel-summary { gap: 8px; }
+  .travel-summary strong { font-size: 19px; }
+}

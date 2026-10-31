@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { thiingsIconByKey, thiingsIconCategories } from "../lib/thiings-icons";
+import TravelBoard from "./components/travel-board";
 import WorkbenchSelect, { SelectChevron } from "./components/workbench-select";
 
 const storagePrefix = "qiyeworkbench:";
@@ -136,7 +137,7 @@ const pageDescriptions = {
   diet: "每日喝水、饮食热量和最近趋势",
   news: "微博、B站、抖音等热榜集中查看",
   consultations: "观影清单、想法和资料整理",
-  assets: "管理个人物品、会员订阅和使用周期",
+  assets: "管理个人物品、会员订阅与旅行记录",
   exercise: "记录跑步、球类训练与每日对战战绩",
   settings: "账号同步、备份恢复和自选配置",
 };
@@ -259,7 +260,7 @@ const marketSymbolNames = {
 };
 const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
 const defaultChineseHolidaysSeedKey = "defaultChineseHolidays2026Seeded";
-const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins", "assetRecords", "subscriptionRecords", "exerciseRecords", "weightRecords", "lifeGoals"];
+const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins", "assetRecords", "subscriptionRecords", "travelRecords", "exerciseRecords", "weightRecords", "lifeGoals"];
 const marketCacheVersion = 5;
 const fundCacheVersion = 2;
 const indexTrackerCacheVersion = 2;
@@ -1138,6 +1139,7 @@ function mergeCloudWithLocal(cloud) {
     watchCheckins: mergedWatchCheckins,
     assetRecords: mergeSyncedItems("assetRecords", readAssetRecords(), cloudAssetRecords(cloud), cloud),
     subscriptionRecords: mergeSyncedItems("subscriptionRecords", readStorage("subscriptionRecords", []), cloud.subscriptionRecords, cloud),
+    travelRecords: mergeSyncedItems("travelRecords", readStorage("travelRecords", []), cloud.travelRecords, cloud),
     dietRecords: mergeSyncedItems("dietRecords", readStorage("dietRecords", []), cloud.dietRecords, cloud),
     exerciseRecords: mergeSyncedItems("exerciseRecords", readStorage("exerciseRecords", []), cloud.exerciseRecords, cloud),
     weightRecords: mergeSyncedItems("weightRecords", readStorage("weightRecords", []), cloud.weightRecords, cloud),
@@ -6044,6 +6046,7 @@ export default function Workbench() {
   const [watchCheckins, setWatchCheckins] = useState([]);
   const [assetItems, setAssetItems] = useState([]);
   const [subscriptionRecords, setSubscriptionRecords] = useState([]);
+  const [travelRecords, setTravelRecords] = useState([]);
   const [dietRecords, setDietRecords] = useState([]);
   const [exerciseRecords, setExerciseRecords] = useState([]);
   const [weightRecords, setWeightRecords] = useState([]);
@@ -6192,6 +6195,10 @@ export default function Workbench() {
       setAssetItems(cloud.assetRecords);
       writeStorage("assetRecords", cloud.assetRecords);
     }
+    if (Array.isArray(cloud.travelRecords)) {
+      setTravelRecords(cloud.travelRecords);
+      writeStorage("travelRecords", cloud.travelRecords);
+    }
     if (Array.isArray(cloud.subscriptionRecords)) {
       setSubscriptionRecords(cloud.subscriptionRecords);
       writeStorage("subscriptionRecords", cloud.subscriptionRecords);
@@ -6280,6 +6287,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, `done:${todayKey()}`, merged[`done:${todayKey()}`]),
         saveCloudItem(nextSession, "assetRecords", merged.assetRecords),
         saveCloudItem(nextSession, "subscriptionRecords", merged.subscriptionRecords),
+        saveCloudItem(nextSession, "travelRecords", merged.travelRecords),
         saveCloudItem(nextSession, "assets", merged.assets),
         saveCloudItem(nextSession, "fundPortfolio", merged.fundPortfolio),
         saveCloudItem(nextSession, "fundCodes", merged.fundCodes),
@@ -6318,6 +6326,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, `done:${todayKey()}`, merged[`done:${todayKey()}`]),
         saveCloudItem(nextSession, "assetRecords", merged.assetRecords),
         saveCloudItem(nextSession, "subscriptionRecords", merged.subscriptionRecords),
+        saveCloudItem(nextSession, "travelRecords", merged.travelRecords),
         saveCloudItem(nextSession, "assets", merged.assets),
         saveCloudItem(nextSession, "fundPortfolio", merged.fundPortfolio),
         saveCloudItem(nextSession, "fundCodes", merged.fundCodes),
@@ -6380,6 +6389,7 @@ export default function Workbench() {
     writeStorage("watchCheckins", savedWatchCheckins);
     setAssetItems(readAssetRecords());
     setSubscriptionRecords(readStorage("subscriptionRecords", []));
+    setTravelRecords(readStorage("travelRecords", []));
     let nextAnniversaries = readStorage("anniversaries", []);
     if (localStorage.getItem(key(defaultChineseHolidaysSeedKey)) !== "true") {
       nextAnniversaries = withDefaultChineseHolidays(nextAnniversaries);
@@ -7223,6 +7233,26 @@ export default function Workbench() {
     persist("subscriptionRecords", next);
   }
 
+  function addTravel(values) {
+    const item = stampItem({ id: crypto.randomUUID(), ...values });
+    const next = [item, ...travelRecords];
+    setTravelRecords(next);
+    persist("travelRecords", next);
+  }
+
+  function updateTravel(id, updates) {
+    const next = travelRecords.map((item) => item.id === id ? stampItem({ ...item, ...updates }) : item);
+    setTravelRecords(next);
+    persist("travelRecords", next);
+  }
+
+  function deleteTravel(id) {
+    markDeleted("travelRecords", id);
+    const next = travelRecords.filter((item) => item.id !== id);
+    setTravelRecords(next);
+    persist("travelRecords", next);
+  }
+
   function deleteWatchCheckin(recordId) {
     const record = watchCheckins.find((item) => item.id === recordId);
     if (recordId) markDeleted("watchCheckins", recordId);
@@ -7323,6 +7353,9 @@ export default function Workbench() {
       "## 订阅记录",
       ...subscriptionRecords.map((item) => `- ${item.title} ¥${item.price} · ${item.purchaseType}${item.billingCycle ? ` · ${item.billingCycle}` : ""} · 购买日期 ${item.purchaseDate}${item.endDate ? ` · 结束日期 ${item.endDate}` : ""}${item.usageNote ? ` · 使用说明：${item.usageNote}` : ""}`),
       "",
+      "## 旅游记录",
+      ...travelRecords.map((item) => `### ${item.destination}\n\n${item.startDate} 至 ${item.endDate || item.startDate}\n\n费用：${item.cost == null ? "未记录" : `¥${item.cost}`}\n\n${item.notes || ""}\n`),
+      "",
       "## 体重记录",
       ...weightRecords.map((item) => `- ${item.date} ${item.time} ${formatWeight(item.weight)}kg`),
     ];
@@ -7345,6 +7378,7 @@ export default function Workbench() {
       watchCheckins,
       assetRecords: assetItems,
       subscriptionRecords,
+      travelRecords,
       dietRecords,
       exerciseRecords,
       weightRecords,
@@ -7401,6 +7435,10 @@ export default function Workbench() {
       if (nextAssetRecords) {
         setAssetItems(nextAssetRecords);
         persist("assetRecords", nextAssetRecords);
+      }
+      if (Array.isArray(payload.travelRecords)) {
+        setTravelRecords(payload.travelRecords);
+        persist("travelRecords", payload.travelRecords);
       }
       if (Array.isArray(payload.subscriptionRecords)) {
         setSubscriptionRecords(payload.subscriptionRecords);
@@ -7727,6 +7765,7 @@ export default function Workbench() {
               <div className="asset-section-tabs" aria-label="资产内容切换">
                 <button className={assetSection === "assets" ? "active" : ""} type="button" onClick={() => setAssetSection("assets")}>我的资产</button>
                 <button className={assetSection === "subscriptions" ? "active" : ""} type="button" onClick={() => setAssetSection("subscriptions")}>我的订阅</button>
+                <button className={assetSection === "travel" ? "active" : ""} type="button" onClick={() => setAssetSection("travel")}>旅游记录</button>
               </div>
               {assetSection === "assets" ? (
                 <>
@@ -7737,6 +7776,8 @@ export default function Workbench() {
                   </div>
                   <AssetBoard items={assetItems} status={assetView} onAdd={addAsset} onUpdate={updateAsset} onDelete={deleteAsset} />
                 </>
+              ) : assetSection === "travel" ? (
+                <TravelBoard items={travelRecords} onAdd={addTravel} onUpdate={updateTravel} onDelete={deleteTravel} />
               ) : (
                 <SubscriptionBoard items={subscriptionRecords} onAdd={addSubscription} onUpdate={updateSubscription} onDelete={deleteSubscription} />
               )}
