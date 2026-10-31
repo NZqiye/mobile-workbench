@@ -9486,6 +9486,10 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
   }
   .phone-shell.ios18-shell.desktop-shell.desktop-redesign .content { flex: 0 0 auto; }
   .ios18-shell.desktop-shell .content > * { min-width: 0; }
+  .ios18-shell.desktop-shell .module-tabs {
+    width: 100%;
+    max-width: none;
+  }
   .ios18-shell.desktop-shell:not(.page-today) .content > * { grid-column: 1 / -1; }
   .phone-shell.ios18-shell.desktop-shell.desktop-redesign.page-today .today-time-panel,
   .phone-shell.ios18-shell.desktop-shell.desktop-redesign.page-today .weather-panel {
