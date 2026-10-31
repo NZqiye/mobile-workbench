@@ -7574,12 +7574,12 @@ textarea::placeholder {
 .phone-shell.mobile-shell .work-area,
 .phone-shell.desktop-shell .work-area {
   color: var(--ios-ink);
-  background: linear-gradient(180deg, #f3f5f8 0%, #e9edf2 100%) !important;
+  background: var(--ios-page) !important;
 }
 .phone-shell.mobile-shell .module-head,
 .phone-shell.desktop-shell .module-head {
   color: var(--ios-ink);
-  background: rgba(255, 255, 255, 0.82) !important;
+  background: var(--ios-page) !important;
 }
 .phone-shell.mobile-shell .module-head h1,
 .phone-shell.desktop-shell .module-head h1 { color: var(--ios-ink); }
@@ -9216,7 +9216,7 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
   background: var(--ios-panel) !important;
   box-shadow: var(--ios-shadow);
 }
-.ios18-shell .pet-card { background: var(--ios-panel-muted) !important; }
+.ios18-shell .pet-card { background: var(--ios-surface) !important; }
 .ios18-shell .quick-note-bar input { color: var(--ios-ink); }
 .ios18-shell .today-subscriptions { grid-column: 1 / -1; }
 .subscription-expiry-list { display: grid; }
@@ -9263,7 +9263,7 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
   min-height: 154px;
   padding: 24px;
   border-radius: 20px;
-  background: color-mix(in srgb, var(--ios-blue) 9%, var(--ios-panel)) !important;
+  background: var(--ios-surface) !important;
 }
 .ios18-shell .today-time-panel::before,
 .ios18-shell .today-time-panel::after { content: none; }
@@ -9456,4 +9456,66 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
   .travel-board { padding: 16px; }
   .travel-summary { gap: 8px; }
   .travel-summary strong { font-size: 19px; }
+}
+
+/* Keep home surfaces consistent and let desktop modules shrink with their column. */
+.ios18-shell.page-today .dashboard-tile,
+.ios18-shell.page-today .quick-note-bar {
+  background: var(--ios-surface) !important;
+}
+.ios18-shell .life-goal-form-fields label { min-width: 0; }
+.ios18-shell .life-goal-form-fields input { width: 100%; }
+.ios18-shell .life-goal-form-fields button {
+  color: #fff;
+  border-color: var(--ios-blue);
+  background: var(--ios-blue);
+}
+
+@media (min-width: 960px) {
+  .phone-shell.ios18-shell.desktop-shell.desktop-redesign {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .phone-shell.ios18-shell.desktop-shell.desktop-redesign .work-area,
+  .phone-shell.ios18-shell.desktop-shell.desktop-redesign .module-head,
+  .phone-shell.ios18-shell.desktop-shell.desktop-redesign .content {
+    min-width: 0;
+    max-width: 100%;
+    background: var(--ios-page) !important;
+  }
+  .phone-shell.ios18-shell.desktop-shell.desktop-redesign .content { flex: 0 0 auto; }
+  .ios18-shell.desktop-shell .content > * { min-width: 0; }
+  .ios18-shell.desktop-shell:not(.page-today) .content > * { grid-column: 1 / -1; }
+  .phone-shell.ios18-shell.desktop-shell.desktop-redesign.page-today .today-time-panel,
+  .phone-shell.ios18-shell.desktop-shell.desktop-redesign.page-today .weather-panel {
+    height: auto !important;
+    min-height: 216px !important;
+    align-self: stretch;
+  }
+  .phone-shell.ios18-shell.desktop-shell.desktop-redesign.page-today .quick-note-bar { min-height: 80px; }
+  .phone-shell.ios18-shell.desktop-shell.desktop-redesign.page-today .dashboard-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .phone-shell.ios18-shell.desktop-shell.desktop-redesign.page-today .pet-card { grid-column: 1 / -1; }
+}
+
+@media (min-width: 960px) and (max-width: 1599px) {
+  .phone-shell.ios18-shell.desktop-shell.desktop-redesign .app-body {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+  .phone-shell.ios18-shell.desktop-shell.desktop-redesign .desktop-context-rail { display: none; }
+}
+
+@media (min-width: 960px) and (max-width: 1199px) {
+  .phone-shell.ios18-shell.desktop-shell.desktop-redesign.page-today .content > * { grid-column: 1 / -1; }
+  .ios18-shell.desktop-shell .life-goal-form-fields { grid-template-columns: minmax(0, 1fr) 170px; }
+  .ios18-shell.desktop-shell .life-goal-form-fields button { grid-column: 1 / -1; }
+}
+
+@media (min-width: 1200px) {
+  .phone-shell.ios18-shell.desktop-shell.desktop-redesign.page-today .dashboard-strip {
+    grid-template-columns: minmax(0, 1.12fr) repeat(2, minmax(0, 1fr));
+  }
+  .phone-shell.ios18-shell.desktop-shell.desktop-redesign.page-today .pet-card { grid-column: auto; }
 }
