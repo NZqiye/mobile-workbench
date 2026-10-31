@@ -3674,18 +3674,18 @@ function mediaAirText(item) {
 
 const assetIconImageMap = {
   "thiings:badminton-racket": "/assets-icons/thiings/sport/badminton-racket.webp", "thiings:medicine-bottle": "/assets-icons/thiings/health/medicine-bottle.webp",
-  smartphone: "/assets-icons/smartphone.png", laptop: "/assets-icons/laptop.png", monitor: "/assets-icons/monitor.png", keyboard: "/assets-icons/keyboard.png", mouse: "/assets-icons/mouse.png",
-  headphones: "/assets-icons/headphones.png", camera: "/assets-icons/camera.png", tv: "/assets-icons/tv.png", gamepad: "/assets-icons/gamepad.png", watch: "/assets-icons/watch.png",
-  cpu: "/assets-icons/cpu.png", harddrive: "/assets-icons/harddrive.png", printer: "/assets-icons/printer.png", speaker: "/assets-icons/speaker.png", battery: "/assets-icons/battery.png",
-  house: "/assets-icons/house.png", key: "/assets-icons/key.png", lamp: "/assets-icons/lamp.png", sofa: "/assets-icons/sofa.png", washing: "/assets-icons/washing.png",
-  cart: "/assets-icons/cart.png", backpack: "/assets-icons/backpack.png", scissors: "/assets-icons/scissors.png", droplets: "/assets-icons/droplets.png", trash: "/assets-icons/trash.png",
-  snowflake: "/assets-icons/snowflake.png", umbrella: "/assets-icons/umbrella.png", sun: "/assets-icons/sun.png", flame: "/assets-icons/flame.png", sparkles: "/assets-icons/sparkles.png",
-  coffee: "/assets-icons/coffee.png", cup: "/assets-icons/cup.png", wine: "/assets-icons/wine.png", beer: "/assets-icons/beer.png", milk: "/assets-icons/milk.png",
-  utensils: "/assets-icons/utensils.png", pizza: "/assets-icons/pizza.png", chef: "/assets-icons/chef.png", croissant: "/assets-icons/croissant.png", apple: "/assets-icons/apple.png",
-  shirt: "/assets-icons/shirt.png", footprints: "/assets-icons/footprints.png", glasses: "/assets-icons/glasses.png", diamond: "/assets-icons/diamond.png", shoppingbag: "/assets-icons/shoppingbag.png",
-  car: "/assets-icons/car.png", bike: "/assets-icons/bike.png", plane: "/assets-icons/plane.png", train: "/assets-icons/train.png", dumbbell: "/assets-icons/dumbbell.png",
-  trophy: "/assets-icons/trophy.png", tent: "/assets-icons/tent.png", waves: "/assets-icons/waves.png", mountain: "/assets-icons/mountain.png", sailboat: "/assets-icons/sailboat.png",
-  package: "/assets-icons/package.png",
+  smartphone: "/assets-icons/thiings/digital/smartphone.webp", laptop: "/assets-icons/thiings/digital/laptop.webp", monitor: "/assets-icons/thiings/digital/smart-display.webp", keyboard: "/assets-icons/thiings/digital/keyboard.webp", mouse: "/assets-icons/thiings/digital/desktop-computer-mouse.webp",
+  headphones: "/assets-icons/thiings/digital/headphones.webp", camera: "/assets-icons/thiings/digital/camera.webp", tv: "/assets-icons/thiings/digital/smart-tv.webp", gamepad: "/assets-icons/thiings/leisure/game-controller.webp", watch: "/assets-icons/thiings/digital/wristwatch.webp",
+  cpu: "/assets-icons/thiings/digital/cpu.webp", harddrive: "/assets-icons/thiings/digital/hard-drive.webp", printer: "/assets-icons/thiings/digital/desktop-printer.webp", speaker: "/assets-icons/thiings/digital/portable-speaker.webp", battery: "/assets-icons/thiings/digital/battery.webp",
+  house: "/assets-icons/thiings/home/house.webp", key: "/assets-icons/thiings/home/key.webp", lamp: "/assets-icons/thiings/home/lamp.webp", sofa: "/assets-icons/thiings/home/sofa.webp", washing: "/assets-icons/thiings/home/washing-machine.webp",
+  cart: "/assets-icons/thiings/home/shopping-basket.webp", backpack: "/assets-icons/thiings/fashion/backpack.webp", scissors: "/assets-icons/thiings/leisure/scissors.webp", droplets: "/assets-icons/thiings/food/water-bottle-1.webp", trash: "/assets-icons/thiings/home/trash-can.webp",
+  snowflake: "/assets-icons/thiings/outdoor/snowflake.webp", umbrella: "/assets-icons/thiings/fashion/umbrella-kpw0ub.webp", sun: "/assets-icons/thiings/outdoor/sun.webp", flame: "/assets-icons/thiings/outdoor/flame.webp", sparkles: "/assets-icons/thiings/finance/jewellery.webp",
+  coffee: "/assets-icons/thiings/food/coffee.webp", cup: "/assets-icons/thiings/food/mug.webp", wine: "/assets-icons/thiings/food/wine-bottle.webp", beer: "/assets-icons/thiings/food/beer-bottle.webp", milk: "/assets-icons/thiings/food/milk.webp",
+  utensils: "/assets-icons/thiings/food/fork.webp", pizza: "/assets-icons/thiings/food/pizza.webp", chef: "/assets-icons/thiings/food/chef.webp", croissant: "/assets-icons/thiings/food/croissant.webp", apple: "/assets-icons/thiings/food/apple.webp",
+  shirt: "/assets-icons/thiings/fashion/t-shirt.webp", footprints: "/assets-icons/thiings/fashion/shoes.webp", glasses: "/assets-icons/thiings/fashion/glasses.webp", diamond: "/assets-icons/thiings/finance/jewellery.webp", shoppingbag: "/assets-icons/thiings/fashion/handbag.webp",
+  car: "/assets-icons/thiings/sport/car.webp", bike: "/assets-icons/thiings/sport/bicycle.webp", plane: "/assets-icons/thiings/sport/airplane.webp", train: "/assets-icons/thiings/sport/train.webp", dumbbell: "/assets-icons/thiings/sport/dumbbell.webp",
+  trophy: "/assets-icons/thiings/sport/trophy.webp", tent: "/assets-icons/thiings/sport/tent.webp", waves: "/assets-icons/thiings/sport/swimming.webp", mountain: "/assets-icons/thiings/outdoor/mountain.webp", sailboat: "/assets-icons/thiings/sport/sailboat.webp",
+  package: "/assets-icons/thiings/home/box.webp",
 };
 
 const subscriptionIconCategories = [{
@@ -3717,7 +3717,6 @@ const subscriptionIconCategories = [{
     "thiings-subscribe:amazon-prime-video",
     "thiings-subscribe:hbo-max-programas-e-filmes",
     "thiings-subscribe:tencent-video",
-    "thiings-subscribe:bilibili",
     "thiings-subscribe:iqiyi",
     "thiings-subscribe:youku",
     "thiings-subscribe:douyin",
@@ -3731,9 +3730,9 @@ function AssetIcon({ name, size = 20 }) {
   useEffect(() => setErr(false), [name]);
   if (!src || err) {
     return (
-      <span className="asset-icon-fallback" style={{ width: size, height: size, fontSize: Math.max(12, Math.floor(size * 0.55)) }}>
-        {String(name || "?").slice(0, 1).toUpperCase()}
-      </span>
+      <svg className="asset-icon-fallback" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" aria-label="物品图标暂不可用" role="img">
+        <path d="m3 7 9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10M7.5 5l9 4" />
+      </svg>
     );
   }
   return <img className="asset-icon-img" src={src} width={size} height={size} alt="" loading="eager" decoding="async" onError={() => setErr(true)} />;
@@ -3750,6 +3749,7 @@ const assetIconCategories = [
       "thiings:backpack", "thiings:wallet", "thiings:credit-card", "thiings:calculator",
       "thiings:book", "thiings:notebook-223yak", "thiings:bicycle", "thiings:car",
       "thiings:airplane", "thiings:umbrella-kpw0ub", "thiings:medicine-capsule", "thiings:fitness-tracker",
+      "thiings:camp-chair", "thiings:camping-tent", "thiings:suitcase", "thiings:power-strip",
     ],
   },
   ...thiingsIconCategories.map((category) => ({
@@ -3761,11 +3761,11 @@ const assetIconCategories = [
         : category.icons,
   })),
 ];
-const assetCategoryOptions = assetIconCategories.map((category) => category.label);
+const assetCategoryOptions = assetIconCategories.filter((category) => category.id !== "common").map((category) => category.label);
 
 function assetCategory(item) {
   if (assetCategoryOptions.includes(item?.category)) return item.category;
-  const iconCategory = assetIconCategories.find((category) => category.icons.includes(item?.icon));
+  const iconCategory = assetIconCategories.find((category) => category.id !== "common" && category.icons.includes(item?.icon));
   if (iconCategory) return iconCategory.label;
   return {
     数码: "数码科技",
@@ -3870,12 +3870,12 @@ function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelet
               </div>
               <div className="asset-icon-tabs">
                 {assetIconCategories.map((cat) => (
-                  <button type="button" key={cat.id} className={iconTab === cat.id ? "active" : ""} onClick={() => { setIconTab(cat.id); setFormCategory(cat.label); }}>{cat.label}</button>
+                  <button type="button" key={cat.id} className={iconTab === cat.id ? "active" : ""} onClick={() => setIconTab(cat.id)}>{cat.label}</button>
                 ))}
               </div>
               <div className="asset-icon-grid">
                 {assetIconCategories.find((c) => c.id === iconTab)?.icons.map((icon) => (
-                  <button type="button" key={icon} className={`asset-icon-cell ${formIcon === icon ? "selected" : ""}`} onClick={() => { setFormIcon(icon); setShowIconPicker(false); }}><AssetIcon name={icon} size={36} /></button>
+                  <button type="button" key={icon} aria-label={`选择 ${icon.replace("thiings:", "").replaceAll("-", " ")}`} aria-pressed={formIcon === icon} className={`asset-icon-cell ${formIcon === icon ? "selected" : ""}`} onClick={() => { setFormIcon(icon); setFormCategory(assetCategory({ icon })); setShowIconPicker(false); }}><AssetIcon name={icon} size={36} /></button>
                 ))}
               </div>
             </div>
@@ -3884,7 +3884,7 @@ function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelet
           <input value={formDate} onChange={(e) => setFormDate(e.target.value)} type="date" required />
           <div className="asset-form-row">
             <WorkbenchSelect value={formCategory} onChange={(e) => { const category = assetIconCategories.find((item) => item.label === e.target.value); setFormCategory(e.target.value); if (category) setIconTab(category.id); }}>
-              {assetIconCategories.map((category) => <option value={category.label} key={category.id}>{category.label}</option>)}
+              {assetCategoryOptions.map((category) => <option value={category} key={category}>{category}</option>)}
             </WorkbenchSelect>
             <WorkbenchSelect value={formStatus} onChange={(e) => setFormStatus(e.target.value)}>
               <option value="服役中">服役中</option><option value="退役">退役</option><option value="已出售">已出售</option>
