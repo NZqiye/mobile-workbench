@@ -138,7 +138,7 @@ const pageNames = Object.fromEntries(pages.map((page) => [page.id, page.name]));
 const pageDescriptions = {
   today: "时间、天气、计划和行情集中整理",
   life: "设定目标日期，拆分成每天都能完成的行动",
-  plans: "习惯打卡、任务安排和纪念日倒数",
+  plans: "习惯打卡、计划安排与岁时纪往",
   market: "金价、指数、自选资产观察",
   diet: "每日喝水、饮食热量和最近趋势",
   news: "微博、B站、抖音等热榜集中查看",
@@ -3313,7 +3313,7 @@ function itemMatchesQuery(item, query, fields) {
     .some((value) => String(value).toLowerCase().includes(keyword));
 }
 
-function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onToggleHabit, onDeleteHabit, onAddTask, onToggleTask, onDeleteTask, onAddAnniversary, onDeleteAnniversary, onUpdateAnniversaryIcon }) {
+function DailyArrangement({ view = "habits", habits, done, tasks, anniversaries, onAddHabit, onToggleHabit, onDeleteHabit, onAddTask, onToggleTask, onDeleteTask, onAddAnniversary, onDeleteAnniversary, onUpdateAnniversaryIcon }) {
   const [anniversaryType, setAnniversaryType] = useState("countdown");
   const [anniversaryCalendarType, setAnniversaryCalendarType] = useState("solar");
   const [anniversaryFilter, setAnniversaryFilter] = useState("all");
@@ -3368,6 +3368,7 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
 
   return (
     <section className="arrange-shell">
+      {view === "habits" && (
       <section className="arrange-card">
         <div className="panel-head">
           <div>
@@ -3392,11 +3393,13 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
           ))}
         </div>
       </section>
+      )}
 
+      {view === "tasks" && (
       <section className="arrange-card">
         <div className="panel-head">
           <div>
-            <h2>任务安排</h2>
+            <h2>计划安排</h2>
             <p>记录近期工作，完成后勾掉即可。</p>
           </div>
         </div>
@@ -3419,28 +3422,19 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
           ))}
         </div>
       </section>
+      )}
 
+      {view === "anniversaries" && (
       <section className="arrange-card daybook-board">
         <div className="panel-head">
           <div>
-            <h2>倒数纪念日</h2>
+            <h2>岁时纪往</h2>
             <p>把值得期待的日子，认真记下来。</p>
           </div>
           <span className="daybook-total">共 {anniversaries.length} 个日子</span>
         </div>
-        <div className="daybook-filters" role="group" aria-label="筛选纪念日">
-          {[{ id: "all", label: "全部日子", icon: "thiings:notebook-223yak" }, ...anniversaryTypes].map((type) => (
-            <button key={type.id} type="button" aria-pressed={anniversaryFilter === type.id} onClick={() => setAnniversaryFilter(type.id)}><img className="daybook-filter-icon" src={thiingsIconByKey[type.icon]} width="24" height="24" alt="" />{type.label}<span>{anniversaries.filter((item) => type.id === "all" || (item.type || "memory") === type.id).length}</span></button>
-          ))}
-        </div>
-        <div className="daybook-events">
-          {featuredAnniversary && renderAnniversary(featuredAnniversary, true)}
-          {upcomingAnniversaries.slice(1).map((item) => renderAnniversary(item))}
-          {upcomingAnniversaries.length === 0 && <p className="daybook-empty">{anniversaries.length === 0 ? "还没有记录，添加一个值得期待的日子吧。" : filteredAnniversaries.length === 0 ? "还没有这类日子，可以在下方添加。" : "暂时没有未到的日子，已过记录收在下方。"}</p>}
-          {pastAnniversaries.length > 0 && <details className="daybook-archive"><summary><span>已过日子 <b>{pastAnniversaries.length}</b></span><span className="daybook-archive-toggle">查看记录 <SelectChevron /></span></summary><div className="daybook-events">{pastAnniversaries.map((item) => renderAnniversary(item, false, true))}</div></details>}
-        </div>
         <details className="daybook-add" open={anniversaries.length === 0 ? true : undefined}>
-          <summary><span>添加纪念日</span><SelectChevron /></summary>
+          <summary><span>＋ 添加日子</span><SelectChevron /></summary>
         <form className="anniversary-form" onSubmit={submitAnniversary}>
           <input name="title" placeholder="名称，例如 高考、结婚纪念、生日、春节" required />
           <div className="anniversary-fields">
@@ -3469,7 +3463,20 @@ function DailyArrangement({ habits, done, tasks, anniversaries, onAddHabit, onTo
           <button type="submit">添加纪念日</button>
         </form>
         </details>
+        <div className="daybook-filters" role="group" aria-label="筛选纪念日">
+          {[{ id: "all", label: "全部日子", icon: "thiings:notebook-223yak" }, ...anniversaryTypes].map((type) => (
+            <button key={type.id} type="button" aria-pressed={anniversaryFilter === type.id} onClick={() => setAnniversaryFilter(type.id)}><img className="daybook-filter-icon" src={thiingsIconByKey[type.icon]} width="24" height="24" alt="" />{type.label}<span>{anniversaries.filter((item) => type.id === "all" || (item.type || "memory") === type.id).length}</span></button>
+          ))}
+        </div>
+        <div className="daybook-events">
+          {featuredAnniversary && renderAnniversary(featuredAnniversary, true)}
+          {upcomingAnniversaries.slice(1).map((item) => renderAnniversary(item))}
+          {upcomingAnniversaries.length === 0 && <p className="daybook-empty">{anniversaries.length === 0 ? "还没有记录，添加一个值得期待的日子吧。" : filteredAnniversaries.length === 0 ? "还没有这类日子，可以在上方添加。" : "暂时没有未到的日子，已过记录收在下方。"}</p>}
+          {pastAnniversaries.length > 0 && <details className="daybook-archive"><summary><span>已过日子 <b>{pastAnniversaries.length}</b></span><span className="daybook-archive-toggle">查看记录 <SelectChevron /></span></summary><div className="daybook-events">{pastAnniversaries.map((item) => renderAnniversary(item, false, true))}</div></details>}
+        </div>
+
       </section>
+      )}
     </section>
   );
 }
@@ -5110,7 +5117,7 @@ function ConsultationList({ consultations, onDelete, onEdit }) {
   );
 }
 
-function DietTracker({ records, waterTarget, onAddWater, onAddMeal, onDelete, onSaveTarget }) {
+function DietTracker({ view = "water", records, waterTarget, onAddWater, onAddMeal, onDelete, onSaveTarget }) {
   const [meal, setMeal] = useState("早餐");
   const [foodInput, setFoodInput] = useState("");
   const target = Number(waterTarget) || defaultWaterTarget;
@@ -5162,14 +5169,7 @@ function DietTracker({ records, waterTarget, onAddWater, onAddMeal, onDelete, on
 
   return (
     <section className="diet-shell">
-      <div className="diet-title">
-        <span>🍱</span>
-        <div>
-          <h2>每日饮食喝水</h2>
-          <p>{todayDisplay()} · 今天也要好好照顾自己</p>
-        </div>
-      </div>
-
+      {view === "water" && (
       <section className="diet-card water-card">
         <div className="panel-head">
           <h2>喝水打卡</h2>
@@ -5226,10 +5226,12 @@ function DietTracker({ records, waterTarget, onAddWater, onAddMeal, onDelete, on
           </div>
         </div>
       </section>
+      )}
 
+      {view === "calories" && (
       <section className="diet-card meal-card">
         <div className="panel-head">
-          <h2>饮食热量记录</h2>
+          <h2>热量统计</h2>
           <span className="tag">今日 {calorieTotal} kcal</span>
         </div>
         <div className="meal-tabs">
@@ -5253,6 +5255,7 @@ function DietTracker({ records, waterTarget, onAddWater, onAddMeal, onDelete, on
           ))}
         </div>
       </section>
+      )}
     </section>
   );
 }
@@ -5264,12 +5267,12 @@ const exerciseTypes = [
   { id: 'gym', label: '健身', icon: '/assets-icons/thiings/sport/dumbbell.webp', calPerMin: 8 },
   { id: 'table-tennis', label: '乒乓球', icon: '/assets-icons/thiings/sport/table-tennis-paddle.webp', calPerMin: 6 },
   { id: 'badminton', label: '羽毛球', icon: '/assets-icons/thiings/sport/badminton-shuttlecock.webp', calPerMin: 8 },
+  { id: 'yoga', label: '瑜伽', icon: '/assets-icons/thiings/sport/yoga-mat.webp', calPerMin: 5 },
 ];
 
 const legacyExerciseTypes = {
   swimming: { id: 'swimming', label: '游泳', icon: '/assets-icons/thiings/sport/swimming.webp', calPerMin: 10 },
   cycling: { id: 'cycling', label: '骑行', icon: '/assets-icons/thiings/sport/bicycle.webp', calPerMin: 9 },
-  yoga: { id: 'yoga', label: '瑜伽', icon: '/assets-icons/thiings/sport/yoga-mat.webp', calPerMin: 5 },
 };
 
 function exerciseTypeForRecord(record) {
@@ -5545,7 +5548,7 @@ function formatWeight(value) {
   return Number.isFinite(number) && number > 0 ? number.toFixed(2) : '--';
 }
 
-function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight, onDeleteWeight }) {
+function ExerciseTracker({ view = "weight", records, weightRecords, onAdd, onDelete, onAddWeight, onDeleteWeight }) {
   const [exerciseType, setExerciseType] = useState('running');
   const [distanceKm, setDistanceKm] = useState('');
   const [duration, setDuration] = useState('');
@@ -5694,14 +5697,7 @@ function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight,
 
   return (
     <section className="exercise-shell">
-      <div className="exercise-title">
-        <span>{'🏋️'}</span>
-        <div>
-          <h2>{'每日运动记录'}</h2>
-          <p>{todayDisplay()} {'· 动起来，每一步都算数'}</p>
-        </div>
-      </div>
-
+      {view === "exercise" && (
       <section className="exercise-stats-row">
         <div className="exercise-stat-card">
           <span>{'📊'}</span>
@@ -5719,7 +5715,9 @@ function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight,
           <small>{'获得小蛋糕'}</small>
         </div>
       </section>
+      )}
 
+      {view === "weight" && (
       <section className="exercise-card">
         <div className="panel-head">
           <h2>{'体重记录'}</h2>
@@ -5755,7 +5753,10 @@ function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight,
           ))}
         </div>
       </section>
+      )}
 
+      {view === "exercise" && (
+      <>
       <section className={`exercise-card exercise-entry-card ${isTableTennisType(exerciseType) ? 'table-tennis-entry-card' : ''}`}>
         <div className="panel-head">
           <h2>{'记录运动'}</h2>
@@ -5881,7 +5882,7 @@ function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight,
           <span className="tag">{todayOtherExerciseRecords.length} 条</span>
         </div>
         <div className="exercise-log-list">
-          {todayOtherExerciseRecords.length === 0 && <p className="empty">跑步、散步、健身和羽毛球会显示在这里。</p>}
+          {todayOtherExerciseRecords.length === 0 && <p className="empty">跑步、散步、健身、羽毛球和瑜伽会显示在这里。</p>}
           {todayOtherExerciseRecords.map((item) => (
             <div className="exercise-log-row" key={item.id}>
               <span className="exercise-log-icon"><ExerciseIcon src={item.icon} /></span>
@@ -5909,6 +5910,8 @@ function ExerciseTracker({ records, weightRecords, onAdd, onDelete, onAddWeight,
           ))}
         </div>
       </section>
+      </>
+      )}
     </section>
   );
 }
@@ -6044,6 +6047,10 @@ function LifeListBoard({ goals, onAddGoal, onDeleteGoal, onAddItem, onToggleItem
 
 export default function Workbench() {
   const [activePage, setActivePage] = useState("today");
+  const [arrangementView, setArrangementView] = useState("habits");
+  const [dietView, setDietView] = useState("water");
+  const [exerciseView, setExerciseView] = useState("weight");
+  const bottomNavRef = useRef(null);
   const [clock, setClock] = useState("--:--:--");
   const [plans, setPlans] = useState([]);
   const [notes, setNotes] = useState([]);
@@ -6469,6 +6476,14 @@ export default function Workbench() {
     ...consultations.slice(0, 3).map((record) => ({ type: "咨询", title: record.title, time: record.time, page: "consultations" })),
   ].slice(0, 5);
   const todayPlans = plans.filter((plan) => plan.date === todayKey() && plan.status !== "已完成").slice(0, 3);
+
+  useEffect(() => {
+    bottomNavRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView({
+      inline: "center",
+      block: "nearest",
+      behavior: "auto",
+    });
+  }, [activePage, displayMode]);
 
   function switchPage(page) {
     setActivePage(page);
@@ -7651,6 +7666,24 @@ export default function Workbench() {
                     <button className={marketView === "funds" ? "active" : ""} type="button" onClick={() => setMarketView("funds")}>基金</button>
                     <button className={marketView === "indexes" ? "active" : ""} type="button" onClick={() => setMarketView("indexes")}>指数追踪</button>
                   </div>
+                ) : activePage === "plans" ? (
+                  <div className="module-tabs arrangement-tabs" role="group" aria-label="每日安排子栏目">
+                    {[{ id: "habits", label: "习惯打卡" }, { id: "tasks", label: "计划安排" }, { id: "anniversaries", label: "岁时纪往" }].map((tab) => (
+                      <button key={tab.id} className={arrangementView === tab.id ? "active" : ""} type="button" aria-pressed={arrangementView === tab.id} onClick={() => setArrangementView(tab.id)}>{tab.label}</button>
+                    ))}
+                  </div>
+                ) : activePage === "diet" ? (
+                  <div className="module-tabs diet-section-tabs" role="group" aria-label="饮食记录子栏目">
+                    {[{ id: "water", label: "喝水打卡" }, { id: "calories", label: "热量统计" }].map((tab) => (
+                      <button key={tab.id} className={dietView === tab.id ? "active" : ""} type="button" aria-pressed={dietView === tab.id} onClick={() => setDietView(tab.id)}>{tab.label}</button>
+                    ))}
+                  </div>
+                ) : activePage === "exercise" ? (
+                  <div className="module-tabs exercise-section-tabs" role="group" aria-label="运动记录子栏目">
+                    {[{ id: "weight", label: "体重记录" }, { id: "exercise", label: "运动记录" }].map((tab) => (
+                      <button key={tab.id} className={exerciseView === tab.id ? "active" : ""} type="button" aria-pressed={exerciseView === tab.id} onClick={() => setExerciseView(tab.id)}>{tab.label}</button>
+                    ))}
+                  </div>
                 ) : activePage === "assets" ? null : (
                   <div className="module-tabs" aria-label="内容切换">
                     <button className="active" type="button">{activePage === "life" ? "目标清单" : "今日内容"}</button>
@@ -7698,7 +7731,7 @@ export default function Workbench() {
                 <div className="record-list">
                   {todayPlans.length === 0 && <p className="empty">今天没有未完成计划。</p>}
                   {todayPlans.map((plan) => (
-                    <button className="timeline-row" type="button" key={plan.id} onClick={() => switchPage("plans")}>
+                    <button className="timeline-row" type="button" key={plan.id} onClick={() => { setArrangementView("tasks"); switchPage("plans"); }}>
                       <span>{plan.priority}</span><strong>{plan.title}</strong><small>{plan.status}</small>
                     </button>
                   ))}
@@ -7710,7 +7743,7 @@ export default function Workbench() {
               </section>
               <section className="stats-grid">
                 <StatButton label="今日速看" value="看板" onClick={() => switchPage("today")} />
-                <StatButton label="任务安排" value={`${stats.pendingTasks} 条`} onClick={() => switchPage("plans")} />
+                <StatButton label="计划安排" value={`${stats.pendingTasks} 条`} onClick={() => { setArrangementView("tasks"); switchPage("plans"); }} />
                 <StatButton label="饮食记录" value={`${stats.dietToday} 条`} onClick={() => switchPage("diet")} />
                 <StatButton label="观影记录" value={`${stats.consultations} 条`} onClick={() => switchPage("consultations")} />
               </section>
@@ -7744,6 +7777,7 @@ export default function Workbench() {
 
           {activePage === "plans" && (
             <DailyArrangement
+              view={arrangementView}
               habits={habits}
               done={done}
               tasks={plans}
@@ -7815,11 +7849,11 @@ export default function Workbench() {
           )}
 
           {activePage === "diet" && (
-            <DietTracker records={dietRecords} waterTarget={waterTarget} onAddWater={addWater} onAddMeal={addMeal} onDelete={deleteDietRecord} onSaveTarget={saveWaterTarget} />
+            <DietTracker view={dietView} records={dietRecords} waterTarget={waterTarget} onAddWater={addWater} onAddMeal={addMeal} onDelete={deleteDietRecord} onSaveTarget={saveWaterTarget} />
           )}
 
           {activePage === "exercise" && (
-            <ExerciseTracker records={exerciseRecords} weightRecords={weightRecords} onAdd={addExercise} onDelete={deleteExerciseRecord} onAddWeight={addWeight} onDeleteWeight={deleteWeightRecord} />
+            <ExerciseTracker view={exerciseView} records={exerciseRecords} weightRecords={weightRecords} onAdd={addExercise} onDelete={deleteExerciseRecord} onAddWeight={addWeight} onDeleteWeight={deleteWeightRecord} />
           )}
 
           {activePage === "news" && <NewsBoard />}
@@ -7873,20 +7907,26 @@ export default function Workbench() {
           onChangeTheme={changePonyTheme}
         />
       </section>
-      <nav className="bottom-nav" aria-label="主要导航">
+      <nav className="bottom-nav" aria-label="主要导航，可左右滑动" ref={bottomNavRef}>
         {[
           { id: "today", label: "今日速看", icon: "home" },
           { id: "plans", label: "每日安排", icon: "checklist" },
           { id: "market", label: "股市行情", icon: "trend" },
           { id: "consultations", label: "观影记录", icon: "chat" },
-          { id: "more", label: "更多", icon: "settings" },
+          { id: "diet", label: "饮食记录", icon: "food" },
+          { id: "assets", label: "资产记录", icon: "diamond" },
+          { id: "exercise", label: "运动记录", icon: "exercise" },
+          { id: "news", label: "热榜时讯", icon: "news" },
+          { id: "life", label: "星光计划", icon: "life" },
+          { id: "settings", label: "设置", icon: "settings" },
         ].map((item) => (
           <button
-            className={`bottom-nav-item ${item.id === activePage || (item.id === "more" && !["today", "plans", "market", "consultations"].includes(activePage)) ? "active" : ""}`}
+            className={`bottom-nav-item ${item.id === activePage ? "active" : ""}`}
             type="button"
             key={item.id}
-            onClick={() => item.id === "more" ? setMenuOpen(true) : switchPage(item.id)}
+            onClick={() => switchPage(item.id)}
             aria-label={item.label}
+            aria-current={item.id === activePage ? "page" : undefined}
           >
             <span><CrewNavIcon name={item.icon} /></span>
             <small>{item.label}</small>
