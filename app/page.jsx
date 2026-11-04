@@ -7,6 +7,8 @@ import { thiingsIconByKey, thiingsIconCategories } from "../lib/thiings-icons";
 import TravelBoard from "./components/travel-board";
 import WorkbenchSelect, { SelectChevron } from "./components/workbench-select";
 import AnniversaryIconPicker from "./components/anniversary-icon-picker";
+import VoiceQuickRecord from "./components/voice-quick-record";
+import { planQuickRecordChanges, undoQuickRecordChanges } from "../lib/workbench-records";
 import { anniversaryIcon, anniversaryIcons } from "../lib/anniversary-icons";
 import { anniversaryProgress } from "../lib/anniversary-progress";
 
@@ -134,8 +136,9 @@ const pages = [
   { id: "life", name: "星光计划", icon: "life" },
   { id: "settings", name: "设置", icon: "settings" },
 ];
-const pageNames = Object.fromEntries(pages.map((page) => [page.id, page.name]));
+const pageNames = { ...Object.fromEntries(pages.map((page) => [page.id, page.name])), notes: "生活记录" };
 const pageDescriptions = {
+  notes: "保存生活、树洞、复盘和灵感笔记",
   today: "时间、天气、计划和行情集中整理",
   life: "设定目标日期，拆分成每天都能完成的行动",
   plans: "习惯打卡、计划安排与岁时纪往",
@@ -6062,6 +6065,7 @@ export default function Workbench() {
   const [dietRecords, setDietRecords] = useState([]);
   const [exerciseRecords, setExerciseRecords] = useState([]);
   const [weightRecords, setWeightRecords] = useState([]);
+  const [quickSaved, setQuickSaved] = useState(null);
   const [anniversaries, setAnniversaries] = useState([]);
   const [lifeGoals, setLifeGoals] = useState([]);
   const [waterTarget, setWaterTarget] = useState(defaultWaterTarget);
@@ -6835,6 +6839,85 @@ export default function Workbench() {
   function saveExerciseRecords(next) {
     setExerciseRecords(next);
     persist('exerciseRecords', next);
+  }
+
+  function quickRecordState(names = []) {
+    const current = { dietRecords, exerciseRecords, weightRecords, notes, plans, habits, anniversaries, lifeGoals, consultations, watchCheckins, assetRecords: assetItems, subscriptionRecords, travelRecords };
+    const state = Object.fromEntries(Object.entries(current).map(([name, fallback]) => [name, readStorage(name, fallback)]));
+    state.fundPortfolio = readStorage('fundPortfolio', []);
+    state.indexTrackerItems = readStorage('indexTrackerItems', indexTrackerItems);
+    names.filter((name) => name.startsWith('done:')).forEach((name) => { state[name] = readStorage(name, name === `done:${todayKey()}` ? done : {}); });
+    return state;
+  }
+
+  function prepareQuickRecords(drafts) {
+    const habitDates = drafts.filter((draft) => draft.kind === 'habit' && draft.action === 'complete').map((draft) => `done:${draft.value.date || todayKey()}`);
+    const state = quickRecordState(habitDates);
+    const prepared = planQuickRecordChanges(drafts, state);
+    return { ...prepared, basis: Object.fromEntries(Object.keys(prepared.collections).map((name) => [name, state[name] || (name.startsWith('done:') ? {} : [])])) };
+  }
+
+  function writeQuickCollections(collections) {
+    const setters = { dietRecords: setDietRecords, exerciseRecords: setExerciseRecords, weightRecords: setWeightRecords, notes: setNotes, plans: setPlans, habits: setHabits, anniversaries: setAnniversaries, lifeGoals: setLifeGoals, consultations: setConsultations, watchCheckins: setWatchCheckins, assetRecords: setAssetItems, subscriptionRecords: setSubscriptionRecords, travelRecords: setTravelRecords };
+    for (const [name, value] of Object.entries(collections)) {
+      setters[name]?.(value);
+      if (name === `done:${todayKey()}`) setDone(value);
+      persist(name, value);
+      if (name === 'fundPortfolio') {
+        const codes = value.map((item) => item.code).join(',');
+        writeStorage('fundCodes', codes);
+        persist('fundCodes', codes);
+        localStorage.removeItem(key('fundCache'));
+      }
+      if (name === 'indexTrackerItems') localStorage.removeItem(key('indexTrackerCache'));
+    }
+  }
+
+  function saveQuickRecords(prepared) {
+    const state = quickRecordState(Object.keys(prepared.basis));
+    if (Object.entries(prepared.basis).some(([name, before]) => JSON.stringify(state[name]) !== JSON.stringify(before))) throw new Error('相关记录刚刚发生了变化，请重新识别并核对后保存。');
+    writeQuickCollections(prepared.collections);
+    const history = readStorage('petRewardHistory', {});
+    const actualRewards = prepared.rewards.filter((reward) => {
+      if (reward.key && history[reward.key]) return false;
+      if (reward.key) history[reward.key] = nowText();
+      return true;
+    });
+    if (actualRewards.some((reward) => reward.key)) persist('petRewardHistory', history);
+    for (const type of ['water', 'bone', 'toy', 'stick']) {
+      const amount = actualRewards.filter((reward) => reward.type === type).reduce((sum, reward) => sum + reward.amount, 0);
+      if (amount) changePetSupply(type, amount, '相关记录已更新，胖咕嘎收到了奖励。', 'reward');
+    }
+    return { changes: prepared.changes, rewards: actualRewards };
+  }
+
+  function undoQuickRecords(receipt) {
+    const state = quickRecordState(receipt.changes.map((change) => change.collection));
+    const reversed = undoQuickRecordChanges(receipt.changes, state);
+    if (reversed.skipped) throw new Error('本批记录中有内容已被后续修改或删除，无法整批撤销；请在对应页面调整。');
+    reversed.deleted.forEach(({ collection, id }) => markDeleted(collection, id));
+    writeQuickCollections(reversed.collections);
+    const history = readStorage('petRewardHistory', {});
+    receipt.rewards.forEach((reward) => { if (reward.key) delete history[reward.key]; });
+    if (receipt.rewards.some((reward) => reward.key)) persist('petRewardHistory', history);
+    for (const type of ['water', 'bone', 'toy', 'stick']) {
+      const amount = receipt.rewards.filter((reward) => reward.type === type).reduce((sum, reward) => sum + reward.amount, 0);
+      if (amount) changePetSupply(type, -amount, '已撤销本次记录和奖励。', 'idle');
+    }
+    return '已撤销本次记录，相关统计已恢复。';
+  }
+
+  function openQuickRecord(record) {
+    if (record.kind === 'water' || record.kind === 'meal') setDietView(record.kind === 'water' ? 'water' : 'calories');
+    if (record.kind === 'weight' || record.kind === 'exercise') setExerciseView(record.kind === 'weight' ? 'weight' : 'exercise');
+    if (['task', 'habit', 'anniversary'].includes(record.kind)) setArrangementView({ task: 'tasks', habit: 'habits', anniversary: 'anniversaries' }[record.kind]);
+    if (['asset', 'subscription', 'travel'].includes(record.kind)) {
+      setAssetSection({ asset: 'assets', subscription: 'subscriptions', travel: 'travel' }[record.kind]);
+      if (record.kind === 'asset') setAssetView(record.value.status || '服役中');
+    }
+    if (record.kind === 'fund' || record.kind === 'index') setMarketView(record.kind === 'fund' ? 'funds' : 'indexes');
+    if (record.kind === 'watch') setConsultationView('rating');
+    switchPage(record.page);
   }
 
   function addExercise(item) {
@@ -7704,6 +7787,7 @@ export default function Workbench() {
               <button className="ios-intro-action" type="button" onClick={() => setOverviewOpen(true)} aria-label="打开工作台总览">总览</button>
             </header>
           )}
+          {activePage === 'today' && <VoiceQuickRecord session={session} onPrepare={prepareQuickRecords} onSave={saveQuickRecords} onUndo={undoQuickRecords} onOpen={openQuickRecord} saved={quickSaved} onSaved={setQuickSaved} />}
           {activePage === "today" && (
             <>
               <TodayTimePanel clock={clock} />
@@ -7773,6 +7857,13 @@ export default function Workbench() {
               onDeleteItem={deleteLifeItem}
               onUpdateItem={updateLifeItem}
             />
+          )}
+
+          {activePage === 'notes' && (
+            <>
+              <NoteForm editing={editing} onSave={(note) => { saveNote(note); setEditing(null); }} onCancel={() => setEditing(null)} />
+              <NoteList notes={notes} onDelete={deleteNote} onEdit={editNote} />
+            </>
           )}
 
           {activePage === "plans" && (
