@@ -1,16 +1,20 @@
-.root { min-width: 0; }
+.root { min-width: 0; gap: 12px; }
+.header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 .label { display: block; margin-bottom: 8px; color: var(--ink); font-size: 14px; font-weight: 700; }
-.root .input { box-sizing: border-box; width: 100%; min-height: 82px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--panel-2, var(--panel)); line-height: 1.6; resize: vertical; caret-color: var(--theme-main); }
+.root .input { box-sizing: border-box; width: 100%; min-height: 82px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); background: var(--panel-2, var(--panel)); font-size: 16px; line-height: 1.6; resize: vertical; caret-color: var(--theme-main); }
 .root .input::placeholder { color: var(--muted); opacity: 1; }
-.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.root .recordButton, .root .textButton { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 14px; border: 0; border-radius: 10px; font-size: 14px; font-weight: 700; }
-.root .recordButton { color: var(--panel); background: var(--theme-main); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.root .recordButton, .root .textButton, .root .saveButton { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 14px; border: 0; border-radius: 10px; font-size: 14px; font-weight: 700; }
+.root .recordButton { gap: 6px; padding: 8px 12px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); font-size: 13px; }
 .root .textButton { color: var(--ink); background: color-mix(in srgb, var(--theme-main) 10%, var(--panel)); }
+.root .saveButton { color: #fff; background: var(--theme-main); }
 .root button:disabled { opacity: .55; cursor: default; }
 .root button:not(:disabled):hover { filter: brightness(.94); }
 .root button:focus-visible, .root textarea:focus-visible { outline: 2px solid var(--theme-main); outline-offset: 3px; }
-.status { margin: 12px 0 0; color: var(--ink); font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
-.disclosure { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.status { margin: 0; color: var(--ink); font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.disclosure { color: var(--muted); font-size: 12px; line-height: 1.6; }
+.disclosure summary { cursor: pointer; }
+.disclosure p { margin: 6px 0 0; }
 .results { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--ink); font-size: 13px; line-height: 1.6; }
 .results p { margin: 0 0 8px; overflow-wrap: anywhere; }
 .savedRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }

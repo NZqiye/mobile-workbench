@@ -30,6 +30,18 @@ const boards = {
 function harness(name = "MarketBoard", { storage = new Map(), cached = false } = {}) {
   let now = START, cursor = 0, hover = "", mounted = false;
   const slots = [], effects = [], timers = [], requests = [], savedOrders = [];
+  const frames = new Map();
+  let frameId = 0;
+  const rows = new Map(symbols.map(symbol => [symbol, {
+    dataset: { marketSymbol: symbol }, offset: 0,
+    style: { setProperty(name, value) { rows.get(symbol).offset = parseFloat(value); }, removeProperty() { rows.get(symbol).offset = 0; } },
+    getBoundingClientRect() { const top = slots[0].findIndex(q => q.symbol === symbol) * 100 + this.offset; return { top, bottom: top + 100, height: 100, left: 0, right: 400 }; },
+  }]));
+  const list = {
+    parentElement: null, setPointerCapture() {}, hasPointerCapture: () => true, releasePointerCapture() {},
+    getBoundingClientRect: () => ({ top: 0, bottom: 300, left: 0, right: 400 }),
+    querySelectorAll: () => slots[0].map(q => rows.get(q.symbol)).filter(Boolean),
+  };
   const key = (value) => `qiyeworkbench:${value}`;
   const localStorage = {
     getItem: (value) => storage.get(value) ?? null,
@@ -55,11 +67,16 @@ function harness(name = "MarketBoard", { storage = new Map(), cached = false } =
     },
     useRef(initial) { const index = cursor++; return slots[index] ?? (slots[index] = { current: initial }); },
     useEffect(callback) { if (!mounted) effects.push(callback); },
+    useLayoutEffect() {},
     useMemo(callback) { return callback(); },
     setInterval(callback, delay) { const timer = { callback, delay, next: now + delay }; timers.push(timer); return timer; },
     clearInterval(timer) { timer.active = false; },
+    requestAnimationFrame(callback) { frames.set(++frameId, callback); return frameId; },
+    cancelAnimationFrame(id) { frames.delete(id); },
+    getComputedStyle: () => ({ overflowY: "visible" }),
+    window: { innerHeight: 800 },
     fetch(url) { return new Promise((resolve, reject) => requests.push({ url, resolve, reject })); },
-    document: { elementFromPoint: () => hover ? { closest: () => ({ dataset: { marketSymbol: hover } }) } : null },
+    document: { scrollingElement: { scrollTop: 0 }, querySelector: () => null, elementFromPoint: () => hover ? { closest: () => rows.get(hover) } : null },
     marketRefreshInterval: HOUR, marketSymbolNames: {}, defaultAssets: symbols.join(","), legacyDefaultAssets: "legacy", stockDefaultAssets: "legacy-stocks",
     nowText: () => String(now), touchItems: (items) => items, itemUpdatedAt: () => 0,
     indexTrackerItems: [{ id: "one", name: "One", marketSymbol: A }], defaultIndexTrackerDraft: {}, indexTrackerPresets: [], buildIndexTrackerRows: () => [],
@@ -81,11 +98,12 @@ function harness(name = "MarketBoard", { storage = new Map(), cached = false } =
   return {
     render, requests, storage, savedOrders, readStorage, writeStorage, timers,
     assets: () => localStorage.getItem(key("assets")),
-    hover(symbol) { hover = symbol; },
+    hover(symbol) { hover = symbol; const center = rows.get(symbol).getBoundingClientRect().top + 50; this.event.clientY = center + (this.event.clientY > center ? -6 : 6); },
+    handle(symbol) { this.event.clientY = rows.get(symbol).getBoundingClientRect().top + 50; this.event.currentTarget.closest = selector => selector === ".quote-list" ? list : rows.get(symbol); return this.event; },
     async respond(index, data, ok = true) { requests[index].resolve({ ok, json: async () => data }); await flush(); },
     setTime(time) { now = time; },
     tick(time) { now = time; for (const timer of timers) if (timer.active !== false && now >= timer.next) { timer.next += timer.delay; timer.callback(); } },
-    event: { button: 0, isPrimary: true, pointerId: 1, clientX: 1, clientY: 1, preventDefault() {}, currentTarget: { setPointerCapture() {}, hasPointerCapture: () => true, releasePointerCapture() {}, closest() { return this; } } },
+    event: { button: 0, isPrimary: true, pointerId: 1, clientX: 50, clientY: 50, preventDefault() {}, currentTarget: { ...list, closest(selector) { return selector === ".quote-list" ? list : rows.get(A); } } },
   };
 }
 
@@ -119,6 +137,81 @@ test("rapid repeated drag target and immediate pointer-up persist the latest ord
   assert.equal(h.savedOrders.at(-1), [B, A, C].join(","));
 });
 
+test("pressing or slightly moving the handle does not write a new order", () => {
+  const h = harness("MarketBoard", { cached: true });
+  const view = h.render();
+  view.startQuoteDrag(h.event, A);
+  h.event.clientY += 3;
+  view.moveDraggedQuote(h.event);
+  view.finishQuoteDrag(h.event);
+  assert.equal(h.savedOrders.length, 0);
+  assert.deepEqual(orderOf(h.render().quotes), symbols);
+});
+
+test("a different pointer cannot move or finish the current drag", () => {
+  const h = harness("MarketBoard", { cached: true });
+  const view = h.render();
+  view.startQuoteDrag(h.event, A);
+  h.hover(C);
+  view.moveDraggedQuote({ ...h.event, pointerId: 2 });
+  view.finishQuoteDrag({ ...h.event, pointerId: 2 });
+  assert.deepEqual(orderOf(h.render().quotes), symbols);
+  assert.equal(h.savedOrders.length, 0);
+  view.moveDraggedQuote(h.event);
+  view.finishQuoteDrag(h.event);
+  assert.equal(h.assets(), [B, C, A].join(","));
+});
+
+test("cancelled drag restores its initial order while retaining refreshed prices", async () => {
+  const h = harness("MarketBoard", { cached: true });
+  h.render().loadQuotes(true);
+  const view = h.render();
+  view.startQuoteDrag(h.event, A);
+  h.hover(C);
+  view.moveDraggedQuote(h.event);
+  await h.respond(0, { quotes: quotes(symbols, 20) });
+  h.render().finishQuoteDrag(h.event, true);
+  assert.deepEqual(orderOf(h.render().quotes), symbols);
+  assert.ok(h.render().quotes.every(q => q.price === 20));
+  assert.equal(h.assets(), symbols.join(","));
+  assert.equal(h.savedOrders.length, 0);
+  assert.deepEqual(orderOf(h.readStorage("marketCache").quotes), symbols);
+});
+
+test("moving loaded quotes preserves the slots of symbols without data", () => {
+  const h = harness("MarketBoard", { cached: true });
+  h.storage.set("qiyeworkbench:assets", [A, D, B, C].join(","));
+  h.render().moveQuoteWithKeyboard(A, 1);
+  assert.equal(h.assets(), [B, D, A, C].join(","));
+});
+
+test("hovering near a row midpoint does not repeatedly swap rows", () => {
+  const h = harness("MarketBoard", { cached: true });
+  const view = h.render();
+  view.startQuoteDrag(h.event, A);
+  h.hover(B);
+  view.moveDraggedQuote(h.event);
+  for (const y of [49, 51, 48, 52]) {
+    h.event.clientY = y;
+    h.render().moveDraggedQuote(h.event);
+    assert.deepEqual(orderOf(h.render().quotes), [B, A, C]);
+  }
+  h.render().finishQuoteDrag(h.event);
+  assert.equal(h.savedOrders.length, 1);
+});
+
+test("moving back to the original position does not persist an unchanged order", () => {
+  const h = harness("MarketBoard", { cached: true });
+  h.render().startQuoteDrag(h.event, A);
+  h.hover(B);
+  h.render().moveDraggedQuote(h.event);
+  h.event.clientY = 40;
+  h.render().moveDraggedQuote(h.event);
+  h.render().finishQuoteDrag(h.event);
+  assert.deepEqual(orderOf(h.render().quotes), symbols);
+  assert.equal(h.savedOrders.length, 0);
+});
+
 for (const completion of ["during", "after"]) {
   test(`in-flight refresh completing ${completion} drag cannot restore the old order`, async () => {
     const h = harness("MarketBoard", { cached: true });
@@ -140,7 +233,7 @@ for (const completion of ["during", "after"]) {
 test("re-entering the market uses the saved drag order without a network request", () => {
   const h = harness("MarketBoard", { cached: true });
   const view = h.render();
-  view.startQuoteDrag(h.event, C);
+  view.startQuoteDrag(h.handle(C), C);
   h.hover(A);
   view.moveDraggedQuote(h.event, C);
   view.finishQuoteDrag(h.event);

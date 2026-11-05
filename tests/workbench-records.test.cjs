@@ -74,6 +74,15 @@ test('updates preserve unspecified dates, notes, prices and metadata', () => {
   assert.deepEqual(note.records[0].value, { content: '新的正文' });
 });
 
+test('classification does not invent event times from the request timestamp', () => {
+  const withoutTime = normalize([draft('weight', { weight: 65, time: '13:06' })], '今天体重65公斤');
+  assert.equal(withoutTime.records[0].value.time, '');
+  const withTime = normalize([draft('water', { amount: 300, time: '09:30' })], '今天早上9点半喝了300毫升水');
+  assert.equal(withTime.records[0].value.time, '09:30');
+  const update = normalize([draft('note', { content: '新的正文', time: '13:06' }, 'update', '原记录')], '原记录改为新的正文');
+  assert.equal(Object.hasOwn(update.records[0].value, 'time'), false);
+});
+
 test('complete a task and a habit without duplicating the existing records; undo retains unrelated checkins', () => {
   const state = { plans: [{ id: 'task', title: '读书', status: '未完成' }], habits: [{ id: 'habit', title: '早睡' }], 'done:2026-11-04': { unrelated: true } };
   const result = plan([draft('task', {}, 'complete', '读书'), draft('habit', { date: '2026-11-04' }, 'complete', '早睡')], state);

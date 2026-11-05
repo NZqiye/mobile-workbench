@@ -2,7 +2,7 @@
 
 import { upcomingSubscriptions } from "../lib/subscriptions";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { thiingsIconByKey, thiingsIconCategories } from "../lib/thiings-icons";
 import TravelBoard from "./components/travel-board";
 import WorkbenchSelect, { SelectChevron } from "./components/workbench-select";
@@ -2238,7 +2238,7 @@ function MarketBoard({ compact = false, onAssetsChange }) {
   const [draggingSymbol, setDraggingSymbol] = useState("");
   const dragSymbolRef = useRef("");
   const dragOrderRef = useRef([]);
-  const dragTargetRef = useRef("");
+  const quoteDragRef = useRef(null);
   const marketRequestRef = useRef(0);
 
   function applyQuotes(nextQuotes) {
@@ -2336,11 +2336,12 @@ function MarketBoard({ compact = false, onAssetsChange }) {
   function persistQuoteOrder(nextQuotes) {
     const orderedSymbols = nextQuotes.map((quote) => quote.symbol);
     const orderedSet = new Set(orderedSymbols.map((symbol) => symbol.toLowerCase()));
-    const unavailableSymbols = normalizeSavedAssets(localStorage.getItem(key("assets")))
+    const savedSymbols = normalizeSavedAssets(localStorage.getItem(key("assets")))
       .split(",")
       .map((item) => item.trim())
-      .filter((item) => item && !orderedSet.has(item.toLowerCase()));
-    const nextAssets = [...orderedSymbols, ...unavailableSymbols].join(",");
+      .filter(Boolean);
+    let index = 0;
+    const nextAssets = savedSymbols.map((symbol) => orderedSet.has(symbol.toLowerCase()) ? orderedSymbols[index++] : symbol).join(",");
     localStorage.setItem(key("assets"), nextAssets);
     const cache = readStorage("marketCache", null);
     if (cache?.quotes) writeStorage("marketCache", { ...cache, quotes: nextQuotes });
@@ -2348,12 +2349,10 @@ function MarketBoard({ compact = false, onAssetsChange }) {
     setStatus(`已保存自选顺序 · ${nowText()}`);
   }
 
-  function reorderQuote(sourceSymbol, targetSymbol) {
-    if (!sourceSymbol || !targetSymbol || sourceSymbol === targetSymbol) return;
-    const current = dragOrderRef.current.length ? dragOrderRef.current : quotes;
+  function reorderQuote(sourceSymbol, targetIndex) {
+    const current = dragOrderRef.current;
     const sourceIndex = current.findIndex((quote) => quote.symbol === sourceSymbol);
-    const targetIndex = current.findIndex((quote) => quote.symbol === targetSymbol);
-    if (sourceIndex < 0 || targetIndex < 0) return;
+    if (sourceIndex < 0 || sourceIndex === targetIndex) return;
     const next = [...current];
     const [moved] = next.splice(sourceIndex, 1);
     next.splice(targetIndex, 0, moved);
@@ -2363,33 +2362,101 @@ function MarketBoard({ compact = false, onAssetsChange }) {
 
   function startQuoteDrag(event, symbol) {
     if (event.button !== 0 || event.isPrimary === false || dragSymbolRef.current) return;
+    const list = event.currentTarget.closest(".quote-list");
+    const row = event.currentTarget.closest("[data-market-symbol]");
+    const rect = row.getBoundingClientRect();
+    let scrollElement = list.parentElement;
+    while (scrollElement && !(scrollElement.scrollHeight > scrollElement.clientHeight && /auto|scroll/.test(getComputedStyle(scrollElement).overflowY))) scrollElement = scrollElement.parentElement;
     dragOrderRef.current = [...quotes];
     dragSymbolRef.current = symbol;
-    dragTargetRef.current = symbol;
-    setDraggingSymbol(symbol);
-    event.currentTarget.closest(".quote-list").setPointerCapture(event.pointerId);
+    quoteDragRef.current = { pointerId: event.pointerId, list, row, scrollElement: scrollElement || document.scrollingElement, initialSymbols: quotes.map((quote) => quote.symbol), startY: event.clientY, y: event.clientY, x: event.clientX, grabOffset: event.clientY - rect.top, offset: 0, active: false, frame: 0, lastFrame: 0 };
+    list.setPointerCapture(event.pointerId);
+  }
+
+  function positionDraggedQuote() {
+    const drag = quoteDragRef.current;
+    if (!drag?.active) return;
+    const rect = drag.row.getBoundingClientRect();
+    const listRect = drag.list.getBoundingClientRect();
+    const top = Math.max(listRect.top, Math.min(drag.y - drag.grabOffset, listRect.bottom - rect.height));
+    drag.offset = top - (rect.top - drag.offset);
+    drag.row.style.setProperty("--quote-drag-offset", `${drag.offset}px`);
+  }
+
+  function updateQuoteDrag() {
+    const drag = quoteDragRef.current;
+    if (!drag?.active) return;
+    positionDraggedQuote();
+    const rect = drag.row.getBoundingClientRect();
+    const listRect = drag.list.getBoundingClientRect();
+    if (drag.x < listRect.left - 40 || drag.x > listRect.right + 40) return;
+    const center = drag.y - drag.grabOffset + rect.height / 2;
+    const rows = [...drag.list.querySelectorAll("[data-market-symbol]")];
+    const sourceIndex = rows.indexOf(drag.row);
+    const targetIndex = rows.filter((row, index) => {
+      if (row === drag.row) return false;
+      const bounds = row.getBoundingClientRect();
+      return center > bounds.top + bounds.height / 2 + (index < sourceIndex ? -4 : 4);
+    }).length;
+    reorderQuote(dragSymbolRef.current, targetIndex);
+  }
+
+  function scrollQuoteDrag(time) {
+    const drag = quoteDragRef.current;
+    if (!drag?.active) return;
+    const scroll = drag.scrollElement;
+    const bounds = scroll === document.scrollingElement ? { top: 0, bottom: window.innerHeight } : scroll.getBoundingClientRect();
+    const header = document.querySelector(".phone-status")?.getBoundingClientRect();
+    const bottomNav = document.querySelector(".bottom-nav")?.getBoundingClientRect();
+    const top = Math.max(bounds.top, header?.bottom || 0);
+    const bottom = Math.min(bounds.bottom, bottomNav?.height ? bottomNav.top : window.innerHeight, window.innerHeight);
+    const speed = drag.y < top + 48 ? -Math.min(1, (top + 48 - drag.y) / 48) : drag.y > bottom - 48 ? Math.min(1, (drag.y - bottom + 48) / 48) : 0;
+    const elapsed = drag.lastFrame ? Math.min(time - drag.lastFrame, 32) : 16;
+    drag.lastFrame = time;
+    scroll.scrollTop += speed * elapsed * .6;
+    updateQuoteDrag();
+    drag.frame = requestAnimationFrame(scrollQuoteDrag);
   }
 
   function moveDraggedQuote(event) {
-    if (!dragSymbolRef.current) return;
+    const drag = quoteDragRef.current;
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    drag.y = event.clientY;
+    drag.x = event.clientX;
+    if (!drag.active) {
+      if (Math.abs(drag.y - drag.startY) < 6) return;
+      drag.active = true;
+      setDraggingSymbol(dragSymbolRef.current);
+      drag.frame = requestAnimationFrame(scrollQuoteDrag);
+    }
     event.preventDefault();
-    const targetRow = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-market-symbol]");
-    const targetSymbol = targetRow?.dataset.marketSymbol || "";
-    if (!targetSymbol || targetSymbol === dragTargetRef.current) return;
-    dragTargetRef.current = targetSymbol;
-    reorderQuote(dragSymbolRef.current, targetSymbol);
+    updateQuoteDrag();
   }
 
-  function finishQuoteDrag(event) {
-    if (!dragSymbolRef.current) return;
+  function finishQuoteDrag(event, cancelled = false) {
+    const drag = quoteDragRef.current;
+    if (!drag || (event.pointerId != null && event.pointerId !== drag.pointerId)) return;
+    cancelAnimationFrame(drag.frame);
+    drag.row.style.removeProperty("--quote-drag-offset");
+    quoteDragRef.current = null;
     dragSymbolRef.current = "";
-    dragTargetRef.current = "";
     setDraggingSymbol("");
-    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    persistQuoteOrder(dragOrderRef.current.length ? dragOrderRef.current : quotes);
+    if (drag.list.hasPointerCapture(drag.pointerId)) drag.list.releasePointerCapture(drag.pointerId);
+    if (cancelled) {
+      const quoteMap = new Map(dragOrderRef.current.map((quote) => [quote.symbol, quote]));
+      const restored = drag.initialSymbols.map((symbol) => quoteMap.get(symbol)).filter(Boolean);
+      dragOrderRef.current = restored;
+      setQuotes(restored);
+      const cache = readStorage("marketCache", null);
+      if (cache?.quotes) writeStorage("marketCache", { ...cache, quotes: restored });
+      if (drag.active) setStatus("已取消移动，自选顺序未更改");
+    } else if (drag.active && dragOrderRef.current.some((quote, index) => quote.symbol !== drag.initialSymbols[index])) {
+      persistQuoteOrder(dragOrderRef.current);
+    }
   }
 
   function moveQuoteWithKeyboard(symbol, direction) {
+    if (quoteDragRef.current) return;
     const sourceIndex = quotes.findIndex((quote) => quote.symbol === symbol);
     const targetIndex = sourceIndex + direction;
     if (sourceIndex < 0 || targetIndex < 0 || targetIndex >= quotes.length) return;
@@ -2400,12 +2467,15 @@ function MarketBoard({ compact = false, onAssetsChange }) {
     persistQuoteOrder(next);
   }
 
+  useLayoutEffect(() => { positionDraggedQuote(); }, [quotes, draggingSymbol]);
+
   useEffect(() => {
     loadQuotes();
     const timer = setInterval(() => loadQuotes(true), marketRefreshInterval);
     return () => {
       clearInterval(timer);
       marketRequestRef.current += 1;
+      if (quoteDragRef.current) cancelAnimationFrame(quoteDragRef.current.frame);
     };
   }, []);
 
@@ -2431,7 +2501,7 @@ function MarketBoard({ compact = false, onAssetsChange }) {
       )}
       {!compact && (
         <>
-          <p className="market-refresh-note">每小时自动更新，也可以随时手动刷新；拖动左侧把手调整自选顺序。</p>
+          <p className="market-refresh-note">每小时自动更新，也可手动刷新；拖动左侧把手调整顺序，靠近边缘自动滚动，松手保存。</p>
           <form className="market-add-form" onSubmit={addStock}>
             <WorkbenchSelect value={stockMarket} onChange={(event) => setStockMarket(event.target.value)} aria-label="股票类型">
               <option value="a">A股</option>
@@ -2443,7 +2513,7 @@ function MarketBoard({ compact = false, onAssetsChange }) {
           </form>
         </>
       )}
-      <div className="quote-list" onPointerMove={moveDraggedQuote} onPointerUp={finishQuoteDrag} onPointerCancel={finishQuoteDrag} onLostPointerCapture={finishQuoteDrag}>
+      <div className="quote-list" onPointerMove={moveDraggedQuote} onPointerUp={finishQuoteDrag} onPointerCancel={(event) => finishQuoteDrag(event, true)} onLostPointerCapture={(event) => finishQuoteDrag(event, true)} onKeyDown={(event) => { if (event.key === "Escape" && quoteDragRef.current) { event.preventDefault(); finishQuoteDrag(event, true); } }}>
         {quotes.length === 0 && <p className="empty">还没有行情数据。</p>}
         {quotes.map((quote) => {
           const changeClass = quote.changePercent > 0 ? "up" : quote.changePercent < 0 ? "down" : "flat";
@@ -2455,6 +2525,7 @@ function MarketBoard({ compact = false, onAssetsChange }) {
                   <button
                     className="quote-drag-handle"
                     type="button"
+                    title="拖动排序"
                     aria-label={`拖动调整 ${quote.name || quote.symbol} 的顺序，或使用上下方向键`}
                     aria-keyshortcuts="ArrowUp ArrowDown"
                     onKeyDown={(event) => {
@@ -2465,10 +2536,14 @@ function MarketBoard({ compact = false, onAssetsChange }) {
                     }}
                     onPointerDown={(event) => startQuoteDrag(event, quote.symbol)}
                   >
-                    <svg viewBox="0 0 16 20" aria-hidden="true"><circle cx="5" cy="4" r="1.2" /><circle cx="11" cy="4" r="1.2" /><circle cx="5" cy="10" r="1.2" /><circle cx="11" cy="10" r="1.2" /><circle cx="5" cy="16" r="1.2" /><circle cx="11" cy="16" r="1.2" /></svg>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 3-3 3 3M8 10h8M8 14h8m-7 5 3 3 3-3" /></svg>
                   </button>
                 )}
-                <span className="quote-market">{quote.market || (quote.symbol.startsWith("sh") || quote.symbol.startsWith("sz") || quote.symbol.startsWith("bj") ? "A股" : "行情")}</span><strong>{quote.name || quote.symbol}</strong><span>{quote.symbol.toUpperCase()} · {quote.source || "行情"}</span>
+                <div className="quote-title">
+                  <strong title={quote.name || quote.symbol}>{quote.name || quote.symbol}</strong>
+                  <span className="quote-market">{quote.market || (quote.symbol.startsWith("sh") || quote.symbol.startsWith("sz") || quote.symbol.startsWith("bj") ? "A股" : "行情")}</span>
+                </div>
+                <span className="quote-source" title={`${quote.symbol.toUpperCase()} · ${quote.source || "行情"}`}>{quote.symbol.toUpperCase()} · {quote.source || "行情"}</span>
               </div>
               <div className="quote-price"><strong>{quote.currency || ""}{Number(quote.price || 0).toFixed(2)}</strong><span className={changeClass}>{sign}{Number(quote.change || 0).toFixed(2)} · {sign}{Number(quote.changePercent || 0).toFixed(2)}%</span></div>
               {!compact && (
@@ -3288,7 +3363,14 @@ function FundBoard({ onPortfolioChange }) {
                 </div>
               </div>
               <div className="fund-row-bottom">
-                <small>持有 {Number(fund.shares || 0).toFixed(2)} 份 · 投入 {formatAmount(fund.netInvested)} · 最新 {Number(fund.currentPrice || 0).toFixed(4)}{fund.hasAlipayCalibration ? ` · 支付宝校准 ${fund.alipayCalibratedAt || ""}` : ""}</small>
+                <div className="fund-position-info">
+                  <dl className="fund-position-details">
+                    <div><dt>持有份额</dt><dd>{Number(fund.shares || 0).toFixed(2)}<span>份</span></dd></div>
+                    <div><dt>投入金额</dt><dd>{formatAmount(fund.netInvested)}</dd></div>
+                    <div><dt>参考净值</dt><dd>{Number(fund.currentPrice || 0).toFixed(4)}</dd></div>
+                  </dl>
+                  {fund.hasAlipayCalibration && <p className="fund-calibration-note">支付宝校准<span>{fund.alipayCalibratedAt || ""}</span></p>}
+                </div>
                 <div className="fund-actions">
                   <button className="quote-delete" type="button" onClick={() => openTrade(fund.code, "buy")}>定投</button>
                   <button className="quote-delete" type="button" onClick={() => openTrade(fund.code, "calibrate")}>校准</button>
@@ -7787,14 +7869,14 @@ export default function Workbench() {
               <button className="ios-intro-action" type="button" onClick={() => setOverviewOpen(true)} aria-label="打开工作台总览">总览</button>
             </header>
           )}
-          {activePage === 'today' && <VoiceQuickRecord session={session} onPrepare={prepareQuickRecords} onSave={saveQuickRecords} onUndo={undoQuickRecords} onOpen={openQuickRecord} saved={quickSaved} onSaved={setQuickSaved} />}
           {activePage === "today" && (
             <>
               <TodayTimePanel clock={clock} />
               <WeatherCard compact clock={clock} />
+              <VoiceQuickRecord session={session} onPrepare={prepareQuickRecords} onSave={saveQuickRecords} onUndo={undoQuickRecords} onOpen={openQuickRecord} onSettings={() => switchPage("settings")} saved={quickSaved} onSaved={setQuickSaved} />
               <DailyQuoteCard />
               <form className="quick-note-bar" onSubmit={addQuickNote}>
-                <input name="note" type="text" placeholder="有什么想法？回车即存..." autoComplete="off" />
+                <input name="note" type="text" placeholder="有什么想法？回车即存..." aria-label="闪念笔记" autoComplete="off" />
                 <button type="submit" aria-label="保存闪念笔记">✓</button>
               </form>
               <section className="dashboard-strip" aria-label="今日概览">

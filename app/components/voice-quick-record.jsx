@@ -5,13 +5,14 @@ import { parseQuickRecords } from "../../lib/quick-records";
 import { describeQuickRecord } from "../../lib/workbench-records";
 import styles from "./voice-quick-record.module.css";
 
-export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, onOpen, saved, onSaved }) {
+export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, onOpen, onSettings, saved, onSaved }) {
   const inputId = useId();
   const [text, setText] = useState("");
-  const [configured, setConfigured] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
+  const [service, setService] = useState("checking");
   const [phase, setPhase] = useState("idle");
   const [seconds, setSeconds] = useState(0);
-  const [status, setStatus] = useState("说出想记录的内容，自动填写到对应模块，核对后保存。");
+  const [status, setStatus] = useState("正在检查录音和自动归类服务…");
   const [pending, setPending] = useState(null);
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
@@ -20,6 +21,18 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
   const activeRef = useRef(false);
   const busyRef = useRef(false);
   const busy = phase !== "idle";
+  const configured = service === "ready";
+
+  useEffect(() => {
+    setText(localStorage.getItem("qiyeworkbench:quickRecordDraft") || "");
+    setDraftReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!draftReady) return;
+    if (text) localStorage.setItem("qiyeworkbench:quickRecordDraft", text);
+    else localStorage.removeItem("qiyeworkbench:quickRecordDraft");
+  }, [text, draftReady]);
 
   function releaseMicrophone() {
     clearInterval(timerRef.current);
@@ -38,18 +51,22 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
     };
   }, []);
 
+  async function checkService(signal) {
+    setService("checking");
+    try {
+      const response = await fetch("/api/voice/transcribe", { signal: AbortSignal.any([AbortSignal.timeout(15000), ...(signal ? [signal] : [])]) });
+      const data = await response.json();
+      if (signal?.aborted) return;
+      setService(response.status === 401 ? "locked" : response.ok && data.configured ? "ready" : "unavailable");
+      setStatus(response.status === 401 ? "请先解锁工作台，录音和手打才能自动写入全部栏目。输入会保留。" : response.ok && data.configured ? "录音或手打均可自动归类；保存成功后，下方会显示写入的栏目。" : "自动归类服务暂不可用；当前文字仅支持饮水和运动，其他内容不会写入。");
+    } catch (error) {
+      if (!signal?.aborted) { setService("unavailable"); setStatus("暂时无法连接自动归类服务，请重试。输入会保留；当前文字仅支持饮水和运动。"); }
+    }
+  }
+
   useEffect(() => {
     const controller = new AbortController();
-    setConfigured(false);
-    fetch("/api/voice/transcribe", { signal: controller.signal })
-      .then(async (response) => {
-        const data = await response.json();
-        if (controller.signal.aborted) return;
-        setConfigured(response.ok && data.configured);
-        if (!response.ok || !data.configured) setStatus(response.status === 401 ? "请先在设置中解锁在线语音；未解锁时文字仅支持饮水和运动。" : "在线语音与全模块理解尚未启用；现在可用文字记录饮水和运动。");
-        else setStatus("点击开始录音，最多60秒；说完后自动填写相关记录，核对后保存。");
-      })
-      .catch(() => { if (!controller.signal.aborted) setStatus("暂时无法连接录音服务；可以使用手机输入法语音填写文字。"); });
+    checkService(controller.signal);
     return () => controller.abort();
   }, [session]);
 
@@ -59,38 +76,38 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
       const receipt = onSave(result);
       onSaved({ receipt, records: result.records });
       setPending(null);
-      setText("");
-      setStatus(`已保存${result.records.length}项，已更新对应记录和统计。${result.issues.length ? "提示中的内容尚未保存。" : "可以撤销本次记录。"}`);
-    } catch (error) { setStatus(error.message || "保存失败，请重新识别后重试"); }
+      if (!result.issues.length) setText("");
+      setStatus(`已写入${result.records.length}项，已更新对应栏目和统计。${result.issues.length ? "其余内容未保存，原文已保留；再次提交时请去掉已保存的部分。" : "可以查看或撤销本次记录。"}`);
+    } catch (error) { setPending(result); setStatus(`未保存：${error.message || "保存失败，请重试"}。输入已保留。`); }
   }
 
   async function processText(value, now = new Date(), signal) {
     setPhase("extracting");
-    setStatus("正在填写对应记录…");
+    setStatus("正在识别并保存到对应栏目…");
     let result;
     let fallbackMessage = "";
     if (configured) {
-      try {
-        const response = await fetch("/api/voice/records", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: value, recordedAt: now.toISOString() }), signal });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "记录理解失败，请重试");
-        result = data;
-      } catch (error) {
-        if (error.name === "AbortError") throw error;
-        fallbackMessage = `${error.message}；本次仅使用饮水、运动文字规则。`;
-      }
+      const response = await fetch("/api/voice/records", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: value, recordedAt: now.toISOString() }), signal: AbortSignal.any([signal, AbortSignal.timeout(60000)]) });
+      const data = await response.json();
+      if (response.status === 401) setService("locked");
+      if (!response.ok) throw new Error(data.error || "记录理解失败，请重试");
+      result = data;
     }
     if (!result) {
       const local = parseQuickRecords(value, now);
       result = { records: local.records.map((record) => ({ kind: record.value.type === "water" ? "water" : "exercise", action: "add", value: record.value })), issues: local.issues };
-      if (!configured) fallbackMessage = "全模块联动需要启用在线服务；本次仅使用饮水、运动文字规则。";
+      fallbackMessage = "自动归类服务未启用，本次仅识别饮水和运动；请确认是否只保存这些内容。";
     }
     if (!activeRef.current) return;
     const prepared = onPrepare(result.records);
     const issues = [...result.issues, ...prepared.issues];
     if (fallbackMessage) issues.unshift(fallbackMessage);
-    setPending({ ...prepared, issues });
-    setStatus(prepared.records.length ? `已填写${prepared.records.length}项，核对下方结果后保存。` : "还没有可保存的记录，请按下方提示补充。");
+    const submission = { ...prepared, issues };
+    if (prepared.records.length && !issues.length) saveRecords(submission);
+    else {
+      setPending(submission);
+      setStatus(prepared.records.length ? `尚未保存：${prepared.records.length}项可以写入，其余内容需要补充。请核对下方结果。` : "未保存：没有可写入的记录，请按下方提示补充。输入已保留。");
+    }
   }
 
   async function transcribe(blob, recordedAt) {
@@ -103,14 +120,16 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
       const form = new FormData();
       const extension = blob.type.includes("mp4") ? "m4a" : blob.type.includes("ogg") ? "ogg" : "webm";
       form.append("audio", blob, `recording.${extension}`);
-      const response = await fetch("/api/voice/transcribe", { method: "POST", body: form, signal: controller.signal });
+      const response = await fetch("/api/voice/transcribe", { method: "POST", body: form, signal: AbortSignal.any([controller.signal, AbortSignal.timeout(60000)]) });
       const data = await response.json();
+      if (response.status === 401) setService("locked");
       if (!response.ok) throw new Error(data.error || "识别失败，请重试");
       if (!activeRef.current) return;
-      setText(data.text);
-      await processText(data.text, recordedAt, controller.signal);
+      const combined = [text.trim(), data.text].filter(Boolean).join("\n");
+      setText(combined);
+      await processText(combined, recordedAt, controller.signal);
     } catch (error) {
-      if (activeRef.current && error.name !== "AbortError") setStatus(error.message || "识别失败，请重试");
+      if (activeRef.current && error.name !== "AbortError") setStatus(`未保存：${error.message || "识别失败，请重试"}。已识别的文字会保留。`);
     } finally {
       busyRef.current = false;
       requestRef.current = null;
@@ -150,7 +169,7 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
       setPending(null);
       setPhase("recording");
       setSeconds(0);
-      setStatus("正在录音，说完后点击“停止并填写”。");
+      setStatus("正在录音，说完后点击“停止并保存”，自动归类到对应栏目。");
       let elapsed = 0;
       timerRef.current = setInterval(() => {
         elapsed += 1;
@@ -182,36 +201,44 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
     const controller = new AbortController();
     requestRef.current = controller;
     try { await processText(text, new Date(), controller.signal); }
-    catch (error) { if (activeRef.current && error.name !== "AbortError") setStatus(error.message || "记录理解失败，请重试"); }
+    catch (error) { if (activeRef.current && error.name !== "AbortError") setStatus(`未保存：${error.message || "记录理解失败，请重试"}。输入已保留。`); }
     finally { busyRef.current = false; requestRef.current = null; if (activeRef.current) setPhase("idle"); }
   }
 
   return (
-    <section className={`panel ${styles.root}`} aria-label="语音快速记录">
-      <div className="panel-head"><h2>语音快速记录</h2></div>
-      <form onSubmit={submit}>
-        <label className={styles.label} htmlFor={inputId}>今天做了什么？</label>
-        <textarea id={inputId} className={styles.input} rows={2} maxLength={2000} value={text} disabled={busy} placeholder="早上喝了一杯水，体重65公斤，完成了读书任务，还想记录一部电影…" onChange={(event) => { setText(event.target.value); setPending(null); }} />
-        <div className={styles.actions}>
-          <button className={styles.recordButton} type="button" disabled={phase !== "recording" && (busy || !configured)} onClick={phase === "recording" ? stopRecording : startRecording}>
-            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8" /></svg>
-            {phase === "recording" ? `停止并填写 · ${seconds}s` : phase === "transcribing" ? "转写中…" : phase === "extracting" ? "填写中…" : phase === "permission" ? "等待麦克风…" : "开始录音"}
-          </button>
-          <button className={styles.textButton} type="submit" disabled={busy || !text.trim()}>识别并填写</button>
-        </div>
-      </form>
-      <p className={styles.status} role="status">{status}</p>
-      <p className={styles.disclosure}>可联动饮水、饮食、运动、体重、任务、习惯、观影、资产、订阅、旅行、纪念日、星光计划、生活记录，以及基金和指数追踪。</p>
-      <p className={styles.disclosure}>启用在线服务后，本次录音和文字会发送到 Cloudflare；已有记录的匹配在本地完成。缺失的信息会提示补充。</p>
-      {pending && <div className={styles.results}>
-        {pending.issues.map((issue, index) => <p className={styles.issue} key={index}>{issue}</p>)}
-        {pending.records.map((record, index) => <p key={index}>{describeQuickRecord(record)}</p>)}
-        {pending.records.length > 0 && <button type="button" className={styles.textButton} disabled={busy} onClick={() => saveRecords(pending)}>确认保存{pending.records.length}项记录</button>}
-      </div>}
-      {saved && <div className={styles.results}>
-        {saved.records.map((record, index) => <div className={styles.savedRow} key={index}><p>{describeQuickRecord(record)}</p><button type="button" className={styles.textButton} disabled={busy} onClick={() => onOpen(record)}>查看{record.label}</button></div>)}
-        <button type="button" className={styles.textButton} disabled={busy} onClick={() => { try { const message = onUndo(saved.receipt); onSaved(null); setStatus(message); } catch (error) { setStatus(error.message || "撤销失败，请稍后重试"); } }}>撤销本次记录</button>
-      </div>}
+    <section className={`panel quick-record-panel ${styles.root}`} aria-label="语音快速记录">
+      <div className={styles.header}>
+        <h2>快速记录</h2>
+        <button className={styles.recordButton} type="button" disabled={phase !== "recording" && (busy || !configured)} onClick={phase === "recording" ? stopRecording : startRecording}>
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8" /></svg>
+          {phase === "recording" ? `停止并保存 · ${seconds}s` : phase === "transcribing" ? "转写中…" : phase === "extracting" ? "保存中…" : phase === "permission" ? "等待麦克风…" : "开始录音"}
+        </button>
+      </div>
+        <form onSubmit={submit}>
+          <label className={styles.label} htmlFor={inputId}>说一句，或直接写下来</label>
+          <textarea id={inputId} aria-describedby={`${inputId}-status`} className={styles.input} rows={2} maxLength={2000} value={text} disabled={busy || !draftReady} placeholder="例如：喝了300毫升水，跑步30分钟" onChange={(event) => { setText(event.target.value); setPending(null); }} />
+          <div className={styles.actions}>
+            <button className={styles.saveButton} type="submit" disabled={busy || service === "checking" || !text.trim()}>{phase === "extracting" ? "正在保存…" : "保存到各栏目"}</button>
+            {service === "locked" && <button className={styles.textButton} type="button" onClick={onSettings}>去设置解锁</button>}
+            {service === "unavailable" && <button className={styles.textButton} type="button" disabled={busy} onClick={() => checkService()}>重试连接</button>}
+          </div>
+        </form>
+        <p id={`${inputId}-status`} className={styles.status} role="status">{status}</p>
+        <details className={styles.disclosure}>
+          <summary>支持的栏目与录入说明</summary>
+          <p>可写入饮水、饮食、运动、体重、任务、习惯、观影、资产、订阅、旅行、纪念日、星光目标、生活记录、基金及指数追踪。更新已有内容时请说清完整名称；缺少字段或存在同名记录时会提示补充。</p>
+          <p>录音最多60秒。在线识别会将本次录音和文字发送到 Cloudflare，已有记录在本机匹配。完整识别后直接保存，有缺项时由你确认可保存的部分。</p>
+        </details>
+        {pending && <div className={styles.results}>
+          {pending.issues.map((issue, index) => <p className={styles.issue} key={index}>{issue}</p>)}
+          {pending.records.map((record, index) => <p key={index}>{describeQuickRecord(record)}</p>)}
+          {pending.records.length > 0 && <button type="button" className={styles.saveButton} disabled={busy} onClick={() => saveRecords(pending)}>仅保存已识别的{pending.records.length}项</button>}
+        </div>}
+        {saved && <div className={styles.results}>
+          <p className={styles.issue}>最近一次已保存</p>
+          {saved.records.map((record, index) => <div className={styles.savedRow} key={index}><p>{describeQuickRecord(record)}</p><button type="button" className={styles.textButton} disabled={busy} onClick={() => onOpen(record)}>查看{record.label}</button></div>)}
+          <button type="button" className={styles.textButton} disabled={busy} onClick={() => { try { const message = onUndo(saved.receipt); onSaved(null); setStatus(message); } catch (error) { setStatus(error.message || "撤销失败，请稍后重试"); } }}>撤销本次记录</button>
+        </div>}
     </section>
   );
 }

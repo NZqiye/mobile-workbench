@@ -1,17 +1,18 @@
-import { isAuthorized, isSameOrigin, unauthorizedResponse } from "../../../../lib/access-auth";
+import { isSameOrigin, unauthorizedResponse } from "../../../../lib/access-auth";
+import { isVoiceAuthorized } from "../../../../lib/voice-access";
 import { readVoiceFile, transcribeVoice, voiceConfig } from "../../../../lib/voice-server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function GET(request) {
-  if (!isAuthorized(request)) return unauthorizedResponse();
+  if (!isVoiceAuthorized(request)) return unauthorizedResponse();
   return Response.json({ configured: Boolean(voiceConfig()) });
 }
 
 export async function POST(request) {
   if (!isSameOrigin(request)) return Response.json({ error: "来源不受信任" }, { status: 403 });
-  if (!isAuthorized(request)) return unauthorizedResponse();
+  if (!isVoiceAuthorized(request)) return unauthorizedResponse();
   const config = voiceConfig();
   if (!config) return Response.json({ error: "语音服务尚未配置，请先设置服务端的 Cloudflare 账号和 API Token" }, { status: 503 });
   let file;

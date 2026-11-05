@@ -1,4 +1,5 @@
-import { isAuthorized, isSameOrigin, unauthorizedResponse } from "../../../../lib/access-auth";
+import { isSameOrigin, unauthorizedResponse } from "../../../../lib/access-auth";
+import { isVoiceAuthorized } from "../../../../lib/voice-access";
 import { readLimitedBody, voiceConfig } from "../../../../lib/voice-server";
 import { extractRecordDrafts } from "../../../../lib/record-extraction";
 
@@ -7,7 +8,7 @@ export const maxDuration = 60;
 
 export async function POST(request) {
   if (!isSameOrigin(request)) return Response.json({ error: "来源不受信任" }, { status: 403 });
-  if (!isAuthorized(request)) return unauthorizedResponse();
+  if (!isVoiceAuthorized(request)) return unauthorizedResponse();
   const config = voiceConfig();
   if (!config) return Response.json({ error: "记录理解服务尚未配置，请先设置服务端 Cloudflare 凭据" }, { status: 503 });
   let text, now;
