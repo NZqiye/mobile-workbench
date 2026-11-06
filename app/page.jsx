@@ -9,6 +9,7 @@ import WorkbenchSelect, { SelectChevron } from "./components/workbench-select";
 import AnniversaryIconPicker from "./components/anniversary-icon-picker";
 import VoiceQuickRecord from "./components/voice-quick-record";
 import AccountPanel from "./components/account-panel";
+import { encodeMarkdownBackup, decodeMarkdownBackup } from "../lib/markdown-backup";
 import { planQuickRecordChanges, undoQuickRecordChanges } from "../lib/workbench-records";
 import { anniversaryIcon, anniversaryIcons } from "../lib/anniversary-icons";
 import { anniversaryProgress } from "../lib/anniversary-progress";
@@ -1395,7 +1396,8 @@ function SkillOverview({ open, skills, activePage, stats, session, onClose, onSe
   );
 }
 
-function DesktopContextRail({ activePage, displayMode, ponyTheme, session, stats, clock, skills, onSelect, onToggleDisplayMode, onChangeTheme }) {
+function DesktopContextRail({ activePage, displayMode, ponyTheme, session, stats, skills, onSelect, onToggleDisplayMode, onChangeTheme }) {
+  const clock = useLiveClock();
   const activeSkill = skills.find((skill) => skill.id === activePage) || skills[0];
   const dateKey = visibleTodayKey(clock);
   const todayStats = [
@@ -1551,7 +1553,7 @@ function WeatherCard({ compact = false, clock = "--:--", phoneApp = false }) {
       </div>
       <div className="weather-main">
         <div>
-          <span>{phoneApp ? weather?.location || "无锡" : `${weather?.location || "无锡"} · ${dateKey} · ${clock}`}</span>
+          <span>{phoneApp ? weather?.location || "无锡" : <>{weather?.location || "无锡"} · {dateKey} · <ClockText /></>}</span>
           <strong>{weather ? `${weather.current ?? "--"}°` : "--"}</strong>
           <small className="weather-summary">{weather ? <><span>{weatherLabel(weather.code)}</span><span>{weather.min ?? "--"}° / {weather.max ?? "--"}°</span><span>降水 {weather.rain ?? "--"}%</span></> : "正在读取无锡天气"}</small>
         </div>
@@ -1812,7 +1814,22 @@ function NewsBoard() {
   );
 }
 
-function TodayTimePanel({ clock = "--:--:--" }) {
+function useLiveClock() {
+  const [clock, setClock] = useState("--:--:--");
+  useEffect(() => {
+    setClock(clockText());
+    const timer = setInterval(() => setClock(clockText()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return clock;
+}
+
+function ClockText() {
+  return useLiveClock();
+}
+
+function TodayTimePanel() {
+  const clock = useLiveClock();
   const [hour, minute, second] = String(clock || "").split(":").map(Number);
   const safeHour = Number.isFinite(hour) ? hour % 12 : 0;
   const safeMinute = Number.isFinite(minute) ? minute : 0;
@@ -4639,7 +4656,7 @@ function AnimeUpdates() {
   );
 }
 
-function MediaGallery({ item }) {
+function MediaGallery({ item, posterOnly = false }) {
   const [backdropUrl, setBackdropUrl] = useState(item?.backdropUrl || "");
   const [posterUrl, setPosterUrl] = useState(item?.posterUrl || "");
   const galleryRef = useRef(null);
@@ -4654,7 +4671,7 @@ function MediaGallery({ item }) {
   }, [item?.backdropUrl, item?.posterUrl, item?.tmdbId, item?.tvmazeId, item?.bangumiId]);
 
   useEffect(() => {
-    if (backdropUrl || attempted.current || (!item?.tmdbId && !item?.tvmazeId && !item?.bangumiId) || !galleryRef.current) return;
+    if (posterOnly || backdropUrl || attempted.current || (!item?.tmdbId && !item?.tvmazeId && !item?.bangumiId) || !galleryRef.current) return;
     const controller = new AbortController();
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) return;
@@ -4679,19 +4696,27 @@ function MediaGallery({ item }) {
     }, { rootMargin: "200px" });
     observer.observe(galleryRef.current);
     return () => { observer.disconnect(); controller.abort(); };
-  }, [backdropUrl, item?.tmdbId, item?.tvmazeId, item?.bangumiId, item?.tmdbMediaType, item?.backdropUrl, item?.bangumiName, item?.originalTitle, item?.title, item?.bangumiNameCn, item?.titleZh, item?.year]);
+  }, [posterOnly, backdropUrl, item?.tmdbId, item?.tvmazeId, item?.bangumiId, item?.tmdbMediaType, item?.backdropUrl, item?.bangumiName, item?.originalTitle, item?.title, item?.bangumiNameCn, item?.titleZh, item?.year]);
 
-  if (!backdropUrl && !posterUrl) return null;
+  if (posterOnly) return (
+    <div className="media-recommendation-cover">
+      {posterUrl || backdropUrl
+        ? <img src={posterUrl || backdropUrl} alt="" loading="lazy" decoding="async" onError={() => posterUrl ? setPosterUrl("") : setBackdropUrl("")} />
+        : <span>{mediaTitle(item).slice(0, 1)}</span>}
+    </div>
+  );
+
+  if (!backdropUrl && !posterUrl) return <div ref={galleryRef} className="media-gallery media-gallery-empty" aria-hidden="true"><span>{mediaTitle(item).slice(0, 1)}</span></div>;
   return (
     <div ref={galleryRef} className={`media-gallery${!backdropUrl ? " media-gallery-poster-only" : !posterUrl ? " media-gallery-single" : ""}`}>
       {posterUrl && (
         <div className="media-poster-thumb">
-          <img src={posterUrl} alt="" loading="lazy" onError={() => setPosterUrl("")} />
+          <img src={posterUrl} alt="" loading="lazy" decoding="async" onError={() => setPosterUrl("")} />
         </div>
       )}
       {backdropUrl && (
         <div className="media-still">
-          <img src={backdropUrl} alt="" loading="lazy" onError={() => setBackdropUrl(fallbackImages.current.shift() || "")} />
+          <img src={backdropUrl} alt="" loading="lazy" decoding="async" onError={() => setBackdropUrl(fallbackImages.current.shift() || "")} />
         </div>
       )}
     </div>
@@ -4838,6 +4863,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
   const selectedRecommendationItems = personalItems;
   const selectedRecommendationCount = selectedRecommendationItems.length;
   const visibleRecommendationItems = recommendationExpanded ? selectedRecommendationItems : selectedRecommendationItems.slice(0, 20);
+  const recommendationRow = activeView === "tv" && recommendationMode === "personal";
   const selectedRecommendationIcon = activeView === "anime" ? "spark" : activeView === "variety" ? "screen" : selectedRecommendationSection?.id?.startsWith("movie") ? "movie" : "tv";
   useEffect(() => {
     setRecommendationExpanded(false);
@@ -5074,11 +5100,11 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
             {recommendationMode === "rising" && " · 放送排期不代表播放平台已更新"}
           </p>}
           <div className="tmdb-section">
-            <div className="tmdb-feed">
+            <div className={`tmdb-feed${recommendationRow ? " tmdb-feed-row" : ""}`} key={`${activeView}-${recommendationMode}-${selectedRecommendationId}`}>
               {(Array.isArray(selectedRecommendationSection.items) ? selectedRecommendationSection.items : []).length === 0 && <p className="empty">{activeView === "anime" && recommendationMode === "rising" && !animeRecommendationInfo?.loading && !animeRecommendationInfo?.error && !animeRecommendationInfo?.warnings?.length ? "今日暂无放送排期。" : "暂无片单，稍后点刷新片单重试。"}</p>}
               {visibleRecommendationItems.map((item) => (
-                <div className="media-feed-card" role="button" tabIndex={0} key={`${selectedRecommendationSection.id}-${item.tmdbId || item.id || item.title}`} onClick={() => onImportTmdb(item)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onImportTmdb(item); } }}>
-                  <MediaGallery item={item} />
+                <div className="media-feed-card" role="button" tabIndex={0} key={`${selectedRecommendationSection.id}-${item.tmdbId || item.id || item.title}`} onClick={() => onImportTmdb(item)} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onImportTmdb(item); } }}>
+                  <MediaGallery item={item} posterOnly={recommendationRow} />
                   <strong className="media-feed-title">{mediaTitle(item)}</strong>
                   <span className="media-air">{mediaAirText(item)}</span>
                   <small className="media-meta">{[item.year, item.type || "剧集", item.platform || "TMDB", item.bangumiScore > 0 ? `Bangumi ${item.bangumiScore.toFixed(1)} 分` : ""].filter(Boolean).join(" / ")}</small>
@@ -6510,15 +6536,21 @@ export default function Workbench() {
       const nextMode = !isAndroidApp && window.innerWidth >= 960 ? "desktop" : "mobile";
       setDisplayMode(nextMode);
       localStorage.setItem(key("displayMode"), nextMode);
-      if (nextMode === "mobile" && nextPage === "consultations") setConsultationView("rating");
+      return nextMode;
     };
-    applyResponsiveMode();
+    if (applyResponsiveMode() === "mobile" && nextPage === "consultations") setConsultationView("rating");
     window.addEventListener("resize", applyResponsiveMode);
     window.addEventListener("qiye-native-ready", applyResponsiveMode);
     setPonyTheme(ponyThemes.some((theme) => theme.id === localStorage.getItem(key("ponyTheme"))) ? localStorage.getItem(key("ponyTheme")) : "jade");
     setClock(clockText());
     loadTmdbRecommendations();
-    const timer = setInterval(() => setClock(clockText()), 1000);
+    let lastMinute = clockText().slice(0, 5);
+    const timer = setInterval(() => {
+      const nextClock = clockText();
+      if (nextClock.slice(0, 5) === lastMinute) return;
+      lastMinute = nextClock.slice(0, 5);
+      setClock(nextClock);
+    }, 1000);
 
     restoreAccount(accountController.signal);
 
@@ -7577,16 +7609,6 @@ export default function Workbench() {
       "## 体重记录",
       ...weightRecords.map((item) => `- ${item.date} ${item.time} ${formatWeight(item.weight)}kg`),
     ];
-    const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `qiyeworkbench-${todayKey()}.md`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function exportBackup() {
     const payload = {
       exportedAt: new Date().toISOString(),
       version: 1,
@@ -7617,11 +7639,11 @@ export default function Workbench() {
       weatherCache: readStorage("weatherCache", null),
       marketCache: readStorage("marketCache", null),
     };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+    const blob = new Blob([encodeMarkdownBackup(lines.join("\n"), payload)], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `qiyeworkbench-backup-${todayKey()}.json`;
+    anchor.download = `qiyeworkbench-${todayKey()}.md`;
     anchor.click();
     URL.revokeObjectURL(url);
     setBackupStatus(`已导出 · ${nowText()}`);
@@ -7632,7 +7654,7 @@ export default function Workbench() {
     if (!file) return;
     try {
       const text = await file.text();
-      const payload = JSON.parse(text);
+      const payload = decodeMarkdownBackup(text);
       if (Array.isArray(payload.plans)) {
         setPlans(payload.plans);
         persist("plans", payload.plans);
@@ -7834,7 +7856,7 @@ export default function Workbench() {
     <main className={`phone-shell ios18-shell ${androidApp ? "android-app-shell" : ""} ${displayMode === "desktop" ? "desktop-shell desktop-redesign" : "mobile-shell"} ${menuOpen ? "menu-open" : ""} page-${activePage} pony-theme-${ponyTheme}`}>
       <div className="phone-status">
         <button className="menu-toggle" type="button" aria-label="打开菜单" onClick={() => setMenuOpen(true)}>☰</button>
-        <strong>{androidApp ? "七夜online" : clock}</strong>
+        <strong>{androidApp ? "七夜online" : <ClockText />}</strong>
         <button className="account-status-link" type="button" onClick={() => switchPage("settings")} aria-label="打开账号设置">{session ? syncStatus.includes("失败") ? "同步失败" : syncStatus.startsWith("正在") ? "同步中" : "已登录" : accountState === "checking" ? "检查登录" : "未登录"}</button>
       </div>
       <section className="app-body">
@@ -7937,7 +7959,7 @@ export default function Workbench() {
           )}
           {activePage === "today" && (
             <>
-              <TodayTimePanel clock={clock} />
+              <TodayTimePanel />
               {androidApp && <>{quickRecorder}{todayTasksPanel}</>}
               <WeatherCard compact clock={clock} phoneApp={androidApp} />
               {!androidApp && <>{quickRecorder}<DailyQuoteCard /></>}
@@ -8096,17 +8118,17 @@ export default function Workbench() {
                 <div className="panel-head">
                   <div>
                     <h2>备份与恢复</h2>
-                    <p>{backupStatus}</p>
+                    <p role="status">{backupStatus}</p>
                   </div>
-                  <button className="chip-button" type="button" onClick={exportBackup}>导出备份</button>
+                  <button className="chip-button" type="button" onClick={exportMarkdown}>导出 Markdown</button>
                 </div>
                 <div className="stack-form">
                   <label className="file-row">
-                    <span>导入 JSON 备份</span>
-                    <input type="file" accept="application/json" onChange={importBackup} />
+                    <span>导入 Markdown</span>
+                    <input type="file" accept=".md,.markdown,.json,text/markdown,text/plain,application/json" onChange={importBackup} />
                   </label>
                 </div>
-                <button className="chip-button" type="button" onClick={exportMarkdown}>导出 Markdown</button>
+                <p className="notification-description">导出的 Markdown 保留完整记录，可用于恢复；也兼容旧版 JSON 备份。</p>
               </section>
               <PonyThemePanel value={ponyTheme} onChange={changePonyTheme} />
             </>
@@ -8120,7 +8142,6 @@ export default function Workbench() {
           ponyTheme={ponyTheme}
           session={session}
           stats={stats}
-          clock={clock}
           skills={skillSummaries}
           onSelect={switchPage}
           onToggleDisplayMode={toggleDisplayMode}

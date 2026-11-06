@@ -90,7 +90,7 @@ test("travel is included in startup, both cloud sync flows, backup restore, and 
   assert.match(source, /setTravelRecords\(readStorage\("travelRecords", \[\]\)\)/);
   assert.equal((source.match(/saveCloudItem\(nextSession, "travelRecords", merged.travelRecords\)/g) || []).length, 2);
   assert.match(functionSource("applyCloud"), /setTravelRecords\(cloud.travelRecords\)/);
-  assert.match(functionSource("exportBackup"), /\n\s+travelRecords,/);
+  assert.match(functionSource("exportMarkdown"), /\n\s+travelRecords,/);
   assert.match(functionSource("importBackup"), /persist\("travelRecords", payload.travelRecords\)/);
   assert.match(functionSource("exportMarkdown"), /travelRecords.map/);
 });

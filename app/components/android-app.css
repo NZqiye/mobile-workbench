@@ -125,8 +125,3 @@
 .android-app-shell .notification-description { margin: 0; color: var(--ios-muted); font-size: 14px; line-height: 1.7; }
 
 html.android-keyboard .android-app-shell .bottom-nav { display: none; }
-
-@media (max-width: 420px) {
-  .android-app-shell .quick-record-panel > div:first-child { align-items: stretch; }
-  .android-app-shell .quick-record-panel > div:first-child > button { flex: 1; }
-}

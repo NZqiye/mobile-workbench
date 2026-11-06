@@ -77,3 +77,78 @@
 .phone-shell.ios18-shell.mobile-shell.page-consultations .watch-rating-categories button { min-height: 48px; }
 .phone-shell.ios18-shell.mobile-shell.page-consultations .watch-rating-categories { display: flex; gap: 8px; overflow-x: auto; }
 .phone-shell.ios18-shell.mobile-shell.page-consultations .watch-rating-categories button { flex: 0 0 auto; padding-inline: 12px; }
+.phone-shell.ios18-shell .tmdb-feed.tmdb-feed-row {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: 168px;
+  align-items: stretch;
+  gap: 12px;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 2px;
+  padding: 2px 2px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ios-blue) transparent;
+}
+.phone-shell.ios18-shell .tmdb-feed-row > .media-feed-card {
+  align-content: start;
+  padding: 10px;
+  gap: 8px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--ios-panel);
+  box-shadow: none;
+  scroll-snap-align: start;
+}
+.phone-shell.ios18-shell .media-recommendation-cover {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: 12px;
+  color: var(--ios-blue);
+  background: var(--ios-blue-soft);
+  font-size: 36px;
+}
+.media-recommendation-cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.phone-shell.ios18-shell .media-gallery-empty { grid-template-columns: 1fr; place-items: center; border-radius: 12px; color: var(--ios-blue); background: var(--ios-blue-soft); font-size: 30px; }
+.phone-shell.ios18-shell .tmdb-recommendations .tmdb-section { min-width: 0; }
+.phone-shell.ios18-shell .tmdb-feed-row .media-feed-title { min-height: 42px; margin: 0; font-size: 15px; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
+.phone-shell.ios18-shell .tmdb-feed-row :is(.media-air, .media-meta, .media-recommendation-reason) { font-size: 12px; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
+.phone-shell.ios18-shell .tmdb-feed-row .media-summary-details summary { min-height: 44px; display: list-item; padding-block: 10px; line-height: 24px; }
+.phone-shell.ios18-shell .tmdb-feed-row .media-summary { font-size: 13px; }
+.phone-shell.ios18-shell .tmdb-feed-row > .empty { grid-column: 1; }
+
+.phone-shell.ios18-shell.mobile-shell.page-consultations .tmdb-recommendations {
+  min-width: 0;
+  padding: 14px;
+  border-radius: 20px;
+  backdrop-filter: none;
+}
+.phone-shell.ios18-shell.mobile-shell.page-consultations .module-head { backdrop-filter: none; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .recommendation-mode-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .recommendation-mode-tabs button { min-width: 0; min-height: 44px; padding: 8px 4px; font-size: 12px; line-height: 1.4; white-space: nowrap; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .tmdb-recommendations .panel-head { align-items: start; gap: 12px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .recommendation-actions { min-width: 0; flex-wrap: wrap; gap: 8px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .tmdb-feed:not(.tmdb-feed-row) > .media-feed-card {
+  align-content: start;
+  padding: 12px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--ios-panel);
+  box-shadow: none;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+}
+.phone-shell.ios18-shell.mobile-shell.page-consultations .tmdb-feed:not(.tmdb-feed-row) .media-gallery {
+  width: 100%;
+  aspect-ratio: 22 / 9;
+}
+.phone-shell.ios18-shell.mobile-shell.page-consultations .media-gallery-poster-only .media-poster-thumb { width: 30%; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .media-feed-title { font-size: 18px; line-height: 1.4; white-space: normal; overflow-wrap: anywhere; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations :is(.media-air, .media-meta) { font-size: 13px; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .tmdb-feed-row .media-feed-title { font-size: 15px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .tmdb-feed-row :is(.media-air, .media-meta) { font-size: 12px; }

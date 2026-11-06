@@ -63,6 +63,19 @@ test('regular link clicks continue normally and large exports report an error', 
   assert.match(h.alerts[0], /备份文件过大/);
 });
 
+test('native Markdown export preserves Chinese text and the full restoration block', async () => {
+  const h = harness();
+  const content = '# 七夜online\n\n```json\n{"notes":[{"content":"完整记录"}]}\n```';
+  const anchor = new h.context.HTMLAnchorElement();
+  anchor.href = h.context.URL.createObjectURL(new Blob([content], {type:'text/markdown;charset=utf-8'}));
+  anchor.download = 'qiyeworkbench.md';
+  anchor.click();
+  h.context.URL.revokeObjectURL(anchor.href);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.messages[0].name, 'qiyeworkbench.md');
+  assert.equal(Buffer.from(h.messages[0].data.split(',')[1], 'base64').toString('utf8'), content);
+});
+
 test('native download setup is idempotent and reports a missing connection', async () => {
   const h = harness();
   vm.runInContext(h.script, h.context);
