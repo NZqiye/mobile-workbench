@@ -6,3 +6,5 @@ node_modules/
 output/
 .learnings/
 .planning/
+.android-signing/
+android/build/

@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "build:android": "node scripts/build-android.cjs",
     "lint": "next lint"
   },
   "dependencies": {

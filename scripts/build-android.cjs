@@ -1,0 +1,55 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const { execFileSync } = require('node:child_process');
+const crypto = require('node:crypto');
+const os = require('node:os');
+
+const root = path.resolve(__dirname, '..');
+const sdk = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
+if (!sdk) throw new Error('Set ANDROID_HOME to your installed Android SDK directory.');
+const buildTools = path.join(sdk, 'build-tools', '36.0.0');
+const platform = path.join(sdk, 'platforms', 'android-36', 'android.jar');
+// Android's Windows tools cannot reliably open paths containing Chinese text.
+const build = fs.mkdtempSync(path.join(os.tmpdir(), 'qiye-android-'));
+const resources = path.join(build, 'res', 'drawable');
+const output = path.join(root, 'output', 'android');
+const signing = path.join(root, '.android-signing');
+for (const directory of [build, resources, output, signing]) fs.mkdirSync(directory, { recursive: true });
+fs.copyFileSync(path.join(root, 'public', 'icons', 'icon-512.png'), path.join(resources, 'app_icon.png'));
+fs.copyFileSync(path.join(root, 'android', 'AndroidManifest.xml'), path.join(build, 'AndroidManifest.xml'));
+fs.copyFileSync(path.join(root, 'android', 'src', 'cc', 'qiyeonline', 'workbench', 'MainActivity.java'), path.join(build, 'MainActivity.java'));
+const windows = process.platform === 'win32';
+const javaTool = name => process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, 'bin', name + (windows ? '.exe' : '')) : name;
+const run = (command, args, extra = {}) => execFileSync(command, args, { cwd: build, stdio: 'inherit', ...extra });
+const aapt = path.join(buildTools, 'aapt2' + (windows ? '.exe' : ''));
+const classes = path.join(build, 'classes');
+fs.mkdirSync(classes, { recursive: true });
+run(aapt, ['compile', '--dir', path.join(build, 'res'), '-o', path.join(build, 'resources.zip')]);
+run(aapt, ['link', '-o', path.join(build, 'unsigned.apk'), '--manifest', path.join(build, 'AndroidManifest.xml'), '-I', platform, path.join(build, 'resources.zip')]);
+run(javaTool('javac'), ['-encoding', 'UTF-8', '--release', '8', '-classpath', platform, '-d', classes, path.join(build, 'MainActivity.java')]);
+run(javaTool('jar'), ['cf', path.join(build, 'classes.jar'), '-C', classes, '.']);
+run(javaTool('java'), ['-cp', path.join(buildTools, 'lib', 'd8.jar'), 'com.android.tools.r8.D8', '--release', '--min-api', '26', '--lib', platform, '--output', build, path.join(build, 'classes.jar')]);
+run(javaTool('jar'), ['uf', path.join(build, 'unsigned.apk'), '-C', build, 'classes.dex']);
+run(path.join(buildTools, 'zipalign' + (windows ? '.exe' : '')), ['-f', '4', path.join(build, 'unsigned.apk'), path.join(build, 'aligned.apk')]);
+
+const keyStore = path.join(signing, 'release.jks');
+const passwordFile = path.join(signing, 'password.txt');
+if (fs.existsSync(keyStore) !== fs.existsSync(passwordFile)) throw new Error('Signing key or password is missing. Restore the complete .android-signing directory before building an update.');
+if (!fs.existsSync(passwordFile)) fs.writeFileSync(passwordFile, crypto.randomBytes(32).toString('hex'), { mode: 0o600 });
+const signingEnv = { ...process.env, QIYE_SIGNING_PASSWORD: fs.readFileSync(passwordFile, 'utf8').trim() };
+const buildKeyStore = path.join(build, 'release.jks');
+if (fs.existsSync(keyStore)) fs.copyFileSync(keyStore, buildKeyStore);
+else {
+  run(javaTool('keytool'), ['-genkeypair', '-keystore', buildKeyStore, '-alias', 'qiye-release', '-keyalg', 'RSA', '-keysize', '3072', '-validity', '10000', '-storepass:env', 'QIYE_SIGNING_PASSWORD', '-keypass:env', 'QIYE_SIGNING_PASSWORD', '-dname', 'CN=Qiye Online, OU=Personal Workbench'], { env: signingEnv });
+  fs.copyFileSync(buildKeyStore, keyStore);
+}
+const apk = path.join(output, 'qiyeonline-1.0.0.apk');
+const builtApk = path.join(build, path.basename(apk));
+const signer = [ '-jar', path.join(buildTools, 'lib', 'apksigner.jar') ];
+run(javaTool('java'), [...signer, 'sign', '--ks', buildKeyStore, '--ks-key-alias', 'qiye-release', '--ks-pass', 'env:QIYE_SIGNING_PASSWORD', '--key-pass', 'env:QIYE_SIGNING_PASSWORD', '--out', builtApk, path.join(build, 'aligned.apk')], { env: signingEnv });
+run(javaTool('java'), [...signer, 'verify', '--verbose', builtApk]);
+fs.unlinkSync(buildKeyStore);
+fs.copyFileSync(builtApk, apk);
+const checksum = crypto.createHash('sha256').update(fs.readFileSync(apk)).digest('hex');
+fs.writeFileSync(path.join(output, 'SHA256SUMS.txt'), `${checksum}  ${path.basename(apk)}\n`);
+console.log(`APK: ${apk}\nSHA-256: ${checksum}`);
