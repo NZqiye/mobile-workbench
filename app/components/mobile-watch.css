@@ -1,0 +1,79 @@
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-rating-detail { padding: 0 12px 24px !important; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-rating-library { padding: 16px 12px 24px !important; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-rating-mobile-body { gap: 16px !important; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-titlebar {
+  position: relative;
+  top: auto;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  gap: 8px;
+  min-height: 64px;
+  margin: 0;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ios-separator);
+  background: var(--ios-page) !important;
+  backdrop-filter: none;
+}
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-titlebar > button,
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-titlebar > span { width: 48px; height: 48px; min-width: 0; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-titlebar > button { padding: 0; font-size: 14px; box-shadow: none; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-titlebar h3 { font-size: 22px; line-height: 1.4; overflow-wrap: anywhere; white-space: normal; text-overflow: clip; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-titlebar small { font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; white-space: normal; text-overflow: clip; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-next { grid-template-columns: 72px minmax(0, 1fr); gap: 12px; min-height: 88px; padding: 12px; border-radius: 14px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-next::after { content: none; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-next img,
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-next-placeholder { width: 72px; height: 48px; border-radius: 8px; object-fit: cover; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-next strong { font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-next small,
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-next span { font-size: 12px; line-height: 1.5; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-section-title strong,
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-episodes-head strong { font-size: 20px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-season {
+  grid-template-columns: 44px minmax(0, 1fr) auto 28px;
+  gap: 10px;
+  min-height: 90px;
+  padding: 12px 0;
+}
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-season img,
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-season-poster { width: 44px; height: 66px; border-radius: 8px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-season > span strong,
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-episode strong { font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-season > span small,
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-episode small { font-size: 12px; line-height: 1.5; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-season > b { font-size: 14px; font-variant-numeric: tabular-nums; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-season > i,
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-episode-check { width: 28px; height: 28px; font-size: 16px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-episodes-head { gap: 12px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-episodes-head button { min-height: 48px; padding: 8px 12px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-episode {
+  position: relative;
+  grid-template-columns: 72px minmax(0, 1fr) 28px;
+  gap: 10px;
+  min-height: 88px;
+  padding: 12px 0;
+}
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-episode img,
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-episode > span { grid-column: 1; grid-row: 1; width: 72px; height: 48px; border-radius: 8px; object-fit: cover; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-episode > div { grid-column: 2; grid-row: 1; min-width: 0; gap: 4px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-episode input { display: block; position: absolute; opacity: 0; width: 1px; height: 1px; min-width: 0; min-height: 0; pointer-events: none; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-episode .watch-mobile-episode-check { display: grid !important; grid-column: 3; grid-row: 1; position: static; transform: none; margin: 0; width: 28px; height: 28px; font-size: 0; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-episode strong,
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-episode small { white-space: normal; text-overflow: clip; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-episode:focus-within { outline: 2px solid var(--ios-blue); outline-offset: 2px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-episode p { display: block; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-rating-footer { gap: 12px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-rating-footer > button { min-height: 48px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-movie { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: start; gap: 16px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-movie > img,
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-movie > span { width: 88px; height: 132px; border-radius: 10px; object-fit: cover; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-movie > div { display: grid; min-width: 0; gap: 8px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-movie strong { font-size: 16px; line-height: 1.5; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-movie small { font-size: 12px; line-height: 1.5; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-movie input { width: 100%; min-width: 0; min-height: 48px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-mobile-movie button { min-height: 48px; padding: 8px 12px; border: 0; border-radius: 10px; color: var(--ios-blue); background: var(--ios-blue-soft); font-size: 14px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-rating-syncbar { padding: 12px; gap: 10px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-rating-syncbar span { white-space: normal; font-size: 12px; line-height: 1.5; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-rating-syncbar button,
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-rating-tmdb-search button,
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-rating-categories button { min-height: 48px; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-rating-categories { display: flex; gap: 8px; overflow-x: auto; }
+.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-rating-categories button { flex: 0 0 auto; padding-inline: 12px; }

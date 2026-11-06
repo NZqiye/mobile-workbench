@@ -69,7 +69,7 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
       const data = await response.json();
       if (signal?.aborted) return;
       setService(response.status === 401 ? "locked" : response.ok && data.configured ? "ready" : "unavailable");
-      setStatus(response.status === 401 ? "请先解锁工作台，录音和手打才能自动写入全部栏目。输入会保留。" : response.ok && data.configured ? "录音或手打均可自动归类；保存成功后，下方会显示写入的栏目。" : "自动归类服务暂不可用；当前文字仅支持饮水和运动，其他内容不会写入。");
+      setStatus(response.status === 401 ? "请先登录账号，录音和手打才能自动写入全部栏目。输入会保留。" : response.ok && data.configured ? "录音或手打均可自动归类；保存成功后，下方会显示写入的栏目。" : "自动归类服务暂不可用；当前文字仅支持饮水和运动，其他内容不会写入。");
     } catch (error) {
       if (!signal?.aborted) { setService("unavailable"); setStatus("暂时无法连接自动归类服务，请重试。输入会保留；当前文字仅支持饮水和运动。"); }
     }
@@ -150,7 +150,7 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
 
   async function startRecording() {
     if (busyRef.current) return;
-    if (service === "locked") { setStatus("请先解锁语音识别服务，录音权限会在开始录音时申请。输入已保留。"); onSettings(); return; }
+    if (service === "locked") { setStatus("请先登录账号，录音权限会在开始录音时申请。输入已保留。"); onSettings(); return; }
     if (!configured) { await checkService(); return; }
     if (window.QiyeNative?.recordAudio) {
       busyRef.current = true;
@@ -274,7 +274,7 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
         <h2>快速记录</h2>
         <button className={styles.recordButton} type="button" aria-pressed={phase === "recording"} disabled={phase !== "recording" && (busy || service === "checking")} onClick={phase === "recording" ? stopRecording : startRecording}>
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8" /></svg>
-          {phase === "recording" ? `停止并保存 · ${seconds}s` : phase === "transcribing" ? "转写中…" : phase === "extracting" ? "保存中…" : phase === "permission" ? "等待麦克风…" : service === "locked" ? "解锁后录音" : service === "unavailable" ? "重试语音连接" : native ? "手机录音" : "开始录音"}
+          {phase === "recording" ? `停止并保存 · ${seconds}s` : phase === "transcribing" ? "转写中…" : phase === "extracting" ? "保存中…" : phase === "permission" ? "等待麦克风…" : service === "locked" ? "登录后录音" : service === "unavailable" ? "重试语音连接" : native ? "手机录音" : "开始录音"}
         </button>
       </div>
         <form onSubmit={submit}>
@@ -284,7 +284,7 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
             {phase === "recording" && <button className={styles.textButton} type="button" onClick={cancelRecording}>取消录音</button>}
             {micDenied && native && <button className={styles.textButton} type="button" onClick={() => window.QiyeNative.openPermissions()}>开启麦克风权限</button>}
             <button className={styles.saveButton} type="submit" disabled={busy || service === "checking" || !text.trim()}>{phase === "extracting" ? "正在保存…" : "保存到各栏目"}</button>
-            {service === "locked" && <button className={styles.textButton} type="button" onClick={onSettings}>去设置解锁</button>}
+            {service === "locked" && <button className={styles.textButton} type="button" onClick={onSettings}>去设置登录</button>}
             {service === "unavailable" && <button className={styles.textButton} type="button" disabled={busy} onClick={() => checkService()}>重试连接</button>}
           </div>
         </form>

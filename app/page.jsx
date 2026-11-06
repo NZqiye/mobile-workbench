@@ -8,6 +8,7 @@ import TravelBoard from "./components/travel-board";
 import WorkbenchSelect, { SelectChevron } from "./components/workbench-select";
 import AnniversaryIconPicker from "./components/anniversary-icon-picker";
 import VoiceQuickRecord from "./components/voice-quick-record";
+import AccountPanel from "./components/account-panel";
 import { planQuickRecordChanges, undoQuickRecordChanges } from "../lib/workbench-records";
 import { anniversaryIcon, anniversaryIcons } from "../lib/anniversary-icons";
 import { anniversaryProgress } from "../lib/anniversary-progress";
@@ -15,6 +16,7 @@ import { WeeklyChart, MealBreakdown } from "./components/statistics-charts";
 import StockPriceChart from "./components/stock-price-chart";
 import "./components/stock-lists.css";
 import "./components/android-app.css";
+import "./components/mobile-watch.css";
 
 const storagePrefix = "qiyeworkbench:";
 
@@ -152,7 +154,7 @@ const pageDescriptions = {
   consultations: "观影清单、想法和资料整理",
   assets: "管理个人物品、会员订阅与旅行记录",
   exercise: "记录跑步、球类训练与每日对战战绩",
-  settings: "账号同步、备份恢复和自选配置",
+  settings: "账号、通知与数据备份",
 };
 const defaultPetSupplies = { bone: 0, water: 0, toy: 0, stick: 0 };
 const petSupplyItems = [
@@ -271,7 +273,6 @@ const marketSymbolNames = {
   sh603629: "利通电子",
   sh688507: "索辰科技",
 };
-const fixedSession = { user: { id: "personal-workbench", email: "固定访问码已解锁" } };
 const defaultChineseHolidaysSeedKey = "defaultChineseHolidays2026Seeded";
 const syncedCollections = ["notes", "plans", "consultations", "dietRecords", "anniversaries", "habits", "fundPortfolio", "indexTrackerItems", "watchCheckins", "assetRecords", "subscriptionRecords", "travelRecords", "exerciseRecords", "weightRecords", "lifeGoals"];
 const marketCacheVersion = 5;
@@ -914,7 +915,7 @@ function readStorage(name, fallback) {
   }
 }
 
-function PushSettings() {
+function PushSettings({ androidApp, session }) {
   const [status, setStatus] = useState("未开启");
   const [busy, setBusy] = useState(false);
   async function enablePush() {
@@ -937,7 +938,7 @@ function PushSettings() {
     } catch (error) { setStatus(error.message || "开启失败"); }
     finally { setBusy(false); }
   }
-  return <section className="panel"><div className="panel-head"><div><h2>后台消息提醒</h2><p>{status}</p></div><button className="chip-button" type="button" onClick={enablePush} disabled={busy}>{busy ? "开启中…" : "开启提醒"}</button></div><p className="empty">请先解锁云同步，再开启提醒。设置了提醒时间的未完成任务会在手机锁屏时推送。需要 HTTPS，并建议将本 PWA 添加到主屏幕。</p></section>;
+  return <section className="panel notification-settings"><div className="panel-head"><div><h2>消息提醒</h2><p>{androidApp ? "安卓安装版暂不支持锁屏推送" : status}</p></div>{!androidApp && <button className="chip-button" type="button" onClick={enablePush} disabled={busy || !session}>{busy ? "开启中…" : "开启提醒"}</button>}</div><p className="notification-description">{androidApp ? "目前任务提醒通过手机浏览器中的工作台接收。安卓安装版尚未接入系统推送，关闭应用后不会直接收到通知。" : "登录后可开启浏览器通知。已设置提醒时间的未完成任务，会在服务器检查到期时推送；目前每天北京时间 10:00 和 15:00 检查，并非按分钟即时提醒。"}</p></section>;
 }
 
 function writeStorage(name, value) {
@@ -1478,46 +1479,6 @@ function DesktopContextRail({ activePage, displayMode, ponyTheme, session, stats
         </div>
       </section>
     </aside>
-  );
-}
-
-function SyncPanel({ session, syncStatus, onLogin, onLogout, onSync, onExport }) {
-  const [accessCode, setAccessCode] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function submit(event) {
-    event.preventDefault();
-    if (!accessCode.trim()) return;
-    setBusy(true);
-    await onLogin(accessCode.trim());
-    setBusy(false);
-  }
-
-  return (
-    <section className="panel sync-panel">
-      <div className="panel-head">
-        <div>
-          <h2>数据与账号</h2>
-          <p>{syncStatus}</p>
-        </div>
-        <div className="button-row">
-          {session && <button className="chip-button" type="button" onClick={onSync}>同步</button>}
-          <button className="chip-button" type="button" onClick={onExport}>导出</button>
-        </div>
-      </div>
-            {!session && (
-        <form className="stack-form" onSubmit={submit}>
-          <input type="password" value={accessCode} onChange={(event) => setAccessCode(event.target.value)} placeholder="输入固定访问码" required />
-          <button type="submit" disabled={busy}>{busy ? "验证中" : "解锁云同步"}</button>
-        </form>
-      )}
-      {session && (
-        <div className="account-box">
-          <strong>{session.user.email}</strong>
-          <button type="button" onClick={onLogout}>锁定</button>
-        </div>
-      )}
-    </section>
   );
 }
 
@@ -4300,7 +4261,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
         <strong>{watchItemCount} 部</strong>
       </div>
       <div className="watch-rating-syncbar">
-        <span>{syncStatus || "观看记录会在解锁后同步到云端"}</span>
+        <span>{syncStatus || "观看记录会在登录后同步到云端"}</span>
         <button type="button" onClick={refreshCloudCheckins} disabled={cloudRefreshing}>{cloudRefreshing ? "刷新中" : "刷新云端"}</button>
       </div>
       <form className="watch-rating-tmdb-search" onSubmit={(event) => { event.preventDefault(); onSearchTmdb?.(tmdbQuery); }}>
@@ -4422,7 +4383,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
                       })()}
                     </div>}
                     <div className="watch-mobile-section-title"><strong>季</strong><span>{seasonList.length} 季</span></div>
-                    {seasonOptions.length === 0 ? <p className="watch-rating-status">正在读取 TMDB 季列表…</p> : <div className="watch-mobile-seasons">
+                    {seasonOptions.length === 0 ? <p className="watch-rating-status">{detailsLoading ? "正在读取 TMDB 季列表…" : "暂无季集信息，可搜索并更换已绑定 TMDB 的作品。"}</p> : <div className="watch-mobile-seasons">
                       {seasonOptions.map((season) => {
                         const key = String(season.seasonNumber);
                         const progress = key === String(seasonNumber) ? checkedEpisodes.size : (Array.isArray(selected?.seasonProgress?.[key]) ? selected.seasonProgress[key].length : 0);
@@ -6186,9 +6147,10 @@ export default function Workbench() {
   const [waterTarget, setWaterTarget] = useState(defaultWaterTarget);
   const [habits, setHabits] = useState([]);
   const [done, setDone] = useState({});
-  const [assetInput, setAssetInput] = useState(defaultAssets);
   const [session, setSession] = useState(null);
-  const [syncStatus, setSyncStatus] = useState("本地保存，登录后开启云同步");
+  const [accountState, setAccountState] = useState("checking");
+  const [accountUsername, setAccountUsername] = useState("qiye");
+  const [syncStatus, setSyncStatus] = useState("正在检查登录状态…");
   const [backupStatus, setBackupStatus] = useState("尚未导出");
   const [editing, setEditing] = useState(null);
   const [overviewOpen, setOverviewOpen] = useState(false);
@@ -6213,7 +6175,7 @@ export default function Workbench() {
   function persist(name, value) {
     const nextValue = syncedCollections.includes(name) && Array.isArray(value) ? stampItems(value) : value;
     writeStorage(name, nextValue);
-    const cloudSession = session || (localStorage.getItem(key("accessUnlocked")) === "true" ? fixedSession : null);
+    const cloudSession = session;
     if (cloudSession) {
       const saveTask = ["consultations", "watchCheckins"].includes(name)
         ? saveMergedCloudCollection(cloudSession, name, nextValue)
@@ -6237,7 +6199,7 @@ export default function Workbench() {
   function persistDeletedIds(name, ids) {
     const next = uniqueIds(ids);
     writeDeletedIds(name, next);
-    const cloudSession = session || (localStorage.getItem(key("accessUnlocked")) === "true" ? fixedSession : null);
+    const cloudSession = session;
     if (cloudSession) {
       saveCloudItem(cloudSession, syncDeletedKey(name), next)
         .then(() => setSyncStatus(`已删除 · ${nowText()}`))
@@ -6278,7 +6240,6 @@ export default function Workbench() {
 
   async function syncAssetsToCloud(nextAssets, name = "assets") {
     const normalized = normalizeSavedAssets(nextAssets, name === "assets" ? defaultAssets : "");
-    if (name === "assets") setAssetInput(normalized);
     localStorage.setItem(key(name), normalized);
     if (!session) return;
     try {
@@ -6376,7 +6337,6 @@ export default function Workbench() {
     }
     if (typeof cloud.assets === "string") {
       const nextAssets = normalizeSavedAssets(cloud.assets);
-      setAssetInput(nextAssets);
       localStorage.setItem(key("assets"), nextAssets);
       localStorage.removeItem(key("marketCache"));
     }
@@ -6482,9 +6442,9 @@ export default function Workbench() {
   }
 
   async function refreshWatchCheckinsFromCloud() {
-    const cloudSession = session || (localStorage.getItem(key("accessUnlocked")) === "true" ? fixedSession : null);
+    const cloudSession = session;
     if (!cloudSession) {
-      setSyncStatus("请先解锁访问码后再刷新云端");
+      setSyncStatus("请先登录账号后再刷新云端");
       return false;
     }
     setSyncStatus("正在刷新观影记录...");
@@ -6509,6 +6469,7 @@ export default function Workbench() {
   }
 
   useEffect(() => {
+    const accountController = new AbortController();
     migrateLegacyData();
     const savedPage = localStorage.getItem(key("activePage"));
     const nextPage = pages.some((page) => page.id === savedPage) ? savedPage : "today";
@@ -6542,7 +6503,6 @@ export default function Workbench() {
     setHabits(readStorage("habits", readStorage("checkins", [])));
     setDone(readStorage(`done:${todayKey()}`, {}));
     setPetSupplies({ ...defaultPetSupplies, ...readStorage("petSupplies", defaultPetSupplies) });
-    setAssetInput(normalizeSavedAssets(localStorage.getItem(key("assets"))));
     const applyResponsiveMode = () => {
       const isAndroidApp = Boolean(window.QiyeNative) || /QiyeAndroid\//.test(navigator.userAgent);
       setAndroidApp(isAndroidApp);
@@ -6559,12 +6519,10 @@ export default function Workbench() {
     loadTmdbRecommendations();
     const timer = setInterval(() => setClock(clockText()), 1000);
 
-    if (localStorage.getItem(key("accessUnlocked")) === "true") {
-      setSession(fixedSession);
-      syncFromCloud(fixedSession);
-    }
+    restoreAccount(accountController.signal);
 
     return () => {
+      accountController.abort();
       clearInterval(timer);
       window.removeEventListener("resize", applyResponsiveMode);
       window.removeEventListener("qiye-native-ready", applyResponsiveMode);
@@ -6743,7 +6701,7 @@ export default function Workbench() {
   }
 
   function syncDeletedTmdbWatchlistToCloud() {
-    const cloudSession = session || (localStorage.getItem(key("accessUnlocked")) === "true" ? fixedSession : null);
+    const cloudSession = session;
     if (!cloudSession) return;
     saveCloudItem(cloudSession, "deletedTmdbWatchlist", normalizeDeletedTmdbWatchlist(readStorage("deletedTmdbWatchlist", [])))
       .then(() => setSyncStatus(`已同步删除记录 · ${nowText()}`))
@@ -7581,15 +7539,6 @@ export default function Workbench() {
     switchPage("consultations");
   }
 
-  function saveAssets(event) {
-    event.preventDefault();
-    const next = assetInput.trim() || defaultAssets;
-    localStorage.setItem(key("assets"), next);
-    localStorage.removeItem(key("marketCache"));
-    persist("assets", next);
-    alert("自选资产已保存，回到行情页会重新读取。");
-  }
-
   function exportMarkdown() {
     const lines = [
       "# 七夜online导出",
@@ -7659,7 +7608,7 @@ export default function Workbench() {
       petSupplies: normalizePetSupplies(petSupplies),
       petSuppliesUpdatedAt: readStorage("petSuppliesUpdatedAt", 0),
       petRewardHistory: readStorage("petRewardHistory", {}),
-      assets: assetInput,
+      assets: normalizeSavedAssets(localStorage.getItem(key("assets"))),
       watchAssets: normalizeSavedAssets(localStorage.getItem(key("watchAssets")), ""),
       fundPortfolio: normalizeFundPortfolio(readStorage("fundPortfolio", [])),
       fundCodes: localStorage.getItem(key("fundCodes")) || "",
@@ -7793,28 +7742,59 @@ export default function Workbench() {
     }
   }
 
-  async function login(accessCode) {
+  async function restoreAccount(signal) {
+    setAccountState("checking");
+    try {
+      const response = await fetch("/api/access", { cache: "no-store", signal: AbortSignal.any([AbortSignal.timeout(15000), ...(signal ? [signal] : [])]) });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "无法检查登录状态");
+      if (signal?.aborted) return;
+      setAccountUsername(data.username || "qiye");
+      setAccountState("ready");
+      localStorage.removeItem(key("accessUnlocked"));
+      if (data.authenticated && data.user) {
+        const restored = { user: data.user };
+        setSession(restored);
+        await syncFromCloud(restored);
+      } else {
+        setSession(null);
+        setSyncStatus("本机记录已保留，登录后自动同步");
+      }
+    } catch (error) {
+      if (signal?.aborted) return;
+      setAccountState("error");
+      setSyncStatus("暂时无法检查登录状态，请检查网络后重试。本机记录已保留。");
+    }
+  }
+
+  async function login(credentials) {
     try {
       const response = await fetch("/api/access", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: accessCode }),
+        body: JSON.stringify(credentials),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "访问码验证失败");
-      localStorage.setItem(key("accessUnlocked"), "true");
-      setSession(fixedSession);
-      await syncFromCloud(fixedSession);
+      if (!response.ok) throw new Error(data.error || "登录失败，请重试");
+      const nextSession = { user: data.user };
+      setAccountState("ready");
+      setSession(nextSession);
+      await syncFromCloud(nextSession);
+      return true;
     } catch (error) {
-      setSyncStatus(error.message || "访问码验证失败");
+      setSyncStatus(error.message || "登录失败，请重试");
+      return false;
     }
   }
 
   async function logout() {
-    await fetch("/api/access/logout", { method: "POST" }).catch(() => {});
-    localStorage.removeItem(key("accessUnlocked"));
-    setSession(null);
-    setSyncStatus("已锁定，本机继续本地保存");
+    try {
+      const response = await fetch("/api/access/logout", { method: "POST" });
+      if (!response.ok) throw new Error("退出失败，请重试");
+      localStorage.removeItem(key("accessUnlocked"));
+      setSession(null);
+      setSyncStatus("已退出登录，本机记录保留");
+    } catch (error) { setSyncStatus("退出登录失败，请检查网络后重试。"); }
   }
 
   function cancelEditing() {
@@ -7854,7 +7834,7 @@ export default function Workbench() {
       <div className="phone-status">
         <button className="menu-toggle" type="button" aria-label="打开菜单" onClick={() => setMenuOpen(true)}>☰</button>
         <strong>{androidApp ? "七夜online" : clock}</strong>
-        <span>{session ? "云同步在线" : "本地模式"}</span>
+        <button className="account-status-link" type="button" onClick={() => switchPage("settings")} aria-label="打开账号设置">{session ? syncStatus.includes("失败") ? "同步失败" : syncStatus.startsWith("正在") ? "同步中" : "已登录" : accountState === "checking" ? "检查登录" : "未登录"}</button>
       </div>
       <section className="app-body">
         <button className="menu-backdrop" type="button" aria-label="关闭菜单" onClick={() => setMenuOpen(false)} />
@@ -7934,7 +7914,7 @@ export default function Workbench() {
                       <button key={tab.id} className={exerciseView === tab.id ? "active" : ""} type="button" aria-pressed={exerciseView === tab.id} onClick={() => setExerciseView(tab.id)}>{tab.label}</button>
                     ))}
                   </div>
-                ) : activePage === "assets" ? null : (
+                ) : ["assets", "settings"].includes(activePage) ? null : (
                   <div className="module-tabs" aria-label="内容切换">
                     <button className="active" type="button">{activePage === "life" ? "目标清单" : "今日内容"}</button>
                   </div>
@@ -8109,9 +8089,8 @@ export default function Workbench() {
 
           {activePage === "settings" && (
             <>
-              <PonyThemePanel value={ponyTheme} onChange={changePonyTheme} />
-              <PushSettings />
-              <SyncPanel session={session} syncStatus={syncStatus} onLogin={login} onLogout={logout} onSync={() => syncAll()} onExport={exportMarkdown} />
+              <AccountPanel session={session} username={accountUsername} accountState={accountState} status={syncStatus} onLogin={login} onLogout={logout} onSync={() => syncAll()} onRetry={() => restoreAccount()} />
+              <PushSettings androidApp={androidApp} session={session} />
               <section className="panel">
                 <div className="panel-head">
                   <div>
@@ -8126,18 +8105,9 @@ export default function Workbench() {
                     <input type="file" accept="application/json" onChange={importBackup} />
                   </label>
                 </div>
+                <button className="chip-button" type="button" onClick={exportMarkdown}>导出 Markdown</button>
               </section>
-              <section className="panel">
-                <h2>自选资产</h2>
-                <form className="stack-form" onSubmit={saveAssets}>
-                  <input value={assetInput} onChange={(event) => setAssetInput(event.target.value)} placeholder="hf_GC,sh603629,sh688507" />
-                  <button type="submit">保存自选</button>
-                </form>
-              </section>
-              <section className="panel">
-                <h2>手机同步</h2>
-                <p className="empty">手机打开同一个网址，进入“设置”，输入固定访问码解锁云同步。解锁后点“同步”，电脑和手机就会使用同一份云端数据。</p>
-              </section>
+              <PonyThemePanel value={ponyTheme} onChange={changePonyTheme} />
             </>
           )}
         </section>

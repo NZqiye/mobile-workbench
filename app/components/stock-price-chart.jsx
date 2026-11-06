@@ -126,8 +126,8 @@ function PricePlot({ quote, mode }) {
           {timeLabels.map((item) => <text className="stock-axis" key={item.label} x={item.x} y="261" textAnchor={item.x === 44 ? 'start' : item.x === 354 ? 'end' : 'middle'}>{item.label}</text>)}
           {selected != null && point && <g><line className="stock-crosshair" x1={x(active)} x2={x(active)} y1="24" y2="244" /><line className="stock-crosshair" x1="44" x2="354" y1={y(point.price)} y2={y(point.price)} /><circle className="stock-inspect-point" cx={x(active)} cy={y(point.price)} r="3" /></g>}
         </svg>
-        <p className="stock-chart-hint">鼠标移动或手指横向拖动看价格；键盘可用左右方向键。</p>
-        <p className="stock-chart-source">{current.source} · 数据日期 {current.date}{current.market === 'us' ? ' · 时间为美东时间' : ''} · {mode === 'intraday' ? '每分钟刷新，公开行情可能延迟' : '不复权价格，成交量按源数据展示'}</p>
+        {mode === 'daily' && <p className="stock-chart-hint">鼠标移动或手指横向拖动看价格；键盘可用左右方向键。</p>}
+        {mode === 'daily' && <p className="stock-chart-source">{current.source} · 数据日期 {current.date}{current.market === 'us' ? ' · 时间为美东时间' : ''} · 不复权价格，成交量按源数据展示</p>}
       </>}
     </div>
   );
