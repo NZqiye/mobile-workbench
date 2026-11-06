@@ -1,0 +1,127 @@
+.android-app-shell.phone-shell {
+  width: 100%;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.android-app-shell .phone-status {
+  min-height: 48px;
+  padding-top: 0;
+}
+
+.android-app-shell.phone-shell .phone-status strong { visibility: visible; font-size: 14px; }
+.android-app-shell.phone-shell .phone-status > span { visibility: visible; }
+.android-app-shell .day-line { display: none; }
+.android-app-shell.phone-shell .content { gap: 16px; padding: 16px 16px 24px; }
+.android-app-shell.phone-shell .ios-page-intro { padding: 0; }
+.android-app-shell .ios-page-intro h1 { font-size: 28px; }
+.android-app-shell .ios-intro-action { min-width: 48px; min-height: 48px; }
+
+.android-app-shell.phone-shell.mobile-shell.page-today .today-time-panel {
+  display: flex;
+  justify-content: flex-start;
+  gap: 12px;
+  min-height: 70px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  box-shadow: none;
+}
+.android-app-shell.phone-shell .today-time-panel .clock-dial { width: 48px; height: 48px; filter: none; }
+.android-app-shell.phone-shell .today-time-panel .clock-digital strong { font-size: 26px; }
+.android-app-shell .today-time-panel .clock-seconds,
+.android-app-shell .today-time-panel .clock-calendar { display: none; }
+
+.android-app-shell.phone-shell .panel { padding: 16px; gap: 12px; }
+.android-app-shell .panel-head { flex-wrap: wrap; gap: 8px; }
+.android-app-shell .panel-head h2 { font-size: 20px; }
+.android-app-shell .today-task-panel .empty { margin: 0; padding: 8px 0; }
+.android-app-shell.phone-shell .module-head {
+  position: relative;
+  top: auto;
+  margin: 0;
+  padding: 16px;
+  border-radius: 0;
+  box-shadow: none;
+}
+.android-app-shell .module-title-row { grid-template-columns: 40px minmax(0, 1fr); gap: 12px; }
+.android-app-shell .module-icon { width: 40px; height: 40px; box-shadow: none; transform: none; }
+.android-app-shell.phone-shell .module-head h1 { font-size: 24px; }
+.android-app-shell.phone-shell .module-head p { font-size: 13px; line-height: 1.5; }
+.android-app-shell.phone-shell .module-tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.android-app-shell.phone-shell .module-tabs button { flex: 1 0 auto; min-height: 48px; padding: 8px 14px; }
+.android-app-shell .nav-item { min-height: 52px; }
+.android-app-shell .timeline-row { min-height: 52px; }
+.android-app-shell :is(.chip-button, .task-row button, .habit-row button, .daybook-delete, .daybook-picker-head button) { min-width: 48px; min-height: 48px; }
+.android-app-shell :is(.task-row, .habit-row) label { min-height: 48px; }
+.android-app-shell :is(input[type="text"], input[type="search"], input[type="email"], input[type="password"], input[type="number"], input[type="date"], input[type="time"], input[type="url"], select, .ui-select-trigger) { min-height: 48px; font-size: 16px; }
+.android-app-shell.phone-shell :is(.quick-form, .stack-form, .water-target-form, .meal-form, .exercise-form, .anniversary-form) > button { min-height: 48px; }
+.android-app-shell .quick-note-bar button { width: 48px; height: 48px; }
+
+.android-app-shell.phone-shell .weather-panel .weather-main { padding: 0; gap: 12px; }
+.android-app-shell .weather-panel .weather-main strong { font-size: 32px; }
+.android-app-shell.phone-shell .weather-panel .weather-main .weather-badge { min-width: 64px; height: 64px; }
+.android-app-shell .app-weather-details { border-top: 1px solid var(--ios-separator); }
+.android-app-shell .app-weather-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  color: var(--ios-ink);
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+}
+.android-app-shell .app-weather-details > summary::-webkit-details-marker { display: none; }
+.android-app-shell .app-weather-details > summary svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.android-app-shell .app-weather-details[open] > summary svg { transform: rotate(180deg); }
+.android-app-shell .app-weather-details > summary:focus-visible { outline: 2px solid var(--ios-blue); outline-offset: 2px; }
+.android-app-shell.phone-shell .weather-outfit-tip { padding: 10px 12px; font-size: 13px; }
+
+.android-app-shell.phone-shell .bottom-nav {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+  overflow: visible;
+  padding: 4px 8px;
+}
+
+.android-app-shell.phone-shell .bottom-nav-item {
+  min-width: 0;
+  width: 100%;
+  min-height: 56px;
+  padding: 6px 2px;
+}
+
+.android-app-shell .bottom-nav-item[aria-label="录入"] { color: var(--ios-blue); }
+.android-app-shell .bottom-nav-item[aria-label="录入"] svg { width: 24px; height: 24px; }
+.android-app-shell .bottom-nav-item small { font-size: 12px; }
+.android-app-shell .quick-record-panel button { min-height: 48px; }
+.android-app-shell .quick-record-panel textarea { resize: none; }
+.android-app-shell.phone-shell .quick-record-panel > div:first-child > button {
+  color: #fff;
+  background: var(--ios-blue);
+  border-color: transparent;
+  font-size: 14px;
+}
+.android-app-shell.phone-shell .quick-record-panel > div:first-child > button[aria-pressed="true"] { background: var(--red); }
+.android-app-shell .quick-record-panel summary { min-height: 44px; padding-block: 12px; }
+
+html.android-keyboard .android-app-shell .bottom-nav { display: none; }
+
+@media (max-width: 420px) {
+  .android-app-shell .quick-record-panel > div:first-child { align-items: stretch; }
+  .android-app-shell .quick-record-panel > div:first-child > button { flex: 1; }
+}

@@ -29,7 +29,9 @@ run(aapt, ['link', '-o', path.join(build, 'unsigned.apk'), '--manifest', path.jo
 run(javaTool('javac'), ['-encoding', 'UTF-8', '--release', '8', '-classpath', platform, '-d', classes, path.join(build, 'MainActivity.java')]);
 run(javaTool('jar'), ['cf', path.join(build, 'classes.jar'), '-C', classes, '.']);
 run(javaTool('java'), ['-cp', path.join(buildTools, 'lib', 'd8.jar'), 'com.android.tools.r8.D8', '--release', '--min-api', '26', '--lib', platform, '--output', build, path.join(build, 'classes.jar')]);
-run(javaTool('jar'), ['uf', path.join(build, 'unsigned.apk'), '-C', build, 'classes.dex']);
+fs.mkdirSync(path.join(build, 'assets'), { recursive: true });
+fs.copyFileSync(path.join(root, 'android', 'assets', 'native-shell.js'), path.join(build, 'assets', 'native-shell.js'));
+run(javaTool('jar'), ['uf', path.join(build, 'unsigned.apk'), '-C', build, 'classes.dex', '-C', build, 'assets']);
 run(path.join(buildTools, 'zipalign' + (windows ? '.exe' : '')), ['-f', '4', path.join(build, 'unsigned.apk'), path.join(build, 'aligned.apk')]);
 
 const keyStore = path.join(signing, 'release.jks');
@@ -43,7 +45,8 @@ else {
   run(javaTool('keytool'), ['-genkeypair', '-keystore', buildKeyStore, '-alias', 'qiye-release', '-keyalg', 'RSA', '-keysize', '3072', '-validity', '10000', '-storepass:env', 'QIYE_SIGNING_PASSWORD', '-keypass:env', 'QIYE_SIGNING_PASSWORD', '-dname', 'CN=Qiye Online, OU=Personal Workbench'], { env: signingEnv });
   fs.copyFileSync(buildKeyStore, keyStore);
 }
-const apk = path.join(output, 'qiyeonline-1.0.0.apk');
+const version = fs.readFileSync(path.join(root, 'android', 'AndroidManifest.xml'), 'utf8').match(/android:versionName="([^"]+)"/)[1];
+const apk = path.join(output, `qiyeonline-${version}.apk`);
 const builtApk = path.join(build, path.basename(apk));
 const signer = [ '-jar', path.join(buildTools, 'lib', 'apksigner.jar') ];
 run(javaTool('java'), [...signer, 'sign', '--ks', buildKeyStore, '--ks-key-alias', 'qiye-release', '--ks-pass', 'env:QIYE_SIGNING_PASSWORD', '--key-pass', 'env:QIYE_SIGNING_PASSWORD', '--out', builtApk, path.join(build, 'aligned.apk')], { env: signingEnv });

@@ -14,6 +14,9 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
   const [seconds, setSeconds] = useState(0);
   const [status, setStatus] = useState("正在检查录音和自动归类服务…");
   const [pending, setPending] = useState(null);
+  const [native, setNative] = useState(false);
+  const [micDenied, setMicDenied] = useState(false);
+  const nativeRecordingRef = useRef(false);
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
   const timerRef = useRef(null);
@@ -22,6 +25,13 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
   const busyRef = useRef(false);
   const busy = phase !== "idle";
   const configured = service === "ready";
+
+  useEffect(() => {
+    const detect = () => setNative(Boolean(window.QiyeNative?.recordAudio));
+    detect();
+    window.addEventListener("qiye-native-ready", detect);
+    return () => window.removeEventListener("qiye-native-ready", detect);
+  }, []);
 
   useEffect(() => {
     setText(localStorage.getItem("qiyeworkbench:quickRecordDraft") || "");
@@ -45,6 +55,7 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
     return () => {
       activeRef.current = false;
       requestRef.current?.abort();
+      if (nativeRecordingRef.current) window.QiyeNative?.cancelRecording();
       const recorder = recorderRef.current;
       if (recorder) { recorder.onstop = null; if (recorder.state !== "inactive") recorder.stop(); }
       releaseMicrophone();
@@ -139,6 +150,40 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
 
   async function startRecording() {
     if (busyRef.current) return;
+    if (service === "locked") { setStatus("请先解锁语音识别服务，录音权限会在开始录音时申请。输入已保留。"); onSettings(); return; }
+    if (!configured) { await checkService(); return; }
+    if (window.QiyeNative?.recordAudio) {
+      busyRef.current = true;
+      nativeRecordingRef.current = true;
+      setMicDenied(false);
+      setPhase("permission");
+      setStatus("请允许七夜online使用麦克风…");
+      const recordedAt = new Date();
+      try {
+        const blob = await window.QiyeNative.recordAudio(() => {
+          if (!activeRef.current) return;
+          setPhase("recording");
+          setSeconds(0);
+          setPending(null);
+          setStatus("手机正在录音，说完后点“停止并保存”。切到后台会取消录音。");
+          let elapsed = 0;
+          timerRef.current = setInterval(() => setSeconds(++elapsed), 1000);
+        });
+        clearInterval(timerRef.current);
+        nativeRecordingRef.current = false;
+        await transcribe(blob, recordedAt);
+      } catch (error) {
+        clearInterval(timerRef.current);
+        nativeRecordingRef.current = false;
+        busyRef.current = false;
+        if (activeRef.current) {
+          setPhase("idle");
+          setMicDenied(error.name === "NotAllowedError");
+          setStatus(error.message || "手机录音启动失败，请重试。");
+        }
+      }
+      return;
+    }
     if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { setStatus("当前浏览器不支持录音，请使用手机输入法的语音按钮填写文字。"); return; }
     busyRef.current = true;
     setPhase("permission");
@@ -187,10 +232,28 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
   }
 
   function stopRecording() {
+    if (nativeRecordingRef.current) {
+      clearInterval(timerRef.current);
+      setPhase("transcribing");
+      setStatus("正在处理手机录音…");
+      window.QiyeNative.stopRecording();
+      return;
+    }
     if (recorderRef.current?.state === "recording") {
       setPhase("transcribing");
       setStatus("正在处理录音…");
       recorderRef.current.stop();
+    }
+  }
+
+  function cancelRecording() {
+    if (nativeRecordingRef.current) window.QiyeNative.cancelRecording();
+    else {
+      if (recorderRef.current) { recorderRef.current.onstop = null; recorderRef.current.stop(); recorderRef.current = null; }
+      releaseMicrophone();
+      busyRef.current = false;
+      setPhase("idle");
+      setStatus("录音已取消，未保存任何内容。");
     }
   }
 
@@ -209,15 +272,17 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
     <section className={`panel quick-record-panel ${styles.root}`} aria-label="语音快速记录">
       <div className={styles.header}>
         <h2>快速记录</h2>
-        <button className={styles.recordButton} type="button" disabled={phase !== "recording" && (busy || !configured)} onClick={phase === "recording" ? stopRecording : startRecording}>
+        <button className={styles.recordButton} type="button" aria-pressed={phase === "recording"} disabled={phase !== "recording" && (busy || service === "checking")} onClick={phase === "recording" ? stopRecording : startRecording}>
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8" /></svg>
-          {phase === "recording" ? `停止并保存 · ${seconds}s` : phase === "transcribing" ? "转写中…" : phase === "extracting" ? "保存中…" : phase === "permission" ? "等待麦克风…" : "开始录音"}
+          {phase === "recording" ? `停止并保存 · ${seconds}s` : phase === "transcribing" ? "转写中…" : phase === "extracting" ? "保存中…" : phase === "permission" ? "等待麦克风…" : service === "locked" ? "解锁后录音" : service === "unavailable" ? "重试语音连接" : native ? "手机录音" : "开始录音"}
         </button>
       </div>
         <form onSubmit={submit}>
           <label className={styles.label} htmlFor={inputId}>说一句，或直接写下来</label>
           <textarea id={inputId} aria-describedby={`${inputId}-status`} className={styles.input} rows={2} maxLength={2000} value={text} disabled={busy || !draftReady} placeholder="例如：喝了300毫升水，跑步30分钟" onChange={(event) => { setText(event.target.value); setPending(null); }} />
           <div className={styles.actions}>
+            {phase === "recording" && <button className={styles.textButton} type="button" onClick={cancelRecording}>取消录音</button>}
+            {micDenied && native && <button className={styles.textButton} type="button" onClick={() => window.QiyeNative.openPermissions()}>开启麦克风权限</button>}
             <button className={styles.saveButton} type="submit" disabled={busy || service === "checking" || !text.trim()}>{phase === "extracting" ? "正在保存…" : "保存到各栏目"}</button>
             {service === "locked" && <button className={styles.textButton} type="button" onClick={onSettings}>去设置解锁</button>}
             {service === "unavailable" && <button className={styles.textButton} type="button" disabled={busy} onClick={() => checkService()}>重试连接</button>}

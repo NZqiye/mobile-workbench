@@ -7,12 +7,17 @@ import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
 import android.util.Base64;
 import android.view.View;
 import android.view.WindowInsets;
+import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
 import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
@@ -28,11 +33,13 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.io.OutputStream;
+import java.io.File;
+import java.nio.file.Files;
 import org.json.JSONObject;
 
 public final class MainActivity extends Activity {
     private static final String HOME = "https://qiyeonline.cc.cd/";
-    private static final int FILE_PICK = 10, FILE_SAVE = 11, AUDIO_PERMISSION = 12;
+    private static final int FILE_PICK = 10, FILE_SAVE = 11, AUDIO_PERMISSION = 12, NATIVE_AUDIO_PERMISSION = 13;
     private LinearLayout root;
     private WebView web;
     private LinearLayout errorView;
@@ -40,6 +47,13 @@ public final class MainActivity extends Activity {
     private PermissionRequest audioRequest;
     private WebMessagePort downloadPort;
     private byte[] pendingDownload;
+    private WebMessagePort nativePort;
+    private MediaRecorder nativeRecorder;
+    private File audioFile;
+    private String audioId;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable recordingLimit = () -> finishNativeAudio(false);
+    private boolean keyboardVisible;
 
     private boolean trusted(Uri uri) {
         return uri != null && "https".equals(uri.getScheme()) && "qiyeonline.cc.cd".equals(uri.getHost()) && (uri.getPort() == -1 || uri.getPort() == 443);
@@ -50,14 +64,19 @@ public final class MainActivity extends Activity {
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.rgb(231, 239, 238));
+        if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
         setContentView(root);
         root.setOnApplyWindowInsetsListener((view, insets) -> {
+            boolean previousKeyboard = keyboardVisible;
             if (Build.VERSION.SDK_INT >= 30) {
+                keyboardVisible = insets.isVisible(WindowInsets.Type.ime());
                 android.graphics.Insets safe = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout() | WindowInsets.Type.ime());
                 view.setPadding(safe.left, safe.top, safe.right, safe.bottom);
             } else {
+                keyboardVisible = insets.getSystemWindowInsetBottom() > getResources().getDisplayMetrics().density * 100;
                 view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(), insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
             }
+            if (web != null && previousKeyboard != keyboardVisible) web.evaluateJavascript("document.documentElement.classList.toggle('android-keyboard', " + keyboardVisible + ")", null);
             return insets;
         });
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
@@ -66,6 +85,7 @@ public final class MainActivity extends Activity {
         root.addView(web, new LinearLayout.LayoutParams(-1, -1));
         web.getSettings().setJavaScriptEnabled(true);
         web.getSettings().setDomStorageEnabled(true);
+        web.getSettings().setUserAgentString(web.getSettings().getUserAgentString() + " QiyeAndroid/1.1.0");
         web.getSettings().setAllowFileAccess(false);
         web.getSettings().setAllowContentAccess(true);
         CookieManager.getInstance().setAcceptCookie(true);
@@ -76,10 +96,12 @@ public final class MainActivity extends Activity {
                 return true;
             }
             @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap icon) {
+                finishNativeAudio(true);
+                if (nativePort != null) { nativePort.close(); nativePort = null; }
                 if (downloadPort != null) { downloadPort.close(); downloadPort = null; }
             }
             @Override public void onPageFinished(WebView view, String url) {
-                if (trusted(Uri.parse(url))) connectDownloads();
+                if (trusted(Uri.parse(url))) { connectNative(); connectDownloads(); }
             }
             @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) showNetworkError();
@@ -122,6 +144,100 @@ public final class MainActivity extends Activity {
         });
         if (Build.VERSION.SDK_INT >= 33) getOnBackInvokedDispatcher().registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::goBack);
         if (state == null || web.restoreState(state) == null) web.loadUrl(HOME);
+    }
+
+    private void connectNative() {
+        try {
+            String script;
+            try (java.io.InputStream stream = getAssets().open("native-shell.js")) {
+                java.io.ByteArrayOutputStream buffer = new java.io.ByteArrayOutputStream();
+                byte[] bytes = new byte[4096];
+                int count;
+                while ((count = stream.read(bytes)) != -1) buffer.write(bytes, 0, count);
+                script = buffer.toString("UTF-8");
+            }
+            web.evaluateJavascript(script, value -> {
+                if (!trusted(Uri.parse(web.getUrl()))) return;
+                if (nativePort != null) nativePort.close();
+                WebMessagePort[] ports = web.createWebMessageChannel();
+                nativePort = ports[0];
+                nativePort.setWebMessageCallback(new WebMessagePort.WebMessageCallback() {
+                    @Override public void onMessage(WebMessagePort port, WebMessage message) {
+                        if (!trusted(Uri.parse(web.getUrl()))) return;
+                        try {
+                            JSONObject data = new JSONObject(message.getData());
+                            switch (data.optString("action")) {
+                                case "audio-start":
+                                    if (audioId != null) { replyNative(data.optString("id"), "已有录音正在进行", "Error"); return; }
+                                    audioId = data.getString("id");
+                                    if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startNativeAudio();
+                                    else requestPermissions(new String[] { Manifest.permission.RECORD_AUDIO }, NATIVE_AUDIO_PERMISSION);
+                                    break;
+                                case "audio-stop": finishNativeAudio(false); break;
+                                case "audio-cancel": finishNativeAudio(true); break;
+                                case "permissions": startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()))); break;
+                            }
+                        } catch (Exception error) {
+                            replyNative(audioId, "手机录音连接失败，请重试", "Error");
+                            finishNativeAudio(true);
+                        }
+                    }
+                });
+                web.postWebMessage(new WebMessage("qiye-native-port", new WebMessagePort[] { ports[1] }), Uri.parse(HOME));
+            });
+        } catch (Exception error) { toast("手机录音尚未就绪，请重新打开应用"); }
+    }
+
+    private void replyNative(String id, String error, String name) {
+        if (nativePort == null || id == null) return;
+        try { nativePort.postMessage(new WebMessage(new JSONObject().put("id", id).put("error", error).put("name", name).toString())); }
+        catch (Exception ignored) { }
+    }
+
+    private void startNativeAudio() {
+        if (audioId == null) return;
+        try {
+            audioFile = File.createTempFile("quick-record-", ".m4a", getCacheDir());
+            nativeRecorder = new MediaRecorder();
+            nativeRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            nativeRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            nativeRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+            nativeRecorder.setAudioSamplingRate(44100);
+            nativeRecorder.setAudioEncodingBitRate(64000);
+            nativeRecorder.setOutputFile(audioFile.getAbsolutePath());
+            nativeRecorder.setOnErrorListener((recorder, what, extra) -> {
+                replyNative(audioId, "录音中断，请重试", "Error");
+                finishNativeAudio(true);
+            });
+            nativeRecorder.prepare();
+            nativeRecorder.start();
+            nativePort.postMessage(new WebMessage(new JSONObject().put("id", audioId).put("started", true).toString()));
+            handler.postDelayed(recordingLimit, 60000);
+        } catch (Exception error) {
+            replyNative(audioId, "无法启动麦克风，请确认系统麦克风开关已开启，并关闭其他正在录音的应用", "NotReadableError");
+            finishNativeAudio(true);
+        }
+    }
+
+    private void finishNativeAudio(boolean cancel) {
+        handler.removeCallbacks(recordingLimit);
+        if (audioId == null) return;
+        String id = audioId;
+        audioId = null;
+        try {
+            if (nativeRecorder != null) {
+                if (!cancel) nativeRecorder.stop();
+                nativeRecorder.release();
+                nativeRecorder = null;
+            }
+            if (cancel) replyNative(id, "录音已取消，未保存任何内容", "AbortError");
+            else if (audioFile == null || audioFile.length() == 0) replyNative(id, "录音太短，请说完一句话后再停止", "Error");
+            else if (nativePort != null) nativePort.postMessage(new WebMessage(new JSONObject().put("id", id).put("audio", Base64.encodeToString(Files.readAllBytes(audioFile.toPath()), Base64.NO_WRAP)).toString()));
+        } catch (Exception error) { replyNative(id, "录音太短或已中断，请重试", "Error"); }
+        finally {
+            if (nativeRecorder != null) { nativeRecorder.release(); nativeRecorder = null; }
+            if (audioFile != null) { audioFile.delete(); audioFile = null; }
+        }
     }
 
     private void connectDownloads() {
@@ -179,6 +295,13 @@ public final class MainActivity extends Activity {
 
     @Override public void onRequestPermissionsResult(int request, String[] permissions, int[] grants) {
         super.onRequestPermissionsResult(request, permissions, grants);
+        if (request == NATIVE_AUDIO_PERMISSION && audioId != null) {
+            if (grants.length > 0 && grants[0] == PackageManager.PERMISSION_GRANTED) startNativeAudio();
+            else {
+                replyNative(audioId, "麦克风权限未开启，请点“开启麦克风权限”，在应用权限中允许录音", "NotAllowedError");
+                finishNativeAudio(true);
+            }
+        }
         if (request == AUDIO_PERMISSION && audioRequest != null) {
             if (grants.length > 0 && grants[0] == PackageManager.PERMISSION_GRANTED) audioRequest.grant(new String[] { PermissionRequest.RESOURCE_AUDIO_CAPTURE });
             else { audioRequest.deny(); toast("未获得录音权限，仍可使用文字录入"); }
@@ -213,14 +336,26 @@ public final class MainActivity extends Activity {
 
     private void toast(String text) { Toast.makeText(this, text, Toast.LENGTH_LONG).show(); }
     private void goBack() {
-        if (errorView == null && web.canGoBack()) web.goBack();
-        else new AlertDialog.Builder(this).setMessage("退出工作台？").setPositiveButton("退出", (dialog, which) -> finish()).setNegativeButton("继续使用", null).show();
+        if (keyboardVisible) {
+            ((InputMethodManager) getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(web.getWindowToken(), 0);
+            web.evaluateJavascript("document.activeElement && document.activeElement.blur()", null);
+            return;
+        }
+        web.evaluateJavascript("Boolean(window.__qiyeHandleBack && window.__qiyeHandleBack())", result -> {
+            if ("true".equals(result)) return;
+            if (nativeRecorder != null) {
+                new AlertDialog.Builder(this).setMessage("放弃这次录音？").setPositiveButton("放弃", (dialog, which) -> finishNativeAudio(true)).setNegativeButton("继续录音", null).show();
+            } else if (errorView == null && web.canGoBack()) web.goBack();
+            else new AlertDialog.Builder(this).setMessage("退出工作台？").setPositiveButton("退出", (dialog, which) -> finish()).setNegativeButton("继续使用", null).show();
+        });
     }
     @Override public void onBackPressed() { goBack(); }
     @Override public void onSaveInstanceState(Bundle state) { web.saveState(state); super.onSaveInstanceState(state); }
-    @Override public void onPause() { CookieManager.getInstance().flush(); web.onPause(); super.onPause(); }
+    @Override public void onPause() { if (nativeRecorder != null) finishNativeAudio(true); CookieManager.getInstance().flush(); web.onPause(); super.onPause(); }
     @Override public void onResume() { super.onResume(); if (web != null) web.onResume(); }
     @Override public void onDestroy() {
+        finishNativeAudio(true);
+        if (nativePort != null) nativePort.close();
         if (fileCallback != null) fileCallback.onReceiveValue(null);
         if (audioRequest != null) audioRequest.deny();
         if (downloadPort != null) downloadPort.close();

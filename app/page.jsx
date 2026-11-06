@@ -14,6 +14,7 @@ import { anniversaryProgress } from "../lib/anniversary-progress";
 import { WeeklyChart, MealBreakdown } from "./components/statistics-charts";
 import StockPriceChart from "./components/stock-price-chart";
 import "./components/stock-lists.css";
+import "./components/android-app.css";
 
 const storagePrefix = "qiyeworkbench:";
 
@@ -1520,7 +1521,7 @@ function SyncPanel({ session, syncStatus, onLogin, onLogout, onSync, onExport })
   );
 }
 
-function WeatherCard({ compact = false, clock = "--:--" }) {
+function WeatherCard({ compact = false, clock = "--:--", phoneApp = false }) {
   const [weather, setWeather] = useState(null);
   const [status, setStatus] = useState("正在读取天气...");
   const dateKey = visibleTodayKey(clock);
@@ -1566,6 +1567,17 @@ function WeatherCard({ compact = false, clock = "--:--" }) {
     loadWeather();
   }, []);
 
+  const forecast = <div className="weather-forecast">
+    {(weather?.forecast || []).slice(0, 5).map((day) => (
+      <div key={day.date}>
+        <span>{day.date.slice(5).replace("-", "/")}</span>
+        <WeatherMotionIcon code={day.code} />
+        <strong>{weatherLabel(day.code)}</strong>
+        <small>{day.min ?? "--"}° /<wbr /> {day.max ?? "--"}°</small>
+      </div>
+    ))}
+  </div>;
+
   return (
     <section className={compact ? "panel weather-panel compact" : "panel weather-panel"}>
       <div className="panel-head">
@@ -1577,7 +1589,7 @@ function WeatherCard({ compact = false, clock = "--:--" }) {
       </div>
       <div className="weather-main">
         <div>
-          <span>{weather?.location || "无锡"} · {dateKey} · {clock}</span>
+          <span>{phoneApp ? weather?.location || "无锡" : `${weather?.location || "无锡"} · ${dateKey} · ${clock}`}</span>
           <strong>{weather ? `${weather.current ?? "--"}°` : "--"}</strong>
           <small>{weather ? `${weatherLabel(weather.code)} · ${weather.min ?? "--"}° / ${weather.max ?? "--"}° · 降水 ${weather.rain ?? "--"}%` : "正在读取无锡天气"}</small>
         </div>
@@ -1586,16 +1598,7 @@ function WeatherCard({ compact = false, clock = "--:--" }) {
           <small>{weather ? weatherLabel(weather.code) : "天气"}</small>
         </b>
       </div>
-      <div className="weather-forecast">
-        {(weather?.forecast || []).slice(0, 5).map((day) => (
-          <div key={day.date}>
-            <span>{day.date.slice(5).replace("-", "/")}</span>
-            <WeatherMotionIcon code={day.code} />
-            <strong>{weatherLabel(day.code)}</strong>
-            <small>{day.min ?? "--"}° /<wbr /> {day.max ?? "--"}°</small>
-          </div>
-        ))}
-      </div>
+      {phoneApp ? <details className="app-weather-details"><summary>未来 5 天天气<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg></summary>{forecast}</details> : forecast}
       {compact && weather && (
         <div className="weather-outfit-tip">
           <span>{outfitAdvice(weather).title}</span>
@@ -6191,6 +6194,7 @@ export default function Workbench() {
   const [overviewOpen, setOverviewOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [displayMode, setDisplayMode] = useState("mobile");
+  const [androidApp, setAndroidApp] = useState(false);
   const [ponyTheme, setPonyTheme] = useState("jade");
   const [tmdbResults, setTmdbResults] = useState([]);
   const [tmdbStatus, setTmdbStatus] = useState("输入剧名搜索，点击结果即可加入观影列表");
@@ -6540,13 +6544,16 @@ export default function Workbench() {
     setPetSupplies({ ...defaultPetSupplies, ...readStorage("petSupplies", defaultPetSupplies) });
     setAssetInput(normalizeSavedAssets(localStorage.getItem(key("assets"))));
     const applyResponsiveMode = () => {
-      const nextMode = window.innerWidth >= 960 ? "desktop" : "mobile";
+      const isAndroidApp = Boolean(window.QiyeNative) || /QiyeAndroid\//.test(navigator.userAgent);
+      setAndroidApp(isAndroidApp);
+      const nextMode = !isAndroidApp && window.innerWidth >= 960 ? "desktop" : "mobile";
       setDisplayMode(nextMode);
       localStorage.setItem(key("displayMode"), nextMode);
       if (nextMode === "mobile" && nextPage === "consultations") setConsultationView("rating");
     };
     applyResponsiveMode();
     window.addEventListener("resize", applyResponsiveMode);
+    window.addEventListener("qiye-native-ready", applyResponsiveMode);
     setPonyTheme(ponyThemes.some((theme) => theme.id === localStorage.getItem(key("ponyTheme"))) ? localStorage.getItem(key("ponyTheme")) : "jade");
     setClock(clockText());
     loadTmdbRecommendations();
@@ -6560,6 +6567,7 @@ export default function Workbench() {
     return () => {
       clearInterval(timer);
       window.removeEventListener("resize", applyResponsiveMode);
+      window.removeEventListener("qiye-native-ready", applyResponsiveMode);
     };
   }, []);
 
@@ -6614,6 +6622,28 @@ export default function Workbench() {
     if (page === "consultations" && displayMode === "mobile") setConsultationView("rating");
     localStorage.setItem(key("activePage"), page);
     setMenuOpen(false);
+    if (androidApp) document.querySelector(".work-area")?.scrollTo({ top: 0 });
+  }
+
+  useEffect(() => {
+    if (!androidApp) return;
+    const back = () => {
+      if (menuOpen) { setMenuOpen(false); return true; }
+      if (overviewOpen) { setOverviewOpen(false); return true; }
+      if (editing) { cancelEditing(); return true; }
+      if (activePage !== "today") { switchPage("today"); return true; }
+      return false;
+    };
+    window.__qiyeHandleBack = back;
+    return () => { if (window.__qiyeHandleBack === back) delete window.__qiyeHandleBack; };
+  }, [androidApp, menuOpen, overviewOpen, editing, activePage]);
+
+  function openMobileRecording() {
+    if (activePage !== "today") switchPage("today");
+    setMenuOpen(false);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      document.querySelector('[aria-label="语音快速记录"]')?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }));
   }
 
   function toggleDisplayMode() {
@@ -7806,17 +7836,29 @@ export default function Workbench() {
     { id: "life", name: "星光计划", icon: "life", badge: "目标", summary: `${lifeGoals.length} 个目标` },
     { id: "settings", name: "数据设置", icon: "settings", badge: "备份", summary: session ? "云同步在线" : "本地模式" },
   ];
+  const quickRecorder = <VoiceQuickRecord session={session} onPrepare={prepareQuickRecords} onSave={saveQuickRecords} onUndo={undoQuickRecords} onOpen={openQuickRecord} onSettings={() => switchPage("settings")} saved={quickSaved} onSaved={setQuickSaved} />;
+  const todayTasksPanel = <section className="panel today-task-panel">
+    <div className="panel-head"><h2>今日任务</h2>{androidApp ? <button className="chip-button" type="button" onClick={() => { setArrangementView("tasks"); switchPage("plans"); }}>全部安排</button> : <span className="tag">{dateKey}</span>}</div>
+    <div className="record-list">
+      {todayPlans.length === 0 && <p className="empty">今天没有未完成计划。</p>}
+      {todayPlans.map((plan) => (
+        <button className="timeline-row" type="button" key={plan.id} onClick={() => { setArrangementView("tasks"); switchPage("plans"); }}>
+          <span>{plan.priority}</span><strong>{plan.title}</strong><small>{plan.status}</small>
+        </button>
+      ))}
+    </div>
+  </section>;
 
   return (
-    <main className={`phone-shell ios18-shell ${displayMode === "desktop" ? "desktop-shell desktop-redesign" : "mobile-shell"} ${menuOpen ? "menu-open" : ""} page-${activePage} pony-theme-${ponyTheme}`}>
+    <main className={`phone-shell ios18-shell ${androidApp ? "android-app-shell" : ""} ${displayMode === "desktop" ? "desktop-shell desktop-redesign" : "mobile-shell"} ${menuOpen ? "menu-open" : ""} page-${activePage} pony-theme-${ponyTheme}`}>
       <div className="phone-status">
         <button className="menu-toggle" type="button" aria-label="打开菜单" onClick={() => setMenuOpen(true)}>☰</button>
-        <strong>{clock}</strong>
+        <strong>{androidApp ? "七夜online" : clock}</strong>
         <span>{session ? "云同步在线" : "本地模式"}</span>
       </div>
       <section className="app-body">
         <button className="menu-backdrop" type="button" aria-label="关闭菜单" onClick={() => setMenuOpen(false)} />
-        <nav className="side-nav" aria-label="工作台导航">
+        <nav className="side-nav" aria-label="工作台导航" inert={androidApp && !menuOpen ? true : undefined}>
           <button className="profile-button" type="button" onClick={() => { setMenuOpen(false); setOverviewOpen(true); }} aria-label="打开技能总览">
             <span className="avatar-mark"><CultivationAvatar /></span>
             <strong>七夜online</strong>
@@ -7857,7 +7899,7 @@ export default function Workbench() {
                     <h1>{pageNames[activePage]}</h1>
                     <p>{pageDescriptions[activePage]}</p>
                   </div>
-                  <button className="date-pill" type="button" onClick={toggleDisplayMode}>{displayMode === "desktop" ? "切回手机端" : "切到网页端"}</button>
+                  {!androidApp && <button className="date-pill" type="button" onClick={toggleDisplayMode}>{displayMode === "desktop" ? "切回手机端" : "切到网页端"}</button>}
                 </div>
                 {activePage === "consultations" ? (
                   <div className="module-tabs consultation-tabs" aria-label="观影内容切换">
@@ -7905,9 +7947,9 @@ export default function Workbench() {
           {activePage === "today" && (
             <header className="ios-page-intro">
               <div>
-                <span className="ios-eyebrow">{dateKey}</span>
+                {!androidApp && <span className="ios-eyebrow">{dateKey}</span>}
                 <h1>今天</h1>
-                <p>把重要的事，放在眼前。</p>
+                <p>{androidApp ? visibleTodayDisplay(clock) : "把重要的事，放在眼前。"}</p>
               </div>
               <button className="ios-intro-action" type="button" onClick={() => setOverviewOpen(true)} aria-label="打开工作台总览">总览</button>
             </header>
@@ -7915,9 +7957,9 @@ export default function Workbench() {
           {activePage === "today" && (
             <>
               <TodayTimePanel clock={clock} />
-              <WeatherCard compact clock={clock} />
-              <VoiceQuickRecord session={session} onPrepare={prepareQuickRecords} onSave={saveQuickRecords} onUndo={undoQuickRecords} onOpen={openQuickRecord} onSettings={() => switchPage("settings")} saved={quickSaved} onSaved={setQuickSaved} />
-              <DailyQuoteCard />
+              {androidApp && <>{quickRecorder}{todayTasksPanel}</>}
+              <WeatherCard compact clock={clock} phoneApp={androidApp} />
+              {!androidApp && <>{quickRecorder}<DailyQuoteCard /></>}
               <form className="quick-note-bar" onSubmit={addQuickNote}>
                 <input name="note" type="text" placeholder="有什么想法？回车即存..." aria-label="闪念笔记" autoComplete="off" />
                 <button type="submit" aria-label="保存闪念笔记">✓</button>
@@ -7935,28 +7977,19 @@ export default function Workbench() {
                   <small>饮食与饮水记录</small>
                 </div>
               </section>
-              <section className="panel today-task-panel">
-                <div className="panel-head"><h2>今日任务</h2><span className="tag">{dateKey}</span></div>
-                <div className="record-list">
-                  {todayPlans.length === 0 && <p className="empty">今天没有未完成计划。</p>}
-                  {todayPlans.map((plan) => (
-                    <button className="timeline-row" type="button" key={plan.id} onClick={() => { setArrangementView("tasks"); switchPage("plans"); }}>
-                      <span>{plan.priority}</span><strong>{plan.title}</strong><small>{plan.status}</small>
-                    </button>
-                  ))}
-                </div>
-              </section>
+              {!androidApp && todayTasksPanel}
               <section className="panel today-subscriptions">
                 <div className="panel-head"><div><h2>订阅到期</h2><p>未来 30 天内到期</p></div><button className="chip-button" type="button" onClick={() => { setAssetSection("subscriptions"); switchPage("assets"); }}>管理订阅</button></div>
                 {expiringSubscriptions.length === 0 ? <p className="empty">未来 30 天暂无到期订阅。</p> : <div className="subscription-expiry-list">{expiringSubscriptions.map((item) => <button className="subscription-expiry-row" type="button" key={item.id} onClick={() => { setAssetSection("subscriptions"); switchPage("assets"); }}><AssetIcon name={item.icon || "thiings-subscribe:credit-card"} size={36} /><span><strong>{item.title}</strong><small>{item.endDate} 到期{item.billingCycle ? ` · ${item.billingCycle}` : ""}</small></span><b className={item.daysRemaining <= 7 ? "urgent" : ""}>{item.daysRemaining === 0 ? "今天到期" : `剩 ${item.daysRemaining} 天`}</b></button>)}</div>}
               </section>
               <section className="stats-grid">
-                <StatButton label="今日速看" value="看板" onClick={() => switchPage("today")} />
-                <StatButton label="计划安排" value={`${stats.pendingTasks} 条`} onClick={() => { setArrangementView("tasks"); switchPage("plans"); }} />
+                <StatButton label={androidApp ? "运动记录" : "今日速看"} value={androidApp ? `${exerciseRecords.filter((item) => item.date === todayKey()).length} 条` : "看板"} onClick={() => switchPage(androidApp ? "exercise" : "today")} />
+                <StatButton label={androidApp ? "资产记录" : "计划安排"} value={androidApp ? `${assetItems.length} 件` : `${stats.pendingTasks} 条`} onClick={() => { if (!androidApp) setArrangementView("tasks"); switchPage(androidApp ? "assets" : "plans"); }} />
                 <StatButton label="饮食记录" value={`${stats.dietToday} 条`} onClick={() => switchPage("diet")} />
                 <StatButton label="观影记录" value={`${stats.consultations} 条`} onClick={() => switchPage("consultations")} />
               </section>
               <MarketBoard compact onAssetsChange={syncAssetsToCloud} />
+              {androidApp && <DailyQuoteCard />}
               <section className="panel">
                 <div className="panel-head"><h2>最近整理</h2><span className="tag">最新</span></div>
                 <div className="timeline">
@@ -8123,8 +8156,14 @@ export default function Workbench() {
           onChangeTheme={changePonyTheme}
         />
       </section>
-      <nav className="bottom-nav" aria-label="主要导航，可左右滑动" ref={bottomNavRef}>
-        {[
+      <nav className="bottom-nav" aria-label={androidApp ? "手机主要导航" : "主要导航，可左右滑动"} ref={bottomNavRef}>
+        {(androidApp ? [
+          { id: "today", label: "首页", icon: "home" },
+          { id: "plans", label: "安排", icon: "checklist" },
+          { id: "record", label: "录入", icon: "microphone" },
+          { id: "market", label: "股市", icon: "trend" },
+          { id: "more", label: "更多", icon: "settings" },
+        ] : [
           { id: "today", label: "今日速看", icon: "home" },
           { id: "plans", label: "每日安排", icon: "checklist" },
           { id: "market", label: "股市行情", icon: "trend" },
@@ -8135,16 +8174,16 @@ export default function Workbench() {
           { id: "news", label: "热榜时讯", icon: "news" },
           { id: "life", label: "星光计划", icon: "life" },
           { id: "settings", label: "设置", icon: "settings" },
-        ].map((item) => (
+        ]).map((item) => (
           <button
-            className={`bottom-nav-item ${item.id === activePage ? "active" : ""}`}
+            className={`bottom-nav-item ${item.id === activePage || (androidApp && item.id === "more" && !["today", "plans", "market"].includes(activePage)) ? "active" : ""}`}
             type="button"
             key={item.id}
-            onClick={() => switchPage(item.id)}
+            onClick={() => item.id === "record" ? openMobileRecording() : item.id === "more" ? setMenuOpen(true) : switchPage(item.id)}
             aria-label={item.label}
             aria-current={item.id === activePage ? "page" : undefined}
           >
-            <span><CrewNavIcon name={item.icon} /></span>
+            <span>{item.icon === "microphone" ? <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8" /></svg> : <CrewNavIcon name={item.icon} />}</span>
             <small>{item.label}</small>
           </button>
         ))}
