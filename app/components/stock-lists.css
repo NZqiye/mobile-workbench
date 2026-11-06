@@ -1,0 +1,49 @@
+.stock-list-tabs.asset-status-tabs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 4px;
+  border-radius: 12px;
+}
+
+.stock-list-tabs.asset-status-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.stock-list-tabs button span {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stock-list-tabs button:focus-visible {
+  outline: 2px solid var(--ios-blue, var(--theme-main));
+  outline-offset: 2px;
+}
+
+.stock-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.market-panel .stock-row-actions .quote-delete {
+  min-height: 44px;
+  padding: 0 10px;
+}
+
+.stock-row-actions .stock-list-move,
+.ios18-shell .stock-row-actions .stock-list-move {
+  color: var(--ios-blue, var(--ink)) !important;
+}
+
+.stock-row-actions button:focus-visible {
+  outline: 2px solid var(--ios-blue, var(--theme-main));
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .stock-row-actions button:hover { border-color: var(--ios-blue, var(--theme-main)); }
+}

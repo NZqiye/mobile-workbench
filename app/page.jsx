@@ -11,6 +11,9 @@ import VoiceQuickRecord from "./components/voice-quick-record";
 import { planQuickRecordChanges, undoQuickRecordChanges } from "../lib/workbench-records";
 import { anniversaryIcon, anniversaryIcons } from "../lib/anniversary-icons";
 import { anniversaryProgress } from "../lib/anniversary-progress";
+import { WeeklyChart, MealBreakdown } from "./components/statistics-charts";
+import StockPriceChart from "./components/stock-price-chart";
+import "./components/stock-lists.css";
 
 const storagePrefix = "qiyeworkbench:";
 
@@ -1169,6 +1172,7 @@ function mergeCloudWithLocal(cloud) {
       ...(cloud[`done:${todayKey()}`] || {}),
     },
     assets: typeof cloud.assets === "string" ? cloud.assets : normalizeSavedAssets(localAssets),
+    watchAssets: normalizeSavedAssets(typeof cloud.watchAssets === "string" ? cloud.watchAssets : localStorage.getItem(key("watchAssets")), ""),
     fundPortfolio,
     fundCodes: fundPortfolio.map((item) => item.code).join(","),
     indexTrackerItems: indexItems,
@@ -1179,10 +1183,10 @@ function mergeCloudWithLocal(cloud) {
   };
 }
 
-function normalizeSavedAssets(assets) {
-  if (assets === null || assets === undefined || assets === legacyDefaultAssets || assets === stockDefaultAssets) return defaultAssets;
+function normalizeSavedAssets(assets, fallback = defaultAssets) {
+  if (assets === null || assets === undefined || assets === legacyDefaultAssets || assets === stockDefaultAssets) return fallback;
   try {
-    if (Array.isArray(JSON.parse(assets))) return defaultAssets;
+    if (Array.isArray(JSON.parse(assets))) return fallback;
   } catch {}
   return String(assets)
     .split(",")
@@ -2240,12 +2244,32 @@ function MarketBoard({ compact = false, onAssetsChange }) {
   const dragOrderRef = useRef([]);
   const quoteDragRef = useRef(null);
   const marketRequestRef = useRef(0);
+  const [stockList, setStockList] = useState("assets");
+  const stockListRef = useRef("assets");
+
+  function savedStockList(name = stockListRef.current) {
+    return normalizeSavedAssets(localStorage.getItem(key(name)), name === "assets" ? defaultAssets : "");
+  }
+
+  function stockCacheKey(name = stockListRef.current) {
+    return name === "assets" ? "marketCache" : "watchMarketCache";
+  }
+
+  function switchStockList(name) {
+    if (name === stockListRef.current) return;
+    if (quoteDragRef.current) finishQuoteDrag({}, true);
+    stockListRef.current = name;
+    setStockList(name);
+    setStockInput("");
+    setQuotes([]);
+    loadQuotes();
+  }
 
   function applyQuotes(nextQuotes) {
     const quoteMap = new Map(nextQuotes.map(normalizeMarketQuote).map((quote) => [quote.symbol.toLowerCase(), quote]));
     const symbols = dragSymbolRef.current
       ? dragOrderRef.current.map((quote) => quote.symbol)
-      : normalizeSavedAssets(localStorage.getItem(key("assets"))).split(",");
+      : savedStockList().split(",");
     const ordered = symbols.map((symbol) => quoteMap.get(symbol.toLowerCase())).filter(Boolean);
     if (dragSymbolRef.current) dragOrderRef.current = ordered;
     setQuotes(ordered);
@@ -2254,19 +2278,21 @@ function MarketBoard({ compact = false, onAssetsChange }) {
 
   async function loadQuotes(force = false) {
     const requestId = ++marketRequestRef.current;
-    const savedAssets = localStorage.getItem(key("assets"));
-    const assets = normalizeSavedAssets(savedAssets);
+    const listName = stockListRef.current;
+    const cacheKey = stockCacheKey(listName);
+    const savedAssets = localStorage.getItem(key(listName));
+    const assets = savedStockList(listName);
     if (savedAssets !== assets) {
-      localStorage.setItem(key("assets"), assets);
-      localStorage.removeItem(key("marketCache"));
+      localStorage.setItem(key(listName), assets);
+      localStorage.removeItem(key(cacheKey));
     }
     if (!assets) {
       setQuotes([]);
-      setStatus("暂无自选股票，添加后会显示在这里");
+      setStatus(`暂无${listName === "assets" ? "自选股" : "观察股"}，添加后会显示在这里`);
       setLoading(false);
       return;
     }
-    const cache = readStorage("marketCache", null);
+    const cache = readStorage(cacheKey, null);
     if (!force && cache?.version === marketCacheVersion && Date.now() - cache.savedAt < marketRefreshInterval) {
       applyQuotes(cache.quotes || []);
       setStatus(`缓存行情 · ${nowText(new Date(cache.savedAt))}`);
@@ -2282,7 +2308,7 @@ function MarketBoard({ compact = false, onAssetsChange }) {
       if (!response.ok) throw new Error(data.error || "行情读取失败");
       if (requestId !== marketRequestRef.current) return;
       const nextQuotes = applyQuotes(Array.isArray(data.quotes) ? data.quotes : []);
-      writeStorage("marketCache", { version: marketCacheVersion, savedAt: Date.now(), quotes: nextQuotes });
+      writeStorage(cacheKey, { version: marketCacheVersion, savedAt: Date.now(), quotes: nextQuotes });
       setStatus(`${data.warning || "行情已更新"} · ${nowText()}`);
     } catch {
       if (requestId !== marketRequestRef.current) return;
@@ -2305,48 +2331,62 @@ function MarketBoard({ compact = false, onAssetsChange }) {
       return;
     }
 
-    const current = normalizeSavedAssets(localStorage.getItem(key("assets")))
+    const current = savedStockList()
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
     if (!current.some((item) => item.toLowerCase() === nextStock.toLowerCase())) {
       const next = [...current, nextStock].join(",");
-      localStorage.setItem(key("assets"), next);
-      localStorage.removeItem(key("marketCache"));
-      onAssetsChange?.(next);
+      localStorage.setItem(key(stockListRef.current), next);
+      localStorage.removeItem(key(stockCacheKey()));
+      onAssetsChange?.(next, stockListRef.current);
       setStockInput("");
       setStatus(`已添加 ${nextStock}`);
       loadQuotes(true);
+    } else {
+      setStatus(`该股票已在${stockListRef.current === "assets" ? "自选股" : "观察股"}中`);
     }
   }
 
   function deleteStock(symbol) {
-    const current = normalizeSavedAssets(localStorage.getItem(key("assets")))
+    const current = savedStockList()
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
     const next = current.filter((item) => item.toLowerCase() !== String(symbol || "").toLowerCase()).join(",");
-    localStorage.setItem(key("assets"), next);
-    localStorage.removeItem(key("marketCache"));
-    onAssetsChange?.(next);
+    localStorage.setItem(key(stockListRef.current), next);
+    localStorage.removeItem(key(stockCacheKey()));
+    onAssetsChange?.(next, stockListRef.current);
+    applyQuotes(quotes);
     setStatus(`已删除 ${symbol}`);
     loadQuotes(true);
+  }
+
+  function moveStockToOtherList(symbol) {
+    const target = stockListRef.current === "assets" ? "watchAssets" : "assets";
+    const targetSymbols = savedStockList(target).split(",").filter(Boolean);
+    if (!targetSymbols.some((item) => item.toLowerCase() === symbol.toLowerCase())) targetSymbols.push(symbol);
+    const next = targetSymbols.join(",");
+    localStorage.setItem(key(target), next);
+    localStorage.removeItem(key(stockCacheKey(target)));
+    onAssetsChange?.(next, target);
+    deleteStock(symbol);
   }
 
   function persistQuoteOrder(nextQuotes) {
     const orderedSymbols = nextQuotes.map((quote) => quote.symbol);
     const orderedSet = new Set(orderedSymbols.map((symbol) => symbol.toLowerCase()));
-    const savedSymbols = normalizeSavedAssets(localStorage.getItem(key("assets")))
+    const savedSymbols = savedStockList()
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
     let index = 0;
     const nextAssets = savedSymbols.map((symbol) => orderedSet.has(symbol.toLowerCase()) ? orderedSymbols[index++] : symbol).join(",");
-    localStorage.setItem(key("assets"), nextAssets);
-    const cache = readStorage("marketCache", null);
-    if (cache?.quotes) writeStorage("marketCache", { ...cache, quotes: nextQuotes });
-    onAssetsChange?.(nextAssets);
-    setStatus(`已保存自选顺序 · ${nowText()}`);
+    localStorage.setItem(key(stockListRef.current), nextAssets);
+    const cache = readStorage(stockCacheKey(), null);
+    if (cache?.quotes) writeStorage(stockCacheKey(), { ...cache, quotes: nextQuotes });
+    onAssetsChange?.(nextAssets, stockListRef.current);
+    setStatus(`已保存${stockListRef.current === "assets" ? "自选股" : "观察股"}顺序 · ${nowText()}`);
   }
 
   function reorderQuote(sourceSymbol, targetIndex) {
@@ -2447,9 +2487,9 @@ function MarketBoard({ compact = false, onAssetsChange }) {
       const restored = drag.initialSymbols.map((symbol) => quoteMap.get(symbol)).filter(Boolean);
       dragOrderRef.current = restored;
       setQuotes(restored);
-      const cache = readStorage("marketCache", null);
-      if (cache?.quotes) writeStorage("marketCache", { ...cache, quotes: restored });
-      if (drag.active) setStatus("已取消移动，自选顺序未更改");
+      const cache = readStorage(stockCacheKey(), null);
+      if (cache?.quotes) writeStorage(stockCacheKey(), { ...cache, quotes: restored });
+      if (drag.active) setStatus("已取消移动，名单顺序未更改");
     } else if (drag.active && dragOrderRef.current.some((quote, index) => quote.symbol !== drag.initialSymbols[index])) {
       persistQuoteOrder(dragOrderRef.current);
     }
@@ -2471,9 +2511,12 @@ function MarketBoard({ compact = false, onAssetsChange }) {
 
   useEffect(() => {
     loadQuotes();
+    const reloadLists = () => { if (quoteDragRef.current) finishQuoteDrag({}, true); setQuotes([]); loadQuotes(); };
+    window.addEventListener("stock-lists-changed", reloadLists);
     const timer = setInterval(() => loadQuotes(true), marketRefreshInterval);
     return () => {
       clearInterval(timer);
+      window.removeEventListener("stock-lists-changed", reloadLists);
       marketRequestRef.current += 1;
       if (quoteDragRef.current) cancelAnimationFrame(quoteDragRef.current.frame);
     };
@@ -2482,21 +2525,30 @@ function MarketBoard({ compact = false, onAssetsChange }) {
   const risingCount = quotes.filter((quote) => quote.changePercent > 0).length;
   const fallingCount = quotes.filter((quote) => quote.changePercent < 0).length;
   const averageChange = quotes.length ? quotes.reduce((sum, quote) => sum + Number(quote.changePercent || 0), 0) / quotes.length : 0;
+  const listLabel = stockList === "assets" ? "自选股" : "观察股";
+  const otherListLabel = stockList === "assets" ? "观察股" : "自选股";
 
   return (
     <section className={compact ? "market-panel compact" : "market-panel"}>
       <div className="panel-head">
         <div>
-          <h2>自选行情</h2>
+          <h2>{compact ? "自选行情" : `${listLabel}行情`}</h2>
           <p aria-live="polite">{status}</p>
         </div>
         <button className="chip-button" type="button" disabled={loading} onClick={() => loadQuotes(true)}>{loading ? "更新中" : "刷新行情"}</button>
       </div>
+      {!compact && (
+        <div className="asset-status-tabs stock-list-tabs" role="group" aria-label="股票分类">
+          {[["assets", "自选股"], ["watchAssets", "观察股"]].map(([name, label]) => (
+            <button className={stockList === name ? "active" : ""} type="button" key={name} aria-pressed={stockList === name} onClick={() => switchStockList(name)}>{label}<span>{savedStockList(name).split(",").filter(Boolean).length}</span></button>
+          ))}
+        </div>
+      )}
       {!compact && quotes.length > 0 && (
-        <div className="market-breadth" aria-label={`自选股 ${quotes.length} 只，${risingCount} 只上涨，${fallingCount} 只下跌`}>
-          <div><span>自选</span><strong>{quotes.length}</strong><small>只</small></div>
+        <div className="market-breadth" aria-label={`${listLabel} ${quotes.length} 只，${risingCount} 只上涨，${fallingCount} 只下跌`}>
+          <div><span>{listLabel}</span><strong>{quotes.length}</strong><small>只</small></div>
           <div><span>上涨 / 下跌</span><strong><b className="up">{risingCount}</b> / <b className="down">{fallingCount}</b></strong><small>平盘 {quotes.length - risingCount - fallingCount}</small></div>
-          <div><span>平均涨跌</span><strong className={averageChange > 0 ? "up" : averageChange < 0 ? "down" : "flat"}>{averageChange > 0 ? "+" : ""}{averageChange.toFixed(2)}%</strong><small>当前自选</small></div>
+          <div><span>平均涨跌</span><strong className={averageChange > 0 ? "up" : averageChange < 0 ? "down" : "flat"}>{averageChange > 0 ? "+" : ""}{averageChange.toFixed(2)}%</strong><small>当前名单</small></div>
         </div>
       )}
       {!compact && (
@@ -2508,13 +2560,14 @@ function MarketBoard({ compact = false, onAssetsChange }) {
               <option value="hk">港股</option>
               <option value="us">美股</option>
             </WorkbenchSelect>
-            <input value={stockInput} onChange={(event) => setStockInput(event.target.value)} placeholder={stockMarket === "hk" ? "例如 00700" : stockMarket === "us" ? "例如 AAPL" : "例如 600584"} />
-            <button className="chip-button" type="submit">添加</button>
+            <input aria-label={`添加${listLabel}的股票代码`} value={stockInput} onChange={(event) => setStockInput(event.target.value)} placeholder={stockMarket === "hk" ? "例如 00700" : stockMarket === "us" ? "例如 AAPL" : "例如 600584"} />
+            <button className="chip-button" type="submit">添加{listLabel}</button>
           </form>
         </>
       )}
+      {!compact && quotes.length > 0 && <StockPriceChart quotes={quotes} />}
       <div className="quote-list" onPointerMove={moveDraggedQuote} onPointerUp={finishQuoteDrag} onPointerCancel={(event) => finishQuoteDrag(event, true)} onLostPointerCapture={(event) => finishQuoteDrag(event, true)} onKeyDown={(event) => { if (event.key === "Escape" && quoteDragRef.current) { event.preventDefault(); finishQuoteDrag(event, true); } }}>
-        {quotes.length === 0 && <p className="empty">还没有行情数据。</p>}
+        {quotes.length === 0 && <p className="empty">{loading ? "正在读取行情…" : savedStockList() ? "暂未读取到行情，请点击刷新重试。" : compact ? "还没有自选股，可到股市页添加。" : `还没有${listLabel}，在上方输入股票代码即可添加。`}</p>}
         {quotes.map((quote) => {
           const changeClass = quote.changePercent > 0 ? "up" : quote.changePercent < 0 ? "down" : "flat";
           const sign = quote.changePercent > 0 ? "+" : "";
@@ -2555,7 +2608,10 @@ function MarketBoard({ compact = false, onAssetsChange }) {
                   <span><small>换手</small><b>{Number.isFinite(Number(quote.turnoverRate)) ? `${Number(quote.turnoverRate).toFixed(2)}%` : "--"}</b></span>
                 </div>
               )}
-              {!compact && <button className="quote-delete market-delete" type="button" aria-label={`删除 ${quote.name || quote.symbol}`} onClick={() => deleteStock(quote.symbol)}>移除</button>}
+              {!compact && <div className="stock-row-actions market-delete">
+                <button className="quote-delete stock-list-move" type="button" aria-label={`将 ${quote.name || quote.symbol} 移入${otherListLabel}`} onClick={() => moveStockToOtherList(quote.symbol)}>移入{otherListLabel}</button>
+                <button className="quote-delete" type="button" aria-label={`从${listLabel}移除 ${quote.name || quote.symbol}`} onClick={() => deleteStock(quote.symbol)}>移除</button>
+              </div>}
             </div>
           );
         })}
@@ -5224,7 +5280,8 @@ function DietTracker({ view = "water", records, waterTarget, onAddWater, onAddMe
     const total = records
       .filter((item) => item.type === "water" && item.date === dateKey)
       .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    return { dateKey, label: index === 6 ? "今天" : `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`, total };
+    const calories = records.filter((item) => item.type === "meal" && item.date === dateKey).reduce((sum, item) => sum + Number(item.calories || 0), 0);
+    return { dateKey, label: index === 6 ? "今天" : `${date.getMonth() + 1}/${date.getDate()}`, total, calories };
   });
 
   function addCustomCups() {
@@ -5299,17 +5356,8 @@ function DietTracker({ view = "water", records, waterTarget, onAddWater, onAddMe
             </div>
           ))}
         </div>
-        <div className="water-trend">
-          <p>最近7天趋势</p>
-          <div>
-            {days.map((day) => (
-              <span key={day.dateKey}>
-                <i style={{ height: `${Math.max(4, Math.min(74, (day.total / target) * 74))}px` }} />
-                <small>{day.label}</small>
-              </span>
-            ))}
-          </div>
-        </div>
+        <WeeklyChart title="近 7 天喝水趋势" days={days} series={[{ key: "total", label: "饮水量" }]} unit="ml" target={target}
+          summary={`已记录 ${days.filter((day) => day.total > 0).length} 天 · 达标 ${days.filter((day) => day.total >= target).length} 天 · 日均 ${Math.round(days.reduce((sum, day) => sum + day.total, 0) / 7)} ml（按 7 天）`} />
       </section>
       )}
 
@@ -5319,6 +5367,7 @@ function DietTracker({ view = "water", records, waterTarget, onAddWater, onAddMe
           <h2>热量统计</h2>
           <span className="tag">今日 {calorieTotal} kcal</span>
         </div>
+        <MealBreakdown records={mealRecords} />
         <div className="meal-tabs">
           {["早餐", "午餐", "晚餐", "加餐"].map((item) => (
             <button className={meal === item ? "active" : ""} type="button" key={item} onClick={() => setMeal(item)}>{item}</button>
@@ -5339,6 +5388,8 @@ function DietTracker({ view = "water", records, waterTarget, onAddWater, onAddMe
             </div>
           ))}
         </div>
+        <WeeklyChart title="近 7 天摄入趋势" days={days} series={[{ key: "calories", label: "摄入热量" }]} unit="kcal"
+          summary={`近 7 天共 ${days.reduce((sum, day) => sum + day.calories, 0)} kcal · 已记录 ${days.filter((day) => day.calories > 0).length} 天`} />
       </section>
       )}
     </section>
@@ -5634,6 +5685,7 @@ function formatWeight(value) {
 }
 
 function ExerciseTracker({ view = "weight", records, weightRecords, onAdd, onDelete, onAddWeight, onDeleteWeight }) {
+  const [trendMetric, setTrendMetric] = useState('minutes');
   const [exerciseType, setExerciseType] = useState('running');
   const [distanceKm, setDistanceKm] = useState('');
   const [duration, setDuration] = useState('');
@@ -5671,17 +5723,20 @@ function ExerciseTracker({ view = "weight", records, weightRecords, onAdd, onDel
     const dk = todayKey(date);
     const dayRecords = records.filter((item) => item.date === dk);
     const dayWeightRecords = weightRecords.filter((item) => item.date === dk);
+    const weightRecord = [...dayWeightRecords].sort((a, b) => itemUpdatedAt(b) - itemUpdatedAt(a))[0];
     const matchStats = tableTennisStats(dayRecords);
     return {
       dateKey: dk,
-      label: index === 6 ? '今天' : `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`,
+      label: index === 6 ? '今天' : `${date.getMonth() + 1}/${date.getDate()}`,
       minutes: dayRecords.reduce((s, i) => s + Number(i.duration || 0), 0),
       calories: dayRecords.reduce((s, i) => s + Number(i.calories || 0), 0),
       count: dayRecords.length,
       matchWins: matchStats.wins,
       matchLosses: matchStats.losses,
       matchCount: dayRecords.filter(isTableTennisRecord).length,
-      weightRecord: [...dayWeightRecords].sort((a, b) => itemUpdatedAt(b) - itemUpdatedAt(a))[0],
+      matchUnknown: dayRecords.filter(isTableTennisRecord).length - matchStats.wins - matchStats.losses,
+      weight: weightRecord?.weight > 0 ? Number(weightRecord.weight) : null,
+      weightRecord,
     };
   });
   const weekDateKeys = new Set(days.map((day) => day.dateKey));
@@ -5692,15 +5747,11 @@ function ExerciseTracker({ view = "weight", records, weightRecords, onAdd, onDel
   const weekMatchCount = weekTableTennisRecords.length;
   const weekDecidedMatches = weekMatchStats.wins + weekMatchStats.losses;
   const weekWinRate = weekDecidedMatches ? Math.round((weekMatchStats.wins / weekDecidedMatches) * 100) : 0;
-  const maxMinutes = Math.max(1, ...days.map((d) => d.minutes));
-  const weekWeights = days.map((day) => Number(day.weightRecord?.weight)).filter((weight) => Number.isFinite(weight) && weight > 0);
-  const minWeekWeight = Math.min(...weekWeights);
-  const maxWeekWeight = Math.max(...weekWeights);
-  const latestWeight = [...weightRecords].sort((a, b) => itemUpdatedAt(b) - itemUpdatedAt(a))[0];
+  const latestWeight = [...weightRecords].filter((item) => Number(item.weight) > 0).sort((a, b) => String(b.date).localeCompare(String(a.date)) || itemUpdatedAt(b) - itemUpdatedAt(a))[0];
   const recordedWeightDays = days.filter((day) => Number(day.weightRecord?.weight) > 0);
   const firstWeightDay = recordedWeightDays[0];
   const lastWeightDay = recordedWeightDays.at(-1);
-  const weekWeightChange = firstWeightDay && lastWeightDay
+  const weekWeightChange = recordedWeightDays.length > 1
     ? Math.round((Number(lastWeightDay.weightRecord.weight) - Number(firstWeightDay.weightRecord.weight)) * 100) / 100
     : null;
 
@@ -5770,14 +5821,7 @@ function ExerciseTracker({ view = "weight", records, weightRecords, onAdd, onDel
 
   function selectWeightDay(day) {
     setWeightDate(day.dateKey);
-    setWeightInput(String(day.weightRecord?.weight ?? 0));
-  }
-
-  function weightBarHeight(value) {
-    if (!Number.isFinite(value) || value <= 0) return 6;
-    if (!weekWeights.length) return 6;
-    if (maxWeekWeight === minWeekWeight) return 38;
-    return Math.round(16 + ((value - minWeekWeight) / (maxWeekWeight - minWeekWeight)) * 46);
+    setWeightInput(day.weightRecord?.weight > 0 ? String(day.weightRecord.weight) : '');
   }
 
   return (
@@ -5828,15 +5872,8 @@ function ExerciseTracker({ view = "weight", records, weightRecords, onAdd, onDel
           </label>
           <button type="submit">{'保存修改'}</button>
         </form>
-        <div className="weight-trend">
-          {days.map((day) => (
-            <button type="button" key={day.dateKey} className="weight-trend-item" onClick={() => selectWeightDay(day)}>
-              <em>{day.weightRecord ? formatWeight(day.weightRecord.weight) : '0.00'}</em>
-              <i className={Number(day.weightRecord?.weight) > 0 ? 'active' : ''} style={{ height: `${weightBarHeight(Number(day.weightRecord?.weight))}px` }} />
-              <small>{day.label}</small>
-            </button>
-          ))}
-        </div>
+        <WeeklyChart title="近 7 天体重变化" days={days} series={[{ key: "weight", label: "体重" }]} unit="kg" line
+          selectedDate={weightDate} onSelect={selectWeightDay} emptyText="近 7 天还没有体重记录，先记录一次；也可以点日期补记。" />
       </section>
       )}
 
@@ -5933,15 +5970,11 @@ function ExerciseTracker({ view = "weight", records, weightRecords, onAdd, onDel
           <strong>近 7 天</strong>
           <span>{weekMatchCount} 场 · {weekMatchStats.wins} 胜 {weekMatchStats.losses} 负 · 胜率 {weekDecidedMatches ? `${weekWinRate}%` : '—'}</span>
         </div>
-        <div className="table-tennis-daily" aria-label="最近七天乒乓球胜负">
-          {days.map((day) => (
-            <span key={day.dateKey}>
-              <small>{day.label}</small>
-              <strong>{day.matchCount}场</strong>
-              <em>胜{day.matchWins}负{day.matchLosses}</em>
-            </span>
-          ))}
-        </div>
+        <WeeklyChart title="近 7 天胜负分布" days={days} unit="场" series={[
+          { key: "matchWins", label: "胜", tone: "win" },
+          { key: "matchLosses", label: "负", tone: "loss" },
+          ...(days.some((day) => day.matchUnknown > 0) ? [{ key: "matchUnknown", label: "未记胜负", tone: "unknown" }] : []),
+        ]} />
         <div className="table-tennis-match-list">
           <div className="table-tennis-list-label">近 7 天对局明细</div>
           {weekTableTennisRecords.length === 0 && <p className="empty">近 7 天还没有对战记录，记下第一场吧。</p>}
@@ -5985,15 +6018,12 @@ function ExerciseTracker({ view = "weight", records, weightRecords, onAdd, onDel
         <div className="panel-head">
           <h2>{'最近 7 天趋势'}</h2>
         </div>
-        <div className="exercise-trend">
-          {days.map((day) => (
-            <span key={day.dateKey}>
-              <i style={{ height: `${Math.max(4, Math.min(74, (day.minutes / maxMinutes) * 74))}px` }} />
-              <small>{day.label}</small>
-              <em>{day.minutes > 0 ? `${day.minutes}m` : ''}</em>
-            </span>
-          ))}
+        <div className="statistics-metric-tabs" aria-label="运动趋势指标">
+          {[{ key: 'minutes', label: '运动时长' }, { key: 'calories', label: '消耗热量' }].map((item) => <button type="button" key={item.key} aria-pressed={trendMetric === item.key} onClick={() => setTrendMetric(item.key)}>{item.label}</button>)}
         </div>
+        <WeeklyChart key={trendMetric} title={trendMetric === 'minutes' ? '每日运动时长' : '每日消耗热量'} days={days}
+          series={[{ key: trendMetric, label: trendMetric === 'minutes' ? '运动时长' : '消耗热量' }]} unit={trendMetric === 'minutes' ? '分钟' : 'kcal'}
+          summary={`近 7 天运动 ${days.filter((day) => day.count > 0).length} 天 · 共 ${days.reduce((sum, day) => sum + day.minutes, 0)} 分钟 · 消耗 ${days.reduce((sum, day) => sum + day.calories, 0)} kcal`} />
       </section>
       </>
       )}
@@ -6242,16 +6272,16 @@ export default function Workbench() {
     }
   }
 
-  async function syncAssetsToCloud(nextAssets) {
-    const normalized = normalizeSavedAssets(nextAssets);
-    setAssetInput(normalized);
-    localStorage.setItem(key("assets"), normalized);
+  async function syncAssetsToCloud(nextAssets, name = "assets") {
+    const normalized = normalizeSavedAssets(nextAssets, name === "assets" ? defaultAssets : "");
+    if (name === "assets") setAssetInput(normalized);
+    localStorage.setItem(key(name), normalized);
     if (!session) return;
     try {
-      await saveCloudItem(session, "assets", normalized);
-      setSyncStatus(`自选资产已同步 · ${nowText()}`);
+      await saveCloudItem(session, name, normalized);
+      setSyncStatus(`股票名单已同步 · ${nowText()}`);
     } catch (error) {
-      setSyncStatus(`自选资产同步失败：${error.message || "请稍后再试"}`);
+      setSyncStatus(`股票名单同步失败：${error.message || "请稍后再试"}`);
     }
   }
 
@@ -6344,7 +6374,13 @@ export default function Workbench() {
       const nextAssets = normalizeSavedAssets(cloud.assets);
       setAssetInput(nextAssets);
       localStorage.setItem(key("assets"), nextAssets);
+      localStorage.removeItem(key("marketCache"));
     }
+    if (typeof cloud.watchAssets === "string") {
+      localStorage.setItem(key("watchAssets"), normalizeSavedAssets(cloud.watchAssets, ""));
+      localStorage.removeItem(key("watchMarketCache"));
+    }
+    if (typeof cloud.assets === "string" || typeof cloud.watchAssets === "string") window.dispatchEvent(new Event("stock-lists-changed"));
     if (Array.isArray(cloud.fundPortfolio)) {
       const nextFundPortfolio = normalizeFundPortfolio(cloud.fundPortfolio);
       writeStorage("fundPortfolio", nextFundPortfolio);
@@ -6387,6 +6423,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "subscriptionRecords", merged.subscriptionRecords),
         saveCloudItem(nextSession, "travelRecords", merged.travelRecords),
         saveCloudItem(nextSession, "assets", merged.assets),
+        saveCloudItem(nextSession, "watchAssets", merged.watchAssets),
         saveCloudItem(nextSession, "fundPortfolio", merged.fundPortfolio),
         saveCloudItem(nextSession, "fundCodes", merged.fundCodes),
         saveCloudItem(nextSession, "indexTrackerItems", merged.indexTrackerItems),
@@ -6426,6 +6463,7 @@ export default function Workbench() {
         saveCloudItem(nextSession, "subscriptionRecords", merged.subscriptionRecords),
         saveCloudItem(nextSession, "travelRecords", merged.travelRecords),
         saveCloudItem(nextSession, "assets", merged.assets),
+        saveCloudItem(nextSession, "watchAssets", merged.watchAssets),
         saveCloudItem(nextSession, "fundPortfolio", merged.fundPortfolio),
         saveCloudItem(nextSession, "fundCodes", merged.fundCodes),
         saveCloudItem(nextSession, "indexTrackerItems", merged.indexTrackerItems),
@@ -7592,6 +7630,7 @@ export default function Workbench() {
       petSuppliesUpdatedAt: readStorage("petSuppliesUpdatedAt", 0),
       petRewardHistory: readStorage("petRewardHistory", {}),
       assets: assetInput,
+      watchAssets: normalizeSavedAssets(localStorage.getItem(key("watchAssets")), ""),
       fundPortfolio: normalizeFundPortfolio(readStorage("fundPortfolio", [])),
       fundCodes: localStorage.getItem(key("fundCodes")) || "",
       indexTrackerItems: normalizeIndexTrackerItems(readStorage("indexTrackerItems", indexTrackerItems)),
@@ -7691,9 +7730,12 @@ export default function Workbench() {
         persist("petRewardHistory", payload.petRewardHistory);
       }
       if (typeof payload.assets === "string") {
-        setAssetInput(payload.assets);
-        localStorage.setItem(key("assets"), payload.assets);
-        persist("assets", payload.assets);
+        localStorage.removeItem(key("marketCache"));
+        syncAssetsToCloud(payload.assets);
+      }
+      if (typeof payload.watchAssets === "string") {
+        localStorage.removeItem(key("watchMarketCache"));
+        syncAssetsToCloud(payload.watchAssets, "watchAssets");
       }
       if (Array.isArray(payload.fundPortfolio)) {
         const nextFundPortfolio = normalizeFundPortfolio(payload.fundPortfolio);
@@ -7712,6 +7754,7 @@ export default function Workbench() {
       }
       if (payload.weatherCache) writeStorage("weatherCache", payload.weatherCache);
       if (payload.marketCache) writeStorage("marketCache", payload.marketCache);
+      if (typeof payload.assets === "string" || typeof payload.watchAssets === "string") window.dispatchEvent(new Event("stock-lists-changed"));
       setBackupStatus(`已恢复 · ${nowText()}`);
     } catch (error) {
       setBackupStatus(`恢复失败：${error.message || "文件格式不正确"}`);

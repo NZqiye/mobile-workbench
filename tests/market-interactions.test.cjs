@@ -20,7 +20,7 @@ function functionSource(name) {
 }
 
 const boards = {
-  MarketBoard: { load: "loadQuotes", expose: "quotes, status, loading, loadQuotes, setStockInput, addStock, deleteStock, startQuoteDrag, moveDraggedQuote, finishQuoteDrag, moveQuoteWithKeyboard" },
+  MarketBoard: { load: "loadQuotes", expose: "quotes, status, loading, stockList, loadQuotes, switchStockList, moveStockToOtherList, setStockInput, addStock, deleteStock, startQuoteDrag, moveDraggedQuote, finishQuoteDrag, moveQuoteWithKeyboard" },
   IndexTrackerBoard: { load: "loadTracker", expose: "trackerData, status, loadTracker, saveIndexItems" },
   FundBoard: { load: "loadFunds", expose: "funds, status, loadFunds" },
 };
@@ -29,7 +29,8 @@ const boards = {
 // display/portfolio helpers are replaced; loaders, sorting and timers are not copied.
 function harness(name = "MarketBoard", { storage = new Map(), cached = false } = {}) {
   let now = START, cursor = 0, hover = "", mounted = false;
-  const slots = [], effects = [], timers = [], requests = [], savedOrders = [];
+  const slots = [], effects = [], timers = [], requests = [], savedOrders = [], savedLists = [];
+  const listeners = new Map();
   const frames = new Map();
   let frameId = 0;
   const rows = new Map(symbols.map(symbol => [symbol, {
@@ -74,7 +75,7 @@ function harness(name = "MarketBoard", { storage = new Map(), cached = false } =
     requestAnimationFrame(callback) { frames.set(++frameId, callback); return frameId; },
     cancelAnimationFrame(id) { frames.delete(id); },
     getComputedStyle: () => ({ overflowY: "visible" }),
-    window: { innerHeight: 800 },
+    window: { innerHeight: 800, addEventListener(name, callback) { listeners.set(name, callback); }, removeEventListener(name) { listeners.delete(name); } },
     fetch(url) { return new Promise((resolve, reject) => requests.push({ url, resolve, reject })); },
     document: { scrollingElement: { scrollTop: 0 }, querySelector: () => null, elementFromPoint: () => hover ? { closest: () => rows.get(hover) } : null },
     marketRefreshInterval: HOUR, marketSymbolNames: {}, defaultAssets: symbols.join(","), legacyDefaultAssets: "legacy", stockDefaultAssets: "legacy-stocks",
@@ -91,12 +92,13 @@ function harness(name = "MarketBoard", { storage = new Map(), cached = false } =
   const jsx = component.indexOf("\n  return (");
   assert.ok(jsx > 0, `${name} JSX boundary must be found`);
   const renderComponent = vm.runInContext(`(${component.slice(0, jsx)}\nreturn { ${boards[name].expose} };\n})`, context);
-  function render() { cursor = 0; return renderComponent({ onAssetsChange: (value) => savedOrders.push(value) }); }
+  function render() { cursor = 0; return renderComponent({ onAssetsChange: (value, name) => { savedOrders.push(value); savedLists.push({ name, value }); } }); }
   render();
   mounted = true;
   effects.forEach((effect) => effect());
   return {
-    render, requests, storage, savedOrders, readStorage, writeStorage, timers,
+    render, requests, storage, savedOrders, savedLists, readStorage, writeStorage, timers,
+    reloadLists: () => listeners.get("stock-lists-changed")(),
     assets: () => localStorage.getItem(key("assets")),
     hover(symbol) { hover = symbol; const center = rows.get(symbol).getBoundingClientRect().top + 50; this.event.clientY = center + (this.event.clientY > center ? -6 : 6); },
     handle(symbol) { this.event.clientY = rows.get(symbol).getBoundingClientRect().top + 50; this.event.currentTarget.closest = selector => selector === ".quote-list" ? list : rows.get(symbol); return this.event; },
@@ -265,4 +267,146 @@ test("obsolete response does not re-enable refresh while newest request is pendi
   await h.respond(1, { quotes: quotes(symbols, 20) });
   assert.equal(h.render().loading, false);
   assert.equal(h.render().quotes[0].price, 20);
+});
+
+test("existing stocks remain self-selected and the observation list starts empty", () => {
+  const h = harness("MarketBoard", { cached: true });
+  h.render().switchStockList("watchAssets");
+  assert.equal(h.render().stockList, "watchAssets");
+  assert.deepEqual(orderOf(h.render().quotes), []);
+  assert.equal(h.storage.get("qiyeworkbench:watchAssets"), "");
+  assert.match(h.render().status, /观察股/);
+  assert.equal(h.render().loading, false);
+  assert.equal(h.assets(), symbols.join(","));
+  h.render().switchStockList("assets");
+  assert.deepEqual(orderOf(h.render().quotes), symbols);
+  assert.equal(h.requests.length, 0);
+});
+
+test("adding, duplicate detection and removing observation stocks leave self-selected stocks intact", async () => {
+  const h = harness("MarketBoard", { cached: true });
+  h.render().switchStockList("watchAssets");
+  h.render().setStockInput(D);
+  h.render().addStock(h.event);
+  await h.respond(0, { quotes: quotes([D]) });
+  assert.equal(h.storage.get("qiyeworkbench:watchAssets"), D);
+  assert.equal(h.assets(), symbols.join(","));
+  assert.deepEqual(h.savedLists.at(-1), { name: "watchAssets", value: D });
+  h.render().setStockInput(D);
+  h.render().addStock(h.event);
+  assert.equal(h.requests.length, 1);
+  assert.match(h.render().status, /已在观察股/);
+  h.render().deleteStock(D);
+  assert.equal(h.storage.get("qiyeworkbench:watchAssets"), "");
+  assert.deepEqual(orderOf(h.render().quotes), []);
+  assert.equal(h.assets(), symbols.join(","));
+});
+
+test("switching lists during an outstanding request isolates cache and loading", async () => {
+  const h = harness("MarketBoard");
+  h.storage.set("qiyeworkbench:watchAssets", D);
+  h.render().switchStockList("watchAssets");
+  assert.deepEqual(orderOf(h.render().quotes), []);
+  assert.match(decodeURIComponent(h.requests[1].url), new RegExp(D));
+  await h.respond(0, { quotes: quotes() });
+  assert.equal(h.render().loading, true);
+  assert.deepEqual(orderOf(h.render().quotes), []);
+  await h.respond(1, { quotes: quotes([D], 25) });
+  assert.deepEqual(orderOf(h.render().quotes), [D]);
+  assert.equal(h.render().loading, false);
+  assert.deepEqual(orderOf(h.readStorage("watchMarketCache").quotes), [D]);
+  assert.equal(h.readStorage("marketCache", null), null);
+});
+
+test("switching back to cached self-selected stocks rejects later observation results", async () => {
+  const h = harness("MarketBoard", { cached: true });
+  h.storage.set("qiyeworkbench:watchAssets", D);
+  h.render().switchStockList("watchAssets");
+  h.render().switchStockList("assets");
+  await h.respond(0, { quotes: quotes([D]) });
+  assert.deepEqual(orderOf(h.render().quotes), symbols);
+  assert.deepEqual(orderOf(h.readStorage("marketCache").quotes), symbols);
+  assert.equal(h.readStorage("watchMarketCache", null), null);
+});
+
+test("moving a stock transfers membership and deduplicates the destination", () => {
+  const h = harness("MarketBoard", { cached: true });
+  h.storage.set("qiyeworkbench:watchAssets", [D, A].join(","));
+  h.render().moveStockToOtherList(A);
+  assert.equal(h.assets(), [B, C].join(","));
+  assert.equal(h.storage.get("qiyeworkbench:watchAssets"), [D, A].join(","));
+  assert.deepEqual(h.savedLists.slice(-2), [
+    { name: "watchAssets", value: [D, A].join(",") },
+    { name: "assets", value: [B, C].join(",") },
+  ]);
+  assert.deepEqual(orderOf(h.render().quotes), [B, C]);
+  h.render().switchStockList("watchAssets");
+  h.render().moveStockToOtherList(A);
+  assert.equal(h.assets(), [B, C, A].join(","));
+  assert.equal(h.storage.get("qiyeworkbench:watchAssets"), D);
+});
+
+test("observation sorting survives switching lists and reopening without sharing caches", async () => {
+  const h = harness("MarketBoard", { cached: true });
+  h.storage.set("qiyeworkbench:watchAssets", [A, B].join(","));
+  h.render().switchStockList("watchAssets");
+  await h.respond(0, { quotes: quotes([A, B], 25) });
+  h.render().moveQuoteWithKeyboard(A, 1);
+  assert.equal(h.storage.get("qiyeworkbench:watchAssets"), [B, A].join(","));
+  assert.equal(h.assets(), symbols.join(","));
+  h.render().switchStockList("assets");
+  assert.ok(h.render().quotes.every((quote) => quote.price === 10));
+  const reopened = harness("MarketBoard", { storage: h.storage });
+  reopened.render().switchStockList("watchAssets");
+  assert.deepEqual(orderOf(reopened.render().quotes), [B, A]);
+  assert.ok(reopened.render().quotes.every((quote) => quote.price === 25));
+  assert.equal(reopened.requests.length, 0);
+});
+
+test("hourly refresh follows the active list after switching", async () => {
+  const h = harness("MarketBoard", { cached: true });
+  h.storage.set("qiyeworkbench:watchAssets", D);
+  h.render().switchStockList("watchAssets");
+  await h.respond(0, { quotes: quotes([D]) });
+  h.tick(START + HOUR);
+  assert.match(decodeURIComponent(h.requests[1].url), new RegExp(D));
+  await h.respond(1, { quotes: quotes([D], 30) });
+  assert.equal(h.render().quotes[0].price, 30);
+});
+
+test("switching lists cancels an active drag without changing either saved order", () => {
+  const h = harness("MarketBoard", { cached: true });
+  h.render().startQuoteDrag(h.event, A);
+  h.hover(C);
+  h.render().moveDraggedQuote(h.event);
+  h.render().switchStockList("watchAssets");
+  assert.equal(h.assets(), symbols.join(","));
+  assert.equal(h.savedOrders.length, 0);
+  h.render().switchStockList("assets");
+  assert.deepEqual(orderOf(h.render().quotes), symbols);
+});
+
+test("cloud or backup changes reload the active list and invalidate old requests", async () => {
+  const h = harness("MarketBoard", { cached: true });
+  h.render().switchStockList("watchAssets");
+  h.storage.set("qiyeworkbench:watchAssets", D);
+  h.reloadLists();
+  await h.respond(0, { quotes: quotes([D]) });
+  assert.deepEqual(orderOf(h.render().quotes), [D]);
+  assert.equal(h.assets(), symbols.join(","));
+});
+
+test("an externally updated list cancels dragging before loading its new membership", async () => {
+  const h = harness("MarketBoard", { cached: true });
+  h.render().startQuoteDrag(h.event, A);
+  h.hover(C);
+  h.render().moveDraggedQuote(h.event);
+  h.storage.set("qiyeworkbench:assets", D);
+  h.storage.delete("qiyeworkbench:marketCache");
+  h.reloadLists();
+  await h.respond(0, { quotes: quotes([D]) });
+  h.render().finishQuoteDrag(h.event);
+  assert.deepEqual(orderOf(h.render().quotes), [D]);
+  assert.equal(h.assets(), D);
+  assert.equal(h.savedOrders.length, 0);
 });
