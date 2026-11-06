@@ -1,0 +1,136 @@
+/* Shared mobile surfaces: allow content to size rows instead of clipping text. */
+.phone-shell.ios18-shell.mobile-shell {
+  --mobile-card-radius: 20px;
+  --mobile-inner-radius: 16px;
+  --mobile-control-radius: 14px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
+  font-family: system-ui, "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  line-height: 1.5;
+}
+.phone-shell.ios18-shell.mobile-shell .phone-status {
+  grid-template-columns: 64px minmax(0, 1fr) 64px;
+  grid-template-rows: auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 64px;
+  padding: max(8px, env(safe-area-inset-top)) 12px 8px;
+}
+.phone-shell.ios18-shell.mobile-shell .phone-status > .menu-toggle {
+  position: static;
+  grid-column: 1;
+  grid-row: 1;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border-radius: var(--mobile-control-radius);
+  line-height: 1;
+}
+.phone-shell.ios18-shell.mobile-shell .phone-status > strong {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  font-size: 16px;
+  line-height: 1.5;
+  text-align: center;
+}
+.phone-shell.ios18-shell.mobile-shell .phone-status > .account-status-link {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  min-height: 48px;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: normal;
+}
+.phone-shell.ios18-shell.mobile-shell .app-body { min-height: 0; }
+.phone-shell.ios18-shell.mobile-shell .work-area {
+  min-height: 0;
+  padding-bottom: 24px;
+  scroll-padding-block: 16px 32px;
+}
+.phone-shell.ios18-shell.mobile-shell :is(.panel, .market-panel, .dashboard-tile, .stat-card, .daily-quote-card, .diet-card, .exercise-card, .exercise-stat-card, .news-card, .arrange-card, .asset-board, .life-goal-card, .watch-panel, .watch-rating-detail, .watch-rating-library, .tmdb-panel, .index-track-card, .travel-board, .travel-card) {
+  min-width: 0;
+  border-radius: var(--mobile-card-radius);
+}
+.phone-shell.ios18-shell.mobile-shell .module-head {
+  margin: 12px 12px 0;
+  border-radius: var(--mobile-card-radius);
+}
+.phone-shell.ios18-shell.mobile-shell :is(.quote-row, .record, .task-row, .habit-row, .timeline-row, .watch-list-row, .media-feed-card, .watch-rating-syncbar, .watch-rating-media-card, .watch-mobile-titlebar, .watch-mobile-next, .watch-mobile-episode, .watch-mobile-season-summary, .weather-outfit-tip, .asset-row, .asset-form, .subscription-row, .travel-checkin-row, .file-row, .account-box, .empty) {
+  min-width: 0;
+  border-radius: var(--mobile-inner-radius);
+}
+.phone-shell.ios18-shell.mobile-shell :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), textarea, select, .ui-select-trigger) {
+  border-radius: var(--mobile-control-radius);
+}
+.phone-shell.ios18-shell.mobile-shell :is(.quick-form, .stack-form, .quick-note-bar, .quick-record-panel, .meal-form, .exercise-form, .weight-form, .water-target-form, .watch-mobile-rating-footer, .watch-mobile-movie) button {
+  border-radius: var(--mobile-control-radius);
+}
+.phone-shell.ios18-shell.mobile-shell :is(.module-tabs, .news-tabs, .meal-tabs, .asset-section-tabs, .asset-status-tabs, .stock-chart-tabs) { border-radius: var(--mobile-inner-radius); }
+.phone-shell.ios18-shell.mobile-shell :is(.module-tabs, .news-tabs, .meal-tabs, .asset-section-tabs, .asset-status-tabs, .stock-chart-tabs) button { border-radius: 12px; }
+.phone-shell.ios18-shell.mobile-shell .panel-head { align-items: center; gap: 12px; }
+.phone-shell.ios18-shell.mobile-shell .panel-head > div { min-width: 0; flex: 1 1 140px; }
+.phone-shell.ios18-shell.mobile-shell .panel-head h2 { line-height: 1.4; }
+.phone-shell.ios18-shell.mobile-shell .panel-head p { line-height: 1.6; overflow-wrap: anywhere; }
+
+/* Keep theme art and swatches above a full-width, consistently aligned label. */
+.phone-shell.ios18-shell.mobile-shell .pony-theme-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+.phone-shell.ios18-shell.mobile-shell .pony-theme-card {
+  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-rows: 48px auto 22px;
+  align-content: start;
+  gap: 8px;
+  min-height: 0;
+  padding: 12px;
+  border-radius: var(--mobile-inner-radius);
+}
+.phone-shell.ios18-shell.mobile-shell .pony-theme-card > .pony-mark { grid-column: 1; grid-row: 1; width: 48px; height: 48px; }
+.phone-shell.ios18-shell.mobile-shell .pony-theme-copy { grid-column: 1 / -1; grid-row: 2; align-self: start; gap: 2px; }
+.phone-shell.ios18-shell.mobile-shell .pony-theme-copy strong { font-size: 16px; line-height: 1.5; }
+.phone-shell.ios18-shell.mobile-shell .pony-theme-copy small { font-size: 12px; line-height: 1.5; }
+.phone-shell.ios18-shell.mobile-shell .pony-theme-copy :is(strong, small) { overflow: visible; white-space: normal; text-overflow: clip; overflow-wrap: anywhere; }
+.phone-shell.ios18-shell.mobile-shell .pony-theme-card > .pony-theme-swatches { grid-column: 2; grid-row: 1; justify-self: end; align-self: start; padding: 0; }
+.phone-shell.ios18-shell.mobile-shell .pony-theme-status { grid-column: 1 / -1; grid-row: 3; align-self: start; padding: 2px 6px; font-size: 11px; line-height: 18px; white-space: nowrap; }
+.phone-shell.ios18-shell.mobile-shell .pony-theme-status svg { flex: 0 0 13px; }
+
+/* Auto rows preserve price glyphs when Android uses larger text. */
+.phone-shell.ios18-shell.mobile-shell .quote-price { grid-template-rows: auto auto; gap: 2px; }
+.phone-shell.ios18-shell.mobile-shell .quote-price strong { font-size: 22px; line-height: 1.4; overflow: visible; text-overflow: clip; }
+.phone-shell.ios18-shell.mobile-shell .quote-price > span { font-size: 13px; line-height: 1.5; }
+.phone-shell.ios18-shell.mobile-shell .quote-title { flex-wrap: wrap; align-items: baseline; gap: 4px 6px; }
+.phone-shell.ios18-shell.mobile-shell .quote-title strong { line-height: 1.5; white-space: normal; text-overflow: clip; overflow-wrap: anywhere; }
+.phone-shell.ios18-shell.mobile-shell .quote-identity > span { line-height: 1.5; white-space: normal; text-overflow: clip; overflow-wrap: anywhere; }
+.phone-shell.ios18-shell.mobile-shell .market-panel.compact .quote-row { grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 12px; }
+.phone-shell.ios18-shell.mobile-shell .market-panel.compact .quote-price { justify-items: end; }
+.phone-shell.ios18-shell.mobile-shell .pet-card-head { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
+.phone-shell.ios18-shell.mobile-shell .pet-card-head :is(span, strong) { line-height: 1.5; overflow: visible; white-space: normal; text-overflow: clip; }
+.phone-shell.ios18-shell.mobile-shell .pet-card-head small { max-width: none; text-align: left; line-height: 1.6; }
+
+/* Weather shares the card rhythm and lets each fact wrap as one unit. */
+.weather-summary > span + span::before { content: " · "; }
+.phone-shell.ios18-shell.mobile-shell .weather-panel .weather-main {
+  grid-template-columns: minmax(0, 1fr) 64px;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--mobile-inner-radius);
+}
+.phone-shell.ios18-shell.mobile-shell .weather-panel .weather-main > div { gap: 8px; }
+.phone-shell.ios18-shell.mobile-shell .weather-panel .weather-main strong { font-size: 36px; line-height: 1.2; }
+.phone-shell.ios18-shell.mobile-shell .weather-panel .weather-main .weather-badge { min-width: 0; width: 64px; height: 72px; padding: 8px; border: 0; border-radius: var(--mobile-inner-radius); }
+.phone-shell.ios18-shell.mobile-shell .weather-panel .weather-summary { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.phone-shell.ios18-shell.mobile-shell .weather-summary > span { font-size: 12px; line-height: 1.6; white-space: nowrap; }
+.phone-shell.ios18-shell.mobile-shell .weather-summary > span::before { content: none; }
+.phone-shell.ios18-shell.mobile-shell .weather-panel .weather-forecast { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; padding-block: 8px; }
+.phone-shell.ios18-shell.mobile-shell .weather-panel .weather-forecast > div { min-width: 0; justify-items: center; padding: 12px 2px; border-radius: var(--mobile-inner-radius); }
+.phone-shell.ios18-shell.mobile-shell .weather-forecast small { white-space: normal; line-height: 1.5; text-align: center; }
+.phone-shell.ios18-shell.mobile-shell .weather-outfit-tip { gap: 6px; padding: 12px 16px; }
+.phone-shell.ios18-shell.mobile-shell .weather-outfit-tip > span { white-space: normal; line-height: 1.5; }
+.phone-shell.ios18-shell.mobile-shell .weather-outfit-tip small { line-height: 1.6; }
+
+@media (max-width: 359px) {
+  .phone-shell.ios18-shell.mobile-shell .market-panel.compact .quote-row { grid-template-columns: minmax(0, 1fr); }
+  .phone-shell.ios18-shell.mobile-shell .market-panel.compact .quote-price { justify-items: start; }
+}

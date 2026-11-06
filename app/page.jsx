@@ -17,6 +17,7 @@ import StockPriceChart from "./components/stock-price-chart";
 import "./components/stock-lists.css";
 import "./components/android-app.css";
 import "./components/mobile-watch.css";
+import "./components/mobile-surface.css";
 
 const storagePrefix = "qiyeworkbench:";
 
@@ -1552,7 +1553,7 @@ function WeatherCard({ compact = false, clock = "--:--", phoneApp = false }) {
         <div>
           <span>{phoneApp ? weather?.location || "无锡" : `${weather?.location || "无锡"} · ${dateKey} · ${clock}`}</span>
           <strong>{weather ? `${weather.current ?? "--"}°` : "--"}</strong>
-          <small>{weather ? `${weatherLabel(weather.code)} · ${weather.min ?? "--"}° / ${weather.max ?? "--"}° · 降水 ${weather.rain ?? "--"}%` : "正在读取无锡天气"}</small>
+          <small className="weather-summary">{weather ? <><span>{weatherLabel(weather.code)}</span><span>{weather.min ?? "--"}° / {weather.max ?? "--"}°</span><span>降水 {weather.rain ?? "--"}%</span></> : "正在读取无锡天气"}</small>
         </div>
         <b className="weather-badge">
           <span><WeatherMotionIcon code={weather?.code} /></span>
