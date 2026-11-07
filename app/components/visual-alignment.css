@@ -145,9 +145,29 @@
 .phone-shell.ios18-shell.visual-aligned.page-consultations .watch-title-row small { color: var(--ios-muted) !important; font-size: 12px; font-weight: 450; line-height: 1.5; }
 .phone-shell.ios18-shell.visual-aligned.page-consultations .watch-info { gap: 6px; }
 .phone-shell.ios18-shell.visual-aligned.page-consultations .watch-info p { color: var(--ios-muted) !important; font-size: 13px; font-weight: 450; white-space: normal; line-height: 1.5; }
-.phone-shell.ios18-shell.visual-aligned.page-consultations .watch-item { gap: 10px; }
-.phone-shell.ios18-shell.visual-aligned.page-consultations .watch-card { align-items: start; }
-.phone-shell.ios18-shell.visual-aligned.page-consultations .timeline-dot { top: 5px; width: 10px; height: 10px; box-shadow: none; border-color: var(--ios-panel); background: var(--ios-blue); }
+.phone-shell.ios18-shell.visual-aligned.page-consultations .watch-timeline {
+  gap: 0;
+  padding: 0;
+  border: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.phone-shell.ios18-shell.visual-aligned.page-consultations .watch-item {
+  gap: 10px;
+  padding: 20px var(--ui-inset);
+  border-bottom: 1px solid var(--ios-separator);
+}
+.phone-shell.ios18-shell.visual-aligned.page-consultations .watch-item:last-child { border-bottom: 0; }
+.phone-shell.ios18-shell.visual-aligned.page-consultations .watch-card {
+  align-items: start;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.phone-shell.ios18-shell.visual-aligned.page-consultations .timeline-dot { display: none; }
 
 @media (max-width: 959px) {
   .phone-shell.ios18-shell.visual-aligned.mobile-shell { --ui-inset: 16px; }
