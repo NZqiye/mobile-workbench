@@ -72,6 +72,22 @@
 .phone-shell.ios18-shell.visual-aligned ::selection { color: var(--ios-ink); background: var(--ios-blue-soft); }
 .phone-shell.ios18-shell.visual-aligned :is(button, input, textarea, summary):focus-visible { outline: 2px solid var(--ios-blue); outline-offset: 3px; }
 
+/* The companion owns its row; the two daily counts sit together beneath it. */
+.phone-shell.ios18-shell.visual-aligned.page-today .content > section.pet-card {
+  grid-column: 1 / -1;
+  grid-row: auto;
+  min-width: 0;
+  padding: var(--ui-inset);
+  border-radius: var(--ui-radius);
+}
+.phone-shell.ios18-shell.visual-aligned.page-today .content > section.dashboard-strip {
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ui-gap);
+}
+.phone-shell.ios18-shell.visual-aligned .pet-supplies button { min-height: 52px; }
+.phone-shell.ios18-shell.visual-aligned .pet-supplies button small { font-size: 12px; line-height: 1.4; }
+
 /* The capture, confirmation and saved ideas belong to one home surface. */
 .phone-shell.ios18-shell.visual-aligned .quick-note-panel { grid-column: 1 / -1; gap: 0; }
 .phone-shell.ios18-shell.visual-aligned .quick-note-panel .panel-head { margin-bottom: 12px; }

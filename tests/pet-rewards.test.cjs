@@ -20,11 +20,21 @@ function setup() {
     persist: (key, value) => { storage[key] = value; },
     setPetSupplies: update => { supplies = update(supplies); },
     setPetAction: () => {}, nowText: () => '12:00',
+    crypto: { randomUUID: () => 'watch-record' }, todayKey: () => '2026-11-08',
+    consultations: [{ id: 'movie', type: '电影' }, { id: 'series', type: '剧集', seasons: [] }],
+    watchCheckins: [],
+    setConsultations: next => { context.consultations = next; },
+    setWatchCheckins: next => { context.watchCheckins = next; },
+    tmdbMediaType: item => item.type === '电影' ? 'movie' : 'tv',
+    upsertWatchCheckin: (items, record) => [record, ...items.filter(item => item.id !== record.id)],
+    dedupeWatchCheckins: items => items,
+    parseEpisodeList: episode => [Number(episode)],
     quickRecordState: () => ({}), undoQuickRecordChanges: () => ({ skipped: 0, deleted: [], collections: {} }),
     writeQuickCollections: () => {},
   });
   vm.runInContext(source.match(/const defaultPetSupplies = .*;/)[0] + '\n' + source.slice(source.indexOf('const petSupplyItems = ['), source.indexOf('const ponyThemes = [')), context);
-  vm.runInContext(['normalizePetSupplies', 'mergePetSupplies', 'changePetSupply', 'rewardPetOnce', 'undoQuickRecords'].map(functionSource).join('\n'), context);
+  const names = ['normalizePetSupplies', 'mergePetSupplies', 'changePetSupply', 'rewardPetOnce', 'undoQuickRecords', 'checkinWatchItem', 'rewardWatchedMovie'];
+  vm.runInContext(names.map(functionSource).join('\n'), context);
   return { context, storage, supplies: () => supplies };
 }
 
@@ -64,4 +74,40 @@ test('old inventories gain zero new fields; sync retains new rewards and happine
   assert.equal(latest.happiness, 8);
   const merged = app.context.mergePetSupplies({ happiness: 8 }, { happiness: 8 }, 20, 20);
   assert.equal(merged.happiness, 8);
+});
+
+test('movie ratings earn a ticket and happiness once across repeat ratings and the older check-in entry', () => {
+  const app = setup();
+  app.context.checkinWatchItem({ id: 'movie', mode: 'movie', rating: '8' });
+  assert.equal(app.supplies().stick, 6);
+  assert.equal(app.supplies().happiness, 1);
+  app.context.checkinWatchItem({ id: 'movie', mode: 'movie', rating: '9' });
+  app.context.checkinWatchItem({ id: 'movie', mode: 'legacy', rating: '9' });
+  assert.equal(app.supplies().stick, 6);
+  assert.equal(app.supplies().happiness, 1);
+});
+
+test('season progress rewards each newly watched episode, without repeat rewards on ratings or rechecking', () => {
+  const app = setup();
+  const save = (mode, episodes, season = 1) => app.context.checkinWatchItem({ id: 'series', mode, season, episodes, episodeCount: 10, rating: '8' });
+  save('season-progress', [1, 2]);
+  assert.equal(app.supplies().stick, 7);
+  assert.equal(app.supplies().happiness, 2);
+  save('season-rating', [1, 2]);
+  save('season-progress', [1]);
+  save('season-progress', [1, 2, 3]);
+  assert.equal(app.supplies().happiness, 3);
+  save('season-progress', [1], 2);
+  assert.equal(app.supplies().happiness, 4);
+  assert.equal(app.storage.petSupplies.happiness, 4);
+});
+
+test('movie rewards from the older entry remain recognized after updating the app', () => {
+  for (const key of ['watch-checkin:movie:movie', 'watch:movie']) {
+    const app = setup();
+    app.storage.petRewardHistory = { [key]: 'previously earned' };
+    app.context.checkinWatchItem({ id: 'movie', mode: 'movie', rating: '8' });
+    assert.equal(app.supplies().stick, 5);
+    assert.equal(app.supplies().happiness, undefined);
+  }
 });

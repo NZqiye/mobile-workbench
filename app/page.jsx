@@ -6646,6 +6646,11 @@ export default function Workbench() {
     changePetSupply(type, -1, item.action, type);
   }
 
+  function rewardWatchedMovie(id) {
+    if (readStorage("petRewardHistory", {})[`watch:${id}`]) return;
+    rewardPetOnce(`watch-checkin:${id}:movie`, "stick", 1, "看完一部电影，舞会票 +1。");
+  }
+
   async function loadTmdbRecommendations({ refreshAnime = false, animeOnly = false } = {}) {
     const requestId = animeOnly ? recommendationRequestRef.current : ++recommendationRequestRef.current;
     const currentRequest = () => recommendationRequestRef.current === requestId;
@@ -7279,7 +7284,8 @@ export default function Workbench() {
     setConsultations(next);
     persist("consultations", next);
     if (nextItem.status === "看过的剧" && oldItem?.status !== "看过的剧") {
-      rewardPetOnce(`watch:${item.id}`, "stick", 1, "看完一部内容，舞会票 +1。");
+      if (tmdbMediaType(nextItem) === "movie") rewardWatchedMovie(item.id);
+      else rewardPetOnce(`watch:${item.id}`, "stick", 1, "看完一部内容，舞会票 +1。");
     }
   }
 
@@ -7347,6 +7353,10 @@ export default function Workbench() {
       const nextWatchCheckins = upsertWatchCheckin(watchCheckins, seasonRecord);
       setWatchCheckins(nextWatchCheckins);
       persist("watchCheckins", nextWatchCheckins);
+      const previousEpisodes = new Set((item.seasonProgress?.[seasonKey] || []).map(Number));
+      normalizedEpisodes.filter((episodeNumber) => !previousEpisodes.has(episodeNumber)).forEach((episodeNumber) => {
+        rewardPetOnce(`watch-checkin:${id}:${seasonKey}:${episodeNumber}`, "stick", 1, "看完一集电视剧，舞会票 +1。");
+      });
       if (allSeasonsComplete && item.status !== "看过的剧" && item.tmdbId) {
         fetch("/api/tmdb/watchlist", {
           method: "PUT",
@@ -7381,6 +7391,7 @@ export default function Workbench() {
       const nextWatchCheckins = upsertWatchCheckin(watchCheckins, movieRecord);
       setWatchCheckins(nextWatchCheckins);
       persist("watchCheckins", nextWatchCheckins);
+      rewardWatchedMovie(id);
       return;
     }
 
@@ -7406,8 +7417,8 @@ export default function Workbench() {
       }).catch(() => {});
     }
     checkedEpisodes.forEach((checkedEpisode) => {
-      const rewardKey = isMovie ? `watch-checkin:${id}:movie` : `watch-checkin:${id}:${item.season || 1}:${checkedEpisode}`;
-      rewardPetOnce(rewardKey, "stick", 1, isMovie ? "看完一部电影，舞会票 +1。" : "看完一集电视剧，舞会票 +1。");
+      if (isMovie) rewardWatchedMovie(id);
+      else rewardPetOnce(`watch-checkin:${id}:${item.season || 1}:${checkedEpisode}`, "stick", 1, "看完一集电视剧，舞会票 +1。");
     });
   }
 
@@ -7946,8 +7957,8 @@ export default function Workbench() {
                 <p className={`quick-note-status${quickNoteStatus.startsWith("已保存") ? " saved" : ""}`} id="quick-note-status" role="status">{quickNoteStatus || "想法收在这里，也可以到「想法笔记」搜索和编辑。"}</p>
                 {recentIdeas.length > 0 && <details className="quick-note-disclosure"><summary><span>最近想法</span><span className="quick-note-expand">展开</span><span className="quick-note-collapse">收起</span><SelectChevron /></summary><div className="quick-note-recent" aria-label="最近想法">{recentIdeas.map((note) => <button type="button" key={note.id} onClick={() => editNote(note)}><span>{note.title}</span><small>{note.date}</small></button>)}</div></details>}
               </section>
+              <PetCompanionCard supplies={petSupplies} action={petAction} onUse={usePetSupply} onRest={() => setPetAction({ type: "idle", text: "等你来陪我玩。" })} />
               <section className="dashboard-strip" aria-label="今日概览">
-                <PetCompanionCard supplies={petSupplies} action={petAction} onUse={usePetSupply} onRest={() => setPetAction({ type: "idle", text: "等你来陪我玩。" })} />
                 <div className="dashboard-tile">
                   <span>打卡任务</span>
                   <strong>{stats.checkin}</strong>
