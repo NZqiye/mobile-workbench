@@ -9211,6 +9211,26 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
 .travel-form label { display: grid; gap: 7px; min-width: 0; color: var(--ios-ink, var(--ink)); font-size: 14px; font-weight: 650; }
 .travel-form input, .travel-form textarea { width: 100%; min-width: 0; font-size: 16px; }
 .travel-form textarea { resize: vertical; line-height: 1.6; }
+.travel-icon-picker { min-width: 0; border-block: 1px solid var(--ios-separator, var(--line)); }
+.travel-icon-picker > summary { display: flex; align-items: center; gap: 12px; min-height: 64px; padding-block: 8px; cursor: pointer; list-style: none; }
+.travel-icon-picker > summary::-webkit-details-marker { display: none; }
+.travel-icon-picker img { flex-shrink: 0; object-fit: contain; }
+.travel-icon-picker > summary > span:nth-child(2) { display: grid; gap: 3px; flex: 1; min-width: 0; }
+.travel-icon-picker strong { font-size: 14px; }
+.travel-icon-picker small { color: var(--ios-muted, var(--muted)); font-size: 12px; }
+.travel-icon-change { display: flex; align-items: center; gap: 4px; color: var(--ios-blue, var(--theme-main)); font-size: 13px; }
+.travel-icon-picker[open] .travel-icon-change svg { transform: rotate(180deg); }
+.travel-icon-options { display: grid; gap: 12px; padding-block: 4px 14px; }
+.travel-icon-auto { justify-self: start; min-height: 44px; padding: 8px 12px; border: 0; border-radius: 8px; color: var(--ios-blue, var(--theme-main)); background: var(--ios-blue-soft, var(--theme-soft)); font-size: 13px; }
+.travel-icon-groups { display: flex; flex-wrap: wrap; gap: 4px; }
+.travel-icon-groups button { min-height: 44px; padding: 8px 10px; border: 0; border-radius: 8px; color: var(--ios-muted, var(--muted)); background: transparent; font-size: 13px; }
+.travel-icon-groups button[aria-pressed="true"] { color: var(--ios-blue, var(--theme-main)); background: var(--ios-blue-soft, var(--theme-soft)); }
+.travel-icon-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; max-height: 280px; overflow-y: auto; overscroll-behavior: contain; padding: 4px; scrollbar-color: var(--ios-separator, var(--line)) transparent; }
+.travel-icon-choice { display: grid; justify-items: center; align-content: start; gap: 4px; min-width: 0; min-height: 76px; padding: 6px 2px; border: 1px solid transparent; border-radius: 10px; color: var(--ios-muted, var(--muted)); background: transparent; font-size: 12px; line-height: 1.4; }
+.travel-icon-choice span { overflow-wrap: anywhere; }
+.travel-icon-choice[aria-pressed="true"] { color: var(--ios-blue, var(--theme-main)); border-color: var(--ios-blue, var(--theme-main)); background: var(--ios-blue-soft, var(--theme-soft)); }
+.travel-icon-choice:hover, .travel-icon-groups button:hover { background: var(--ios-panel-muted, var(--soft)); }
+.travel-icon-hint { margin: 0; color: var(--ios-muted, var(--muted)); font-size: 12px; line-height: 1.6; }
 .travel-filters { display: flex; flex-wrap: wrap; gap: 6px; }
 .travel-filters button, .travel-actions button, .travel-delete-confirm button { min-height: 36px; padding: 6px 12px; border: 1px solid transparent; border-radius: 8px; color: var(--ios-muted, var(--muted)); background: transparent; font-size: 14px; font-weight: 650; }
 .travel-filters button.active { color: var(--ios-blue, var(--theme-main)); border-color: var(--ios-separator, var(--line)); background: var(--ios-blue-soft, var(--theme-soft)); }

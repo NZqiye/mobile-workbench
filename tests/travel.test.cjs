@@ -7,6 +7,12 @@ const travel = {};
 vm.createContext(travel);
 vm.runInContext(fs.readFileSync(path.join(__dirname, "../lib/travel.js"), "utf8").replaceAll("export function", "function"), travel);
 const source = fs.readFileSync(path.join(__dirname, "../app/page.jsx"), "utf8");
+function iconContext() {
+  const context = vm.createContext({});
+  const data = ["travel-icons.js", "travel-places.js"].map((file) => fs.readFileSync(path.join(__dirname, "../lib", file), "utf8").replace(/^import .*;\n/gm, "").replaceAll("export const", "const").replaceAll("export function", "function"));
+  vm.runInContext(`${data.join("\n")}\nthis.cities = travelCities; this.icons = travelIcons;`, context);
+  return context;
+}
 function functionSource(name) {
   const start = source.indexOf(`function ${name}(`);
   const indent = source.slice(source.lastIndexOf("\n", start) + 1, start).match(/^\s*/)[0];
@@ -50,9 +56,7 @@ test("city check-ins keep personal reviews, validate ratings and stay inside tri
 });
 
 test("preset cities have unique attraction shortcuts and valid local illustrations", async () => {
-  const context = vm.createContext({});
-  const data = fs.readFileSync(path.join(__dirname, "../lib/travel-places.js"), "utf8").replaceAll("export const", "const").replaceAll("export function", "function");
-  vm.runInContext(`${data}\nthis.cities = travelCities;`, context);
+  const context = iconContext();
   const sharp = require("sharp");
   assert.equal(new Set(context.cities.map((city) => city.name)).size, context.cities.length);
   const images = new Set();
@@ -64,6 +68,48 @@ test("preset cities have unique attraction shortcuts and valid local illustratio
   images.add(context.travelCityImage("自定义城市"));
   for (const image of images) await sharp(path.join(__dirname, "../public", image)).raw().toBuffer();
   assert.equal(context.travelCityImage("自定义城市"), "/assets-icons/thiings/fashion/suitcase.webp");
+});
+
+test("selected trip and check-in icons survive saving and can return to automatic matching", () => {
+  const trip = { destination: "杭州周末", city: "杭州", startDate: "2026-11-01", endDate: "2026-11-03", icon: "tea-plantation", checkins: [{ id: "spot-1", name: "西湖", date: "2026-11-02", icon: "sailboat" }] };
+  const saved = travel.normalizeTravelRecord(trip);
+  assert.equal(saved.icon, "tea-plantation");
+  assert.equal(saved.checkins[0].icon, "sailboat");
+  const automatic = travel.normalizeTravelRecord({ ...saved, icon: "", checkins: [{ ...saved.checkins[0], icon: "" }] });
+  assert.equal(automatic.icon, "");
+  assert.equal(automatic.checkins[0].icon, "");
+  const legacy = travel.normalizeTravelRecord({ ...trip, icon: undefined, checkins: [{ ...trip.checkins[0], icon: undefined }] });
+  assert.equal(legacy.icon, "");
+  assert.equal(legacy.checkins[0].icon, "");
+});
+
+test("specific landmarks and scenery match correctly while a selected icon takes priority", () => {
+  const context = iconContext();
+  const expected = (id) => `/assets-icons/thiings/travel/${id}.webp`;
+  assert.equal(context.travelCityImage(" 杭州 "), expected("alpine-lake"));
+  assert.equal(context.travelCityImage("巴黎"), expected("paris-france"));
+  assert.equal(context.travelCityImage("杭州", "tea-plantation"), expected("tea-plantation"));
+  assert.equal(context.travelCityImage("杭州", "../../invalid"), expected("alpine-lake"));
+  for (const [name, id] of [["八达岭长城", "great-wall-of-china"], ["富士山", "mount-fuji"], ["布达拉宫", "potala-palace"], ["清水寺", "kiyomizu-dera"], ["埃菲尔铁塔", "eiffel-tower"], ["伦敦塔桥", "london-bridge"], ["西湖", "alpine-lake"], ["灵隐寺", "pagoda"], ["苏州博物馆", "museum"], ["鼓浪屿", "island"], ["上海迪士尼乐园", "theme-park"], ["长江索道", "cableway"], ["广州塔", "skyline"]]) {
+    assert.equal(context.travelPlaceImage("自定义城市", name), expected(id), name);
+  }
+  assert.equal(context.travelPlaceImage("杭州", "西湖", "sailboat"), expected("sailboat"));
+  assert.equal(context.travelPlaceImage("杭州", "西湖", "missing"), expected("alpine-lake"));
+  assert.equal(context.travelPlaceImage("无锡", "灵山胜境"), expected("pagoda"));
+  assert.equal(context.travelPlaceImage("沈阳", "故宫"), expected("palace"));
+  assert.equal(context.travelIconImage("missing"), "");
+});
+
+test("all 72 travel choices have real, transparent local illustrations", async () => {
+  const context = iconContext();
+  const sharp = require("sharp");
+  assert.equal(context.icons.length, 72);
+  assert.equal(new Set(context.icons.map((icon) => icon.id)).size, context.icons.length);
+  for (const icon of context.icons) {
+    const image = sharp(path.join(__dirname, "../public", context.travelIconImage(icon.id)));
+    assert.equal((await image.metadata()).hasAlpha, true, icon.id);
+    await image.raw().toBuffer();
+  }
 });
 
 test("travel mutations persist timestamps and deleted records stay deleted after merging", () => {
