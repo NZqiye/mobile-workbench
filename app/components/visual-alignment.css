@@ -102,7 +102,16 @@
   font-size: 12px;
   line-height: 1.6;
 }
-.phone-shell.ios18-shell.visual-aligned .quick-note-recent { display: grid; margin-top: 12px; }
+.phone-shell.ios18-shell.visual-aligned .quick-note-disclosure { margin-top: 12px; border-top: 1px solid var(--ios-separator); }
+.phone-shell.ios18-shell.visual-aligned .quick-note-disclosure > summary { display: flex; align-items: center; gap: 8px; min-height: 48px; color: var(--ios-muted); font-size: 13px; cursor: pointer; list-style: none; }
+.phone-shell.ios18-shell.visual-aligned .quick-note-disclosure > summary::-webkit-details-marker { display: none; }
+.phone-shell.ios18-shell.visual-aligned .quick-note-disclosure > summary > span:first-child { margin-right: auto; color: var(--ios-ink); font-weight: 600; }
+.phone-shell.ios18-shell.visual-aligned .quick-note-disclosure svg { width: 16px; height: 16px; }
+.phone-shell.ios18-shell.visual-aligned .quick-note-disclosure .quick-note-collapse,
+.phone-shell.ios18-shell.visual-aligned .quick-note-disclosure[open] .quick-note-expand { display: none; }
+.phone-shell.ios18-shell.visual-aligned .quick-note-disclosure[open] .quick-note-collapse { display: inline; }
+.phone-shell.ios18-shell.visual-aligned .quick-note-disclosure[open] svg { transform: rotate(180deg); }
+.phone-shell.ios18-shell.visual-aligned .quick-note-recent { display: grid; }
 .phone-shell.ios18-shell.visual-aligned .quick-note-recent button {
   display: flex;
   justify-content: space-between;

@@ -8029,7 +8029,7 @@ export default function Workbench() {
                   <button type="submit" aria-label="保存闪念笔记">保存</button>
                 </form>
                 <p className="quick-note-status" id="quick-note-status" role="status">{quickNoteStatus || "想法收在这里，也可以到「想法笔记」搜索和编辑。"}</p>
-                {recentIdeas.length > 0 && <div className="quick-note-recent" aria-label="最近想法">{recentIdeas.map((note) => <button type="button" key={note.id} onClick={() => editNote(note)}><span>{note.title}</span><small>{note.date}</small></button>)}</div>}
+                {recentIdeas.length > 0 && <details className="quick-note-disclosure"><summary><span>最近想法</span><span className="quick-note-expand">展开</span><span className="quick-note-collapse">收起</span><SelectChevron /></summary><div className="quick-note-recent" aria-label="最近想法">{recentIdeas.map((note) => <button type="button" key={note.id} onClick={() => editNote(note)}><span>{note.title}</span><small>{note.date}</small></button>)}</div></details>}
               </section>
               <section className="dashboard-strip" aria-label="今日概览">
                 <PetCompanionCard supplies={petSupplies} action={petAction} onUse={usePetSupply} />
