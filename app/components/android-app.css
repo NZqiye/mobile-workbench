@@ -24,19 +24,28 @@
 .android-app-shell.phone-shell.mobile-shell.page-today .today-time-panel {
   display: flex;
   justify-content: center;
-  gap: 12px;
-  min-height: 70px;
+  align-items: center;
+  gap: 22px;
+  min-height: 132px;
   margin: 0;
-  padding: 10px 14px;
-  border-radius: 14px;
+  padding: 16px;
+  border-radius: 16px;
   box-shadow: none;
 }
-.android-app-shell.phone-shell .today-time-panel .clock-dial { width: 48px; height: 48px; filter: none; }
-.android-app-shell.phone-shell .today-time-panel .clock-digital strong { font-size: 26px; }
-.android-app-shell .today-time-panel .clock-calendar { display: none; }
-.android-app-shell.phone-shell .today-time-panel .clock-digital { gap: 0; }
-.android-app-shell.phone-shell .today-time-panel .clock-seconds { display: inline; padding: 0; min-height: 0; border: 0; border-radius: 0; color: var(--ios-ink) !important; background: transparent; font-size: 26px; font-weight: 650; letter-spacing: -0.03em; }
-.android-app-shell .clock-seconds::before { content: ":"; }
+.android-app-shell.phone-shell .today-time-panel .clock-dial { flex-shrink: 0; width: 96px; height: 96px; filter: drop-shadow(0 4px 5px rgba(30, 40, 50, .10)); }
+.android-app-shell.phone-shell .today-time-panel .clock-copy { display: grid; min-width: 0; gap: 10px; }
+.android-app-shell.phone-shell .today-time-panel .clock-digital strong { font-size: 44px; line-height: 1; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.android-app-shell.phone-shell .today-time-panel .clock-calendar { display: block; color: var(--ios-muted-strong) !important; font-size: 12px; font-weight: 650; line-height: 1.5; white-space: nowrap; }
+.android-app-shell.phone-shell .today-time-panel .clock-digital { display: flex; align-items: baseline; justify-content: start; gap: 8px; }
+.android-app-shell.phone-shell .today-time-panel .clock-seconds { display: inline; padding: 0; min-height: 0; border: 0; border-radius: 0; color: var(--ios-blue) !important; background: transparent; font-size: 24px; line-height: 1; font-weight: 700; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.android-app-shell .clock-seconds::before { content: none; }
+@media (max-width: 359px) {
+  .android-app-shell.phone-shell.mobile-shell.page-today .today-time-panel { gap: 16px; min-height: 116px; padding: 12px; }
+  .android-app-shell.phone-shell .today-time-panel .clock-dial { width: 80px; height: 80px; }
+  .android-app-shell.phone-shell .today-time-panel .clock-digital strong { font-size: 36px; }
+  .android-app-shell.phone-shell .today-time-panel .clock-seconds { font-size: 20px; }
+  .android-app-shell.phone-shell .today-time-panel .clock-calendar { font-size: 11px; }
+}
 
 .android-app-shell.phone-shell .panel { padding: 16px; gap: 12px; }
 .android-app-shell .panel-head { flex-wrap: wrap; gap: 8px; }
