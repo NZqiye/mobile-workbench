@@ -346,7 +346,7 @@ public final class MainActivity extends Activity {
             if (nativeRecorder != null) {
                 new AlertDialog.Builder(this).setMessage("放弃这次录音？").setPositiveButton("放弃", (dialog, which) -> finishNativeAudio(true)).setNegativeButton("继续录音", null).show();
             } else if (errorView == null && web.canGoBack()) web.goBack();
-            else new AlertDialog.Builder(this).setMessage("退出工作台？").setPositiveButton("退出", (dialog, which) -> finish()).setNegativeButton("继续使用", null).show();
+            else moveTaskToBack(true);
         });
     }
     @Override public void onBackPressed() { goBack(); }

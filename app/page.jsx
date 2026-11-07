@@ -9,6 +9,7 @@ import WorkbenchSelect, { SelectChevron } from "./components/workbench-select";
 import AnniversaryIconPicker from "./components/anniversary-icon-picker";
 import VoiceQuickRecord from "./components/voice-quick-record";
 import AccountPanel from "./components/account-panel";
+import MediaPoster from "./components/media-poster";
 import { encodeMarkdownBackup, decodeMarkdownBackup } from "../lib/markdown-backup";
 import { planQuickRecordChanges, undoQuickRecordChanges } from "../lib/workbench-records";
 import { anniversaryIcon, anniversaryIcons } from "../lib/anniversary-icons";
@@ -4043,7 +4044,7 @@ function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelet
   );
 }
 
-function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchTmdb, onImportTmdb, onCheckin, onSyncTmdbRating, onRemoveCheckin, onRefreshCloud, syncStatus = "", watchCheckins = [] }) {
+function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatus = "", onSearchTmdb, onImportTmdb, onCheckin, onSyncTmdbRating, onRemoveCheckin, onRefreshCloud, syncStatus = "", watchCheckins = [] }) {
   const watchItems = items.filter((item) => item.status !== "已归档" && item.status !== "暂停/弃剧");
   const activeWatchItems = watchItems.filter((item) => item.status !== "看过的剧");
   const [selectedId, setSelectedId] = useState(activeWatchItems[0]?.id || watchItems[0]?.id || "");
@@ -4052,6 +4053,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
   const [category, setCategory] = useState("all");
   const [completedLibraryOpen, setCompletedLibraryOpen] = useState(false);
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(true);
+  const [libraryToolsOpen, setLibraryToolsOpen] = useState(false);
   const [mobileRatingView, setMobileRatingView] = useState("seasons");
   const [details, setDetails] = useState(null);
   const [seasonData, setSeasonData] = useState(null);
@@ -4084,7 +4086,6 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
   const completedFilteredItems = filteredItems.filter((item) => item.status === "看过的剧");
   const visibleLibraryItems = completedLibraryOpen ? filteredItems : filteredItems.filter((item) => item.status !== "看过的剧");
   const watchItemCount = countUniqueWatchItems(watchItems);
-  const filteredItemCount = countUniqueWatchItems(filteredItems);
   const visibleLibraryItemCount = countUniqueWatchItems(visibleLibraryItems);
   const seasonList = (details?.seasons || selected?.seasons || []).filter((season) => Number(season?.seasonNumber) > 0);
   const seasonOptions = seasonList.length ? seasonList : seasonNumber ? [{ seasonNumber: Number(seasonNumber), episodeCount: 0 }] : [];
@@ -4122,6 +4123,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
     setMobileRatingView("seasons");
     setDetailsLoading(false);
     setSeasonLoading(false);
+    if (compact && mobileLibraryVisible) return undefined;
     if (!selected?.tmdbId) {
       setDetailStatus("该条目没有绑定 TMDB，无法读取季集信息");
       return undefined;
@@ -4141,7 +4143,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
         if (!cancelled) setDetailsLoading(false);
       });
     return () => { cancelled = true; };
-  }, [selected?.id, selected?.tmdbId, selectedType]);
+  }, [selected?.id, selected?.tmdbId, selectedType, compact, mobileLibraryVisible]);
 
   useEffect(() => {
     if (isMovie) {
@@ -4278,13 +4280,18 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
         </div>
         <strong>{watchItemCount} 部</strong>
       </div>
+      <div className="watch-library-topbar">
+        <h2>我的片单 <small>{watchItemCount} 部</small></h2>
+        <button type="button" aria-expanded={libraryToolsOpen} aria-controls="watch-library-tools" onClick={() => setLibraryToolsOpen(value => !value)}>{libraryToolsOpen ? "收起" : "添加作品"}</button>
+      </div>
+      {libraryToolsOpen && <div className="watch-library-tools" id="watch-library-tools">
       <div className="watch-rating-syncbar">
         <span>{syncStatus || "观看记录会在登录后同步到云端"}</span>
         <button type="button" onClick={refreshCloudCheckins} disabled={cloudRefreshing}>{cloudRefreshing ? "刷新中" : "刷新云端"}</button>
       </div>
       <form className="watch-rating-tmdb-search" onSubmit={(event) => { event.preventDefault(); onSearchTmdb?.(tmdbQuery); }}>
-        <input value={tmdbQuery} onChange={(event) => setTmdbQuery(event.target.value)} placeholder="从 TMDB 搜索电视剧、电影、综艺或动漫" aria-label="从 TMDB 搜索影视" />
-        <button type="submit">搜索 TMDB</button>
+        <input value={tmdbQuery} onChange={(event) => setTmdbQuery(event.target.value)} placeholder="输入片名，查找新作品" aria-label="从 TMDB 搜索影视" />
+        <button type="submit">查找</button>
       </form>
       {Array.isArray(tmdbResults) && tmdbResults.length > 0 && <div className="watch-rating-tmdb-results">
         {tmdbResults.map((item) => <button type="button" key={`${item.tmdbMediaType}-${item.tmdbId}`} onClick={() => {
@@ -4301,8 +4308,9 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
           <small>{[item.year, item.type].filter(Boolean).join(" · ")}</small>
         </button>)}
       </div>}
-      {tmdbStatus && <p className="watch-rating-search-status">{tmdbStatus}</p>}
-      {watchItems.length === 0 ? <p className="empty">先搜索或添加一部影视，再回来记录。</p> : (
+      {tmdbStatus && <p className="watch-rating-search-status" role="status">{tmdbStatus}</p>}
+      </div>}
+      {watchItems.length === 0 ? <p className="empty">片单还是空的，点“添加作品”查找一部影视。</p> : (
         <>
           <div className="watch-rating-toolbar">
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索片名、平台或状态" aria-label="搜索片单" />
@@ -4317,12 +4325,12 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
           </button>
           <div className="watch-rating-layout">
             <div className={`watch-rating-library ${mobileLibraryOpen ? "mobile-library-open" : ""}`}>
-              <div className="watch-rating-library-head"><strong>我的片单</strong><span>{visibleLibraryItemCount}/{filteredItemCount} 部</span>{completedFilteredItems.length > 0 && <button type="button" onClick={() => setCompletedLibraryOpen((value) => !value)}>{completedLibraryOpen ? "隐藏看过" : `展开看过 ${countUniqueWatchItems(completedFilteredItems)}`}</button>}</div>
-              {filteredItems.length === 0 ? <p className="empty">没有匹配的影视。</p> : visibleLibraryItems.length === 0 ? <p className="empty">当前只剩看过的剧，点“展开看过”查看。</p> : <div className="watch-rating-library-grid">
+              <div className="watch-rating-library-head"><span>{visibleLibraryItemCount} 部{query || category !== "all" ? "符合筛选" : completedLibraryOpen ? "作品" : "待看与在追"}</span>{completedFilteredItems.length > 0 && <button type="button" onClick={() => setCompletedLibraryOpen((value) => !value)}>{completedLibraryOpen ? "隐藏看过" : `看过 ${countUniqueWatchItems(completedFilteredItems)}`}</button>}</div>
+              {filteredItems.length === 0 ? <p className="empty">没有匹配的影视。</p> : visibleLibraryItems.length === 0 ? <p className="empty">当前只剩已看完的作品，点“看过”查看。</p> : <div className="watch-rating-library-grid">
                 {visibleLibraryItems.map((item) => (
                   <button className={`watch-rating-media-card ${item.id === selected?.id ? "active" : ""}`} type="button" key={item.id} onClick={() => { setSelectedId(item.id); setMobileLibraryOpen(false); setMobileRatingView("seasons"); }}>
-                    {item.posterUrl ? <img src={item.posterUrl} alt="" loading="lazy" /> : <span className="watch-rating-media-poster">{mediaTitle(item).slice(0, 1)}</span>}
-                    <span className="watch-rating-media-copy"><strong>{mediaTitle(item)}</strong><small>{categoryLabel(item)} · {item.status || "想看的"}</small></span>
+                    <MediaPoster item={item} className="watch-library-poster" />
+                    <span className="watch-rating-media-copy"><strong>{mediaTitle(item)}</strong><small>{[item.year, categoryLabel(item)].filter(Boolean).join(" · ")}</small><span className="watch-library-state">{item.status === "看过的剧" ? "已看完" : item.status === "想看的剧" ? "想看" : item.status || "想看"}{item.rating ? ` · ${item.rating} 分` : ""}</span></span>
                   </button>
                 ))}
               </div>}
@@ -4379,7 +4387,7 @@ function WatchCheckin({ items = [], tmdbResults = [], tmdbStatus = "", onSearchT
                     <h3>{mobileRatingView === "episodes" ? `第 ${seasonNumber} 季` : detailTitle}</h3>
                     {mobileRatingView === "episodes" && <small>{detailTitle}</small>}
                   </div>
-                  <button type="button" className="watch-mobile-search-button" onClick={() => setMobileLibraryOpen(true)} aria-label="搜索作品">搜索</button>
+                  <button type="button" className="watch-mobile-search-button" onClick={() => setMobileLibraryOpen(true)} aria-label="返回片单">片单</button>
                 </div>
                 {detailsLoading && <p className="watch-rating-status">正在读取 TMDB 详情…</p>}
                 {detailStatus && <p className="watch-rating-status error">{detailStatus}</p>}
@@ -4698,13 +4706,7 @@ function MediaGallery({ item, posterOnly = false }) {
     return () => { observer.disconnect(); controller.abort(); };
   }, [posterOnly, backdropUrl, item?.tmdbId, item?.tvmazeId, item?.bangumiId, item?.tmdbMediaType, item?.backdropUrl, item?.bangumiName, item?.originalTitle, item?.title, item?.bangumiNameCn, item?.titleZh, item?.year]);
 
-  if (posterOnly) return (
-    <div className="media-recommendation-cover">
-      {posterUrl || backdropUrl
-        ? <img src={posterUrl || backdropUrl} alt="" loading="lazy" decoding="async" onError={() => posterUrl ? setPosterUrl("") : setBackdropUrl("")} />
-        : <span>{mediaTitle(item).slice(0, 1)}</span>}
-    </div>
-  );
+  if (posterOnly) return <MediaPoster item={item} className="media-recommendation-cover" />;
 
   if (!backdropUrl && !posterUrl) return <div ref={galleryRef} className="media-gallery media-gallery-empty" aria-hidden="true"><span>{mediaTitle(item).slice(0, 1)}</span></div>;
   return (
@@ -4723,7 +4725,7 @@ function MediaGallery({ item, posterOnly = false }) {
   );
 }
 
-function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, animeRecommendationInfo, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked, onDeleteItem, onWatchCheckin, onSyncTmdbRating, onRemoveCheckin, onRefreshWatchCheckins, syncStatus = "", watchCheckins = [] }) {
+function WatchSchedule({ items = [], compact = false, activeView = "today", tmdbResults = [], tmdbStatus, tmdbSections = [], tmdbRecommendationStatus, animeRecommendationInfo, onSearchTmdb, onImportTmdb, onLoadRecommendations, onSyncTmdbWatchlist, onRefreshTmdbTracked, onDeleteItem, onWatchCheckin, onSyncTmdbRating, onRemoveCheckin, onRefreshWatchCheckins, syncStatus = "", watchCheckins = [] }) {
   const today = new Date();
   const [expanded, setExpanded] = useState(false);
   const [tmdbQuery, setTmdbQuery] = useState("");
@@ -5069,7 +5071,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
         </>
       )}
       {activeView === "rating" && (
-        <WatchCheckin items={managedWatchItems} tmdbResults={tmdbResults} tmdbStatus={tmdbStatus} onSearchTmdb={onSearchTmdb} onImportTmdb={onImportTmdb} onCheckin={onWatchCheckin} onSyncTmdbRating={onSyncTmdbRating} onRemoveCheckin={onRemoveCheckin} onRefreshCloud={onRefreshWatchCheckins} syncStatus={syncStatus} watchCheckins={watchCheckins} />
+        <WatchCheckin items={managedWatchItems} compact={compact} tmdbResults={tmdbResults} tmdbStatus={tmdbStatus} onSearchTmdb={onSearchTmdb} onImportTmdb={onImportTmdb} onCheckin={onWatchCheckin} onSyncTmdbRating={onSyncTmdbRating} onRemoveCheckin={onRemoveCheckin} onRefreshCloud={onRefreshWatchCheckins} syncStatus={syncStatus} watchCheckins={watchCheckins} />
       )}
       {selectedRecommendationSection && (
         <section className="tmdb-recommendations">
@@ -5104,7 +5106,8 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
               {(Array.isArray(selectedRecommendationSection.items) ? selectedRecommendationSection.items : []).length === 0 && <p className="empty">{activeView === "anime" && recommendationMode === "rising" && !animeRecommendationInfo?.loading && !animeRecommendationInfo?.error && !animeRecommendationInfo?.warnings?.length ? "今日暂无放送排期。" : "暂无片单，稍后点刷新片单重试。"}</p>}
               {visibleRecommendationItems.map((item) => (
                 <div className="media-feed-card" role="button" tabIndex={0} key={`${selectedRecommendationSection.id}-${item.tmdbId || item.id || item.title}`} onClick={() => onImportTmdb(item)} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onImportTmdb(item); } }}>
-                  <MediaGallery item={item} posterOnly={recommendationRow} />
+                  <MediaGallery item={item} posterOnly={recommendationRow || compact} />
+                  <div className="media-feed-copy">
                   <strong className="media-feed-title">{mediaTitle(item)}</strong>
                   <span className="media-air">{mediaAirText(item)}</span>
                   <small className="media-meta">{[item.year, item.type || "剧集", item.platform || "TMDB", item.bangumiScore > 0 ? `Bangumi ${item.bangumiScore.toFixed(1)} 分` : ""].filter(Boolean).join(" / ")}</small>
@@ -5112,6 +5115,7 @@ function WatchSchedule({ items = [], activeView = "today", tmdbResults = [], tmd
                     {activeView === "anime" ? (recommendationMode === "hot" ? "当季新番热度榜" : recommendationMode === "high" ? "Bangumi 高分作品" : recommendationMode === "rising" ? "今日放送排期" : "本季度首播新番") : recommendationMode === "hot" ? "近期讨论度较高" : recommendationMode === "high" ? "高分作品，适合收藏" : recommendationMode === "rising" ? "近期值得关注" : "根据你的观影片单精选"}
                   </small>
                   <details className="media-summary-details" onClick={(event) => event.stopPropagation()}><summary>简介</summary><p className="media-summary">{mediaDescription(item)}</p></details>
+                  </div>
                 </div>
               ))}
             </div>
@@ -8050,6 +8054,7 @@ export default function Workbench() {
             <>
               <WatchSchedule
                 items={consultations}
+                compact={displayMode === "mobile"}
                 activeView={consultationView}
                 tmdbResults={tmdbResults}
                 tmdbStatus={tmdbStatus}

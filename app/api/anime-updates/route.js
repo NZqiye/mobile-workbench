@@ -94,7 +94,7 @@ async function enrichWithTmdb(sections) {
     }
   }));
   for (const section of sections) {
-    section.items = section.items.map((item) => ({ ...item, ...metadata.get(item.bangumiId) }));
+    section.items = section.items.map((item) => ({ ...item, posterFallbackUrl: item.posterUrl, ...metadata.get(item.bangumiId) }));
   }
   return incomplete ? "部分 TMDB 资料暂未获取，已保留 Bangumi 资料，可稍后刷新重试" : "";
 }
@@ -170,7 +170,7 @@ function normalizeSubject(item, index) {
     platform: "Bangumi",
     source: "Bangumi",
     sourceLabel: "Bangumi",
-    posterUrl: images.large || images.common || images.medium || images.small || "",
+    posterUrl: images.common || images.medium || images.large || images.small || "",
     summary,
     summaryZh: /[\u3400-\u9fff]/.test(summary) ? summary : "",
     tags: Array.isArray(item.meta_tags) ? item.meta_tags : [],

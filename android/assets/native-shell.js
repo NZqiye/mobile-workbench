@@ -25,7 +25,7 @@
   });
   const send = action => port?.postMessage(JSON.stringify({ action }));
   window.QiyeNative = {
-    version: '1.1.0',
+    version: '1.1.1',
     recordAudio(onStarted) {
       if (!port) return Promise.reject(new Error('手机录音尚未就绪，请稍后重试'));
       if (pending.size) return Promise.reject(new Error('已有录音正在进行'));
