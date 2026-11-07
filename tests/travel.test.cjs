@@ -126,7 +126,7 @@ test("domestic famous places use relevant local representations, including a des
   assert.equal(context.travelPlaceImage("", "天山天池"), expected("alpine-lake"));
   assert.equal(context.travelPlaceImage("", "九寨沟", "cn-huangshan"), expected("mountain-peak"));
   assert.equal(context.travelIconImage("cn-huangshan"), expected("mountain-peak"));
-  assert.ok(context.icons.filter((icon) => icon.id.startsWith("cn-")).every((icon) => icon.label.includes("示意")));
+  assert.ok(context.icons.filter((icon) => icon.id.startsWith("cn-")).every((icon) => !icon.label.includes("示意")));
   const trip = { destination: "黄山", startDate: "2026-11-07", endDate: "2026-11-09", icon: "cn-huangshan", checkins: [{ id: "domestic", name: "宏村", date: "2026-11-08", icon: "cn-hongcun" }] };
   const saved = travel.normalizeTravelRecord(trip);
   assert.equal(saved.icon, trip.icon);
