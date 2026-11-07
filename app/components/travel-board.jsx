@@ -27,6 +27,7 @@ function TravelIconPicker({ label, value, automaticImage, onChange }) {
     {expanded && <div className="travel-icon-options">
       <button type="button" className="travel-icon-auto" aria-pressed={!selected} onClick={() => onChange("")}>使用自动匹配</button>
       <div className="travel-icon-groups" role="group" aria-label={`${label}分类`}>{travelIconGroups.map((entry) => <button type="button" key={entry.label} aria-pressed={group === entry.label} onClick={() => setGroup(entry.label)}>{entry.label}</button>)}</div>
+      {currentGroup.note && <p className="travel-icon-hint">{currentGroup.note}</p>}
       <div className="travel-icon-grid" role="group" aria-label={`${label}选择`}>{currentGroup.icons.map(([id, name]) => <button type="button" className="travel-icon-choice" key={id} aria-label={name} title={name} aria-pressed={value === id} onClick={() => onChange(id)}><img src={travelIconImage(id)} width="40" height="40" alt="" loading="lazy" /><span>{name}</span></button>)}</div>
       <p className="travel-icon-hint">共 {travelIcons.length} 个图标 · 选择后随旅行一起保存</p>
     </div>}
@@ -104,7 +105,7 @@ export default function TravelBoard({ items = [], onAdd, onUpdate, onDelete }) {
           <label><span>所在城市（选填）</span><input list="travel-city-options" value={form.city} maxLength={60} onChange={(event) => setForm({ ...form, city: event.target.value })} placeholder="选择或输入城市，例如：上海" /></label>
           <datalist id="travel-city-options">{travelCities.map((city) => <option key={city.name} value={city.name} />)}</datalist>
           {cityInfo && <div className="travel-city-preview"><img src={travelCityImage(cityInfo.name)} width="52" height="52" alt="" /><div><strong>{cityInfo.name}</strong><small>{cityInfo.iconNote || "通用旅行图标 · 支持自定义城市"}</small></div></div>}
-          <TravelIconPicker label="旅行图标" value={form.icon} automaticImage={travelCityImage(form.city)} onChange={(icon) => setForm((current) => ({ ...current, icon }))} />
+          <TravelIconPicker label="旅行图标" value={form.icon} automaticImage={travelCityImage(form.city || form.destination)} onChange={(icon) => setForm((current) => ({ ...current, icon }))} />
           <label><span>目的地</span><input value={form.destination} onChange={(event) => setForm({ ...form, destination: event.target.value })} placeholder="例如：杭州 · 西湖周末游" maxLength={120} required /></label>
           <div className="asset-form-row">
             <label><span>出发日期</span><input type="date" value={form.startDate} onChange={(event) => { const startDate = event.target.value; setForm({ ...form, startDate, endDate: form.endDate < startDate ? startDate : form.endDate }); }} required /></label>
@@ -139,7 +140,7 @@ export default function TravelBoard({ items = [], onAdd, onUpdate, onDelete }) {
       <div className="travel-list">
         {visible.map((item) => (
           <article className="travel-record" key={item.id}>
-            <div className="travel-record-head"><div className="travel-record-place"><img src={travelCityImage(item.city, item.icon)} width="44" height="44" alt="" /><div><h3>{item.destination}</h3>{item.city && <small>{item.city}</small>}</div></div><span className="travel-status">{travelStatus(item, today)}</span></div>
+            <div className="travel-record-head"><div className="travel-record-place"><img src={travelCityImage(item.city || item.destination, item.icon)} width="44" height="44" alt="" /><div><h3>{item.destination}</h3>{item.city && <small>{item.city}</small>}</div></div><span className="travel-status">{travelStatus(item, today)}</span></div>
             <p className="travel-dates"><time dateTime={item.startDate}>{item.startDate}</time><span>至</span><time dateTime={item.endDate || item.startDate}>{item.endDate || item.startDate}</time><span>· {travelDays(item)} 天</span></p>
             {item.notes && <p className="travel-notes">{item.notes}</p>}
             {Array.isArray(item.checkins) && item.checkins.length > 0 && <div className="travel-checkins"><h4>景点打卡 · {item.checkins.length} 处</h4>{item.checkins.map((entry, index) => <div className="travel-checkin" key={entry.id || index}><div className="travel-checkin-top"><div className="travel-record-place"><img src={travelPlaceImage(item.city, entry.name, entry.icon)} width="32" height="32" alt="" /><strong>{entry.name}</strong></div><span className="travel-rating-readout">{entry.rating ? `${entry.rating} / 5 星` : "未评分"}</span></div><time dateTime={entry.date}>{entry.date}</time>{entry.review ? <p>{entry.review}</p> : <small>还没有写评价</small>}</div>)}</div>}
