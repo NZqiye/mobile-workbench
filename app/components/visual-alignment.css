@@ -86,6 +86,8 @@
   gap: var(--ui-gap);
 }
 .phone-shell.ios18-shell.visual-aligned .pet-supplies button { min-height: 52px; }
+.phone-shell.ios18-shell.visual-aligned .pet-supplies button > span { display: grid; place-items: center; min-height: 20px; }
+.phone-shell.ios18-shell.visual-aligned .pet-supplies button > span img { display: block; object-fit: contain; }
 .phone-shell.ios18-shell.visual-aligned .pet-supplies button small { font-size: 12px; line-height: 1.4; }
 
 /* The capture, confirmation and saved ideas belong to one home surface. */

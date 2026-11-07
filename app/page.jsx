@@ -179,7 +179,7 @@ const defaultPetSupplies = { bone: 0, water: 0, toy: 0, stick: 0, gift: 0, cat: 
 const petSupplyItems = [
   { id: "bone", label: "零食包", icon: "🍪", action: "鲸鱼娘拆开零食包，开心地吃起来。" },
   { id: "water", label: "泡泡水", icon: "🫧", action: "鲸鱼娘吹起了泡泡，一起放松一下。" },
-  { id: "toy", label: "魔方", icon: "🧩", action: "鲸鱼娘抱着魔方，认真地转起来。" },
+  { id: "toy", label: "魔方", iconImage: "/assets-icons/thiings/leisure/puzzle-cube.webp", action: "鲸鱼娘抱着魔方，认真地转起来。" },
   { id: "stick", label: "舞会票", icon: "🎟️", action: "鲸鱼娘收下舞会票，跳起了摇摆舞。" },
   { id: "gift", label: "礼物盒", icon: "🎁", action: "鲸鱼娘拆开礼物盒，看看里面的惊喜。" },
   { id: "cat", label: "猫咪券", icon: "🐈", action: "鲸鱼娘抱着猫咪，轻轻地摸摸它。" },
@@ -1257,7 +1257,7 @@ function PetCompanionCard({ supplies, action, onUse, onRest }) {
       <div className="pet-supplies">
         {petSupplyItems.map((item) => (
           <button type="button" key={item.id} onClick={() => onUse(item.id)} disabled={!supplies[item.id]} title={item.action}>
-            <span>{item.icon}</span>
+            <span aria-hidden="true">{item.iconImage ? <img src={item.iconImage} alt="" width="20" height="20" /> : item.icon}</span>
             <strong>{supplies[item.id] || 0}</strong>
             <small>{item.label}</small>
           </button>
@@ -6609,8 +6609,9 @@ export default function Workbench() {
     localStorage.setItem(key("ponyTheme"), theme);
   }
 
-  function changePetSupply(type, amount, actionText, actionType = type, happinessDelta = Math.max(0, amount)) {
+  function changePetSupply(type, amount, actionText, actionType = type, happinessDelta = 0) {
     setPetSupplies((current) => {
+      if (amount < 0 && happinessDelta > 0 && Number(current[type] || 0) < -amount) return current;
       const updatedAt = Date.now();
       const next = {
         ...defaultPetSupplies,
@@ -6643,7 +6644,7 @@ export default function Workbench() {
       setPetAction({ type: "idle", text: `${item.label}还没有库存，先完成对应日常吧。` });
       return;
     }
-    changePetSupply(type, -1, item.action, type);
+    changePetSupply(type, -1, item.action, type, 1);
   }
 
   function rewardWatchedMovie(id) {
@@ -7010,7 +7011,7 @@ export default function Workbench() {
     if (receipt.rewards.some((reward) => reward.key)) persist('petRewardHistory', history);
     for (const { id: type } of petSupplyItems) {
       const amount = receipt.rewards.filter((reward) => reward.type === type).reduce((sum, reward) => sum + reward.amount, 0);
-      if (amount) changePetSupply(type, -amount, '已撤销本次记录和奖励。', 'idle', -amount);
+      if (amount) changePetSupply(type, -amount, '已撤销本次记录和奖励。', 'idle');
     }
     return '已撤销本次记录，相关统计已恢复。';
   }

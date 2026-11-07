@@ -18,7 +18,8 @@ function setup() {
     readStorage: (key, fallback) => storage[key] ?? fallback,
     writeStorage: (key, value) => { storage[key] = value; },
     persist: (key, value) => { storage[key] = value; },
-    setPetSupplies: update => { supplies = update(supplies); },
+    petSupplies: supplies,
+    setPetSupplies: update => { supplies = update(supplies); context.petSupplies = supplies; },
     setPetAction: () => {}, nowText: () => '12:00',
     crypto: { randomUUID: () => 'watch-record' }, todayKey: () => '2026-11-08',
     consultations: [{ id: 'movie', type: '电影' }, { id: 'series', type: '剧集', seasons: [] }],
@@ -33,19 +34,19 @@ function setup() {
     writeQuickCollections: () => {},
   });
   vm.runInContext(source.match(/const defaultPetSupplies = .*;/)[0] + '\n' + source.slice(source.indexOf('const petSupplyItems = ['), source.indexOf('const ponyThemes = [')), context);
-  const names = ['normalizePetSupplies', 'mergePetSupplies', 'changePetSupply', 'rewardPetOnce', 'undoQuickRecords', 'checkinWatchItem', 'rewardWatchedMovie'];
+  const names = ['normalizePetSupplies', 'mergePetSupplies', 'changePetSupply', 'rewardPetOnce', 'usePetSupply', 'undoQuickRecords', 'checkinWatchItem', 'rewardWatchedMovie'];
   vm.runInContext(names.map(functionSource).join('\n'), context);
   return { context, storage, supplies: () => supplies };
 }
 
-test('each earned unit adds happiness, spending keeps it, and undo removes only the earned points', () => {
+test('earning changes only inventory; using adds one point; undoing earnings keeps interaction happiness', () => {
   const app = setup();
   app.context.changePetSupply('water', 3, 'earned', 'reward');
   assert.equal(app.supplies().water, 5);
-  assert.equal(app.supplies().happiness, 3);
-  app.context.changePetSupply('water', -1, 'use', 'water');
+  assert.equal(app.supplies().happiness, 0);
+  app.context.usePetSupply('water');
   assert.equal(app.supplies().water, 4);
-  assert.equal(app.supplies().happiness, 3);
+  assert.equal(app.supplies().happiness, 1);
   app.context.changePetSupply('gift', 2, 'new reward', 'reward');
   app.context.undoQuickRecords({ changes: [], rewards: [{ type: 'water', amount: 3 }, { type: 'gift', amount: 1 }] });
   assert.equal(app.supplies().happiness, 1);
@@ -58,7 +59,7 @@ test('duplicate task or habit rewards do not add stock or happiness again', () =
   app.context.rewardPetOnce('habit:today:reading', 'toy', 1, 'earned');
   app.context.rewardPetOnce('habit:today:reading', 'toy', 1, 'earned');
   assert.equal(app.supplies().toy, 2);
-  assert.equal(app.supplies().happiness, 1);
+  assert.equal(app.supplies().happiness, 0);
 });
 
 test('old inventories gain zero new fields; sync retains new rewards and happiness using existing timestamps', () => {
@@ -76,15 +77,15 @@ test('old inventories gain zero new fields; sync retains new rewards and happine
   assert.equal(merged.happiness, 8);
 });
 
-test('movie ratings earn a ticket and happiness once across repeat ratings and the older check-in entry', () => {
+test('movie ratings earn a ticket once without increasing interaction happiness', () => {
   const app = setup();
   app.context.checkinWatchItem({ id: 'movie', mode: 'movie', rating: '8' });
   assert.equal(app.supplies().stick, 6);
-  assert.equal(app.supplies().happiness, 1);
+  assert.equal(app.supplies().happiness, 0);
   app.context.checkinWatchItem({ id: 'movie', mode: 'movie', rating: '9' });
   app.context.checkinWatchItem({ id: 'movie', mode: 'legacy', rating: '9' });
   assert.equal(app.supplies().stick, 6);
-  assert.equal(app.supplies().happiness, 1);
+  assert.equal(app.supplies().happiness, 0);
 });
 
 test('season progress rewards each newly watched episode, without repeat rewards on ratings or rechecking', () => {
@@ -92,14 +93,16 @@ test('season progress rewards each newly watched episode, without repeat rewards
   const save = (mode, episodes, season = 1) => app.context.checkinWatchItem({ id: 'series', mode, season, episodes, episodeCount: 10, rating: '8' });
   save('season-progress', [1, 2]);
   assert.equal(app.supplies().stick, 7);
-  assert.equal(app.supplies().happiness, 2);
+  assert.equal(app.supplies().happiness, 0);
   save('season-rating', [1, 2]);
   save('season-progress', [1]);
   save('season-progress', [1, 2, 3]);
-  assert.equal(app.supplies().happiness, 3);
+  assert.equal(app.supplies().stick, 8);
+  assert.equal(app.supplies().happiness, 0);
   save('season-progress', [1], 2);
-  assert.equal(app.supplies().happiness, 4);
-  assert.equal(app.storage.petSupplies.happiness, 4);
+  assert.equal(app.supplies().stick, 9);
+  assert.equal(app.supplies().happiness, 0);
+  assert.equal(app.storage.petSupplies.happiness, 0);
 });
 
 test('movie rewards from the older entry remain recognized after updating the app', () => {
@@ -110,4 +113,29 @@ test('movie rewards from the older entry remain recognized after updating the ap
     assert.equal(app.supplies().stick, 5);
     assert.equal(app.supplies().happiness, undefined);
   }
+});
+
+test('all six interactions add exactly one point, and an empty reward adds nothing', () => {
+  const app = setup();
+  let points = 0;
+  for (const type of ['bone', 'water', 'toy', 'stick', 'gift', 'cat']) {
+    app.context.changePetSupply(type, 1, 'earned', 'reward');
+    assert.equal(app.supplies().happiness, points);
+    const previous = app.supplies()[type];
+    app.context.usePetSupply(type);
+    assert.equal(app.supplies()[type], previous - 1);
+    assert.equal(app.supplies().happiness, ++points);
+  }
+  app.context.usePetSupply('gift');
+  assert.equal(app.supplies().happiness, 6);
+  assert.equal(app.storage.petSupplies.happiness, 6);
+});
+
+test('queued interactions cannot add points after the last inventory item was consumed', () => {
+  const app = setup();
+  app.context.changePetSupply('gift', 1, 'earned', 'reward');
+  app.context.changePetSupply('gift', -1, 'use', 'gift', 1);
+  app.context.changePetSupply('gift', -1, 'use', 'gift', 1);
+  assert.equal(app.supplies().gift, 0);
+  assert.equal(app.supplies().happiness, 1);
 });
