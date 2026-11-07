@@ -649,14 +649,14 @@ const crewImgById = {
   food: "/crew/sanji.png",
   news: "/crew/chopper.png",
   checklist: "/crew/robin.png",
-  notes: "/crew/kuma.png",
+  notes: "/crew/kuma-transparent.png",
   diamond: "/crew/franky.png",
   settings: "/crew/jinbe.png",
   exercise: "/crew/zoro.png",
 };
 
 function CrewNavIcon({ name }) {
-  return <img className={`crew-nav-icon${name === "notes" ? " crew-nav-icon-notes" : ""}`} src={crewImgById[name] || "/crew/zoro.png"} alt="" loading="lazy" />;
+  return <img className="crew-nav-icon" src={crewImgById[name] || "/crew/zoro.png"} alt="" loading="lazy" />;
 }
 
 function PonyMark({ theme = "rmb", compact = false }) {
