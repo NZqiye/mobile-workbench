@@ -7,7 +7,7 @@
 ## 本地运行
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -15,6 +15,8 @@ npm run dev
 
 ## 文档
 
+- [App诞生记录](docs/七夜online-诞生记录.md)
+- [复刻指南与踩坑记录](docs/复刻指南与踩坑记录.md)
 - [部署与配置](docs/部署与配置.md)
 - [语音录入](docs/在线语音接口配置.md)
 - [更新记录](docs/更新记录.md)
