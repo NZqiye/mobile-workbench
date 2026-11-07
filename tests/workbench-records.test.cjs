@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const context = vm.createContext({ Intl, Date, crypto: require('node:crypto').webcrypto, Response, AbortSignal, fetch });
-for (const file of ['travel.js', 'workbench-records.js', 'record-extraction.js']) {
+for (const file of ['travel.js', 'quick-records.js', 'workbench-records.js', 'record-extraction.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../lib', file), 'utf8').replace(/^import .*;\r?\n/gm, '').replace(/export /g, ''), context);
 }
 const now = new Date('2026-11-04T01:00:00Z');
@@ -137,7 +137,86 @@ test('series progress is additive and links checkins to the existing title and s
   const reversed = undo(result.changes, result.collections);
   assert.deepEqual(reversed.collections.consultations[0], before);
   assert.equal(reversed.collections.watchCheckins.length, 0);
-  assert.equal(plan([draft('watch', { episodes: [2] }, 'checkin', '测试剧')], { consultations: [before] }).changes.length, 0);
+  assert.equal(plan([draft('watch', { episodes: [2] }, 'checkin', '测试剧')], { consultations: [before] }).records[0].requestedValue.season, 1);
+});
+
+test('watching through an episode fills the current season, preserves later progress and stays undoable', () => {
+  const before = { id: 'show', title: '测试剧', titleZh: '测试剧中文名', type: '电视剧', currentSeason: '2', season: '2', seasonProgress: { 1: [1, 2], 2: [7] }, seasons: [{ seasonNumber: 1, episodeCount: 10 }, { seasonNumber: 2, episodeCount: 12 }], rating: 9 };
+  const parsed = normalize([draft('watch', { watchedThrough: 5 }, 'checkin', '测试剧中文名')], '我看到《测试剧中文名》第五集');
+  const result = plan(parsed.records, { consultations: [before] });
+  assert.deepEqual(result.issues, []);
+  assert.deepEqual(result.collections.consultations[0].seasonProgress['2'], [1, 2, 3, 4, 5, 7]);
+  assert.deepEqual(result.collections.consultations[0].seasonProgress['1'], [1, 2]);
+  assert.equal(result.collections.consultations[0].season, '2');
+  assert.equal(result.collections.consultations[0].currentEpisode, '7');
+  assert.equal(result.collections.consultations[0].rating, 9);
+  assert.equal(result.collections.watchCheckins[0].season, '2');
+  assert.match(context.describeQuickRecord(result.records[0]), /进度已到：第2季 第5集/);
+  const again = plan(parsed.records, result.collections);
+  assert.equal(again.collections.watchCheckins.length, 1);
+  assert.deepEqual(undo(result.changes, result.collections).collections.consultations[0], before);
+});
+
+test('single episode watching never fills earlier episodes and explicit seasons override the current season', () => {
+  const before = { id: 'show', title: '测试剧', type: '动漫', currentSeason: '2', seasonProgress: { 2: [1] }, seasons: [{ seasonNumber: 1, episodeCount: 10 }, { seasonNumber: 2, episodeCount: 12 }] };
+  const result = plan([draft('watch', { season: 1, episodes: [8] }, 'checkin', '测试剧')], { consultations: [before] });
+  assert.deepEqual(result.collections.consultations[0].seasonProgress['1'], [8]);
+  assert.deepEqual(result.collections.consultations[0].seasonProgress['2'], [1]);
+  assert.equal(result.collections.consultations[0].currentSeason, '1');
+  assert.equal(normalize([draft('watch', { watchedThrough: 8 }, 'checkin', '测试剧')], '看了测试剧第8集').records.length, 0);
+});
+
+test('ambiguous seasons, missing shows and impossible episode progress produce no writes', () => {
+  const before = { id: 'show', title: '测试剧', type: '电视剧', seasons: [{ seasonNumber: 1, episodeCount: 10 }, { seasonNumber: 2, episodeCount: 12 }] };
+  for (const state of [{ consultations: [before] }, {}, { consultations: [{ ...before }, { ...before, id: 'duplicate' }] }]) {
+    const result = plan([draft('watch', { watchedThrough: 5 }, 'checkin', '测试剧')], state);
+    assert.equal(result.changes.length, 0);
+    assert.equal(result.issues.length, 1);
+  }
+  for (const value of [{ season: 2, watchedThrough: 13 }, { season: 2, watchedThrough: 2001 }]) {
+    assert.equal(plan([draft('watch', value, 'checkin', '测试剧')], { consultations: [before] }).changes.length, 0);
+  }
+  assert.equal(normalize([draft('watch', { watchedThrough: 8 }, 'checkin', '测试剧')], '我还没看到测试剧第8集').records.length, 0);
+});
+
+test('the extractor accepts a spoken viewing progress without demanding a season from the user', async () => {
+  const text = '我看到《测试剧》第八集';
+  const result = await context.extractRecordDrafts(text, {}, now, async (url, options) => {
+    throw new Error('A recognized viewing sentence should not call the model');
+  });
+  assert.equal(result.records[0].value.watchedThrough, 8);
+  assert.equal(result.records[0].value.season, undefined);
+  assert.deepEqual(json(result.issues), []);
+});
+
+test('spoken viewing rules distinguish through-progress, single episodes, seasons and dates without a model', async () => {
+  const cases = [
+    ['我看到《测试剧》第二季第八集', { season: 2, watchedThrough: 8, date: '2026-11-04' }],
+    ['我看了《测试剧》第八集', { episodes: [8], date: '2026-11-04' }],
+    ['测试剧追到第三季第12集', { season: 3, watchedThrough: 12, date: '2026-11-04' }],
+    ['昨晚我看到测试剧第十集', { watchedThrough: 10, date: '2026-11-03' }],
+  ];
+  for (const [text, value] of cases) {
+    const result = json(await context.extractRecordDrafts(text, {}, now, () => { throw new Error('No model call expected'); }));
+    assert.deepEqual(result.issues, []);
+    assert.deepEqual(result.records[0].value, value);
+    assert.equal(result.records[0].target, '测试剧');
+    assert.equal(result.records[0].source, text);
+  }
+  for (const text of ['我还没看到测试剧第八集', '明天我看到测试剧第八集', '我看到测试剧第八集了吗？']) assert.equal(context.parseWatchProgress(text, now).records.length, 0);
+});
+
+test('viewing progress and another record keep their original source and both survive extraction', async () => {
+  const text = '我看到《测试剧》第8集，喝了300毫升水';
+  const result = json(await context.extractRecordDrafts(text, {}, now, async (url, options) => {
+    const prompt = JSON.parse(options.body).prompt;
+    assert.ok(!prompt.includes('用户原文(JSON字符串)："我看到'));
+    return Response.json({ result: { response: { records: [{ kind: 'water', action: 'add', source: '喝了300毫升水', values: { amount: 300 } }], issues: [] } } });
+  }));
+  assert.deepEqual(result.issues, []);
+  assert.equal(result.records.length, 2);
+  assert.equal(result.records[0].value.watchedThrough, 8);
+  assert.equal(result.records[1].value.amount, 300);
 });
 
 test('fund trades require executed quantities, merge within a batch, and never oversell or replace prior trades', () => {

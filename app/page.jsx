@@ -10,6 +10,7 @@ import AnniversaryIconPicker from "./components/anniversary-icon-picker";
 import VoiceQuickRecord from "./components/voice-quick-record";
 import AccountPanel from "./components/account-panel";
 import MediaPoster from "./components/media-poster";
+import AppUpdatePanel from "./components/app-update-panel";
 import { encodeMarkdownBackup, decodeMarkdownBackup } from "../lib/markdown-backup";
 import { planQuickRecordChanges, undoQuickRecordChanges } from "../lib/workbench-records";
 import { anniversaryIcon, anniversaryIcons } from "../lib/anniversary-icons";
@@ -4069,6 +4070,7 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
   const [cloudRefreshing, setCloudRefreshing] = useState(false);
   const [historyQuery, setHistoryQuery] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
   const selected = watchItems.find((item) => item.id === selectedId) || watchItems[0];
   const mobileLibraryVisible = mobileLibraryOpen || watchItems.length === 0;
   const selectedType = selected ? tmdbMediaType(selected) : "tv";
@@ -4384,8 +4386,8 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
                 <div className="watch-mobile-titlebar">
                   {mobileRatingView === "episodes" ? <button type="button" onClick={() => setMobileRatingView("seasons")} aria-label="返回季列表">←</button> : <span />}
                   <div>
-                    <h3>{mobileRatingView === "episodes" ? `第 ${seasonNumber} 季` : detailTitle}</h3>
-                    {mobileRatingView === "episodes" && <small>{detailTitle}</small>}
+                    <h3>{detailTitle}</h3>
+                    {mobileRatingView === "episodes" && <small>第 {seasonNumber} 季</small>}
                   </div>
                   <button type="button" className="watch-mobile-search-button" onClick={() => setMobileLibraryOpen(true)} aria-label="返回片单">片单</button>
                 </div>
@@ -4424,7 +4426,7 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
                   </>
                 ) : (
                   <>
-                    <div className="watch-mobile-episodes-head"><div><strong>第 {seasonNumber} 季</strong><small>{checkedCount}/{episodeCount || episodes.length} 集已看</small></div>{episodes.length > 0 && <button type="button" onClick={toggleAllEpisodes}>{allEpisodesChecked ? "取消全选" : "全选本季"}</button>}</div>
+                    <div className="watch-mobile-episodes-head"><div><strong>观看进度</strong><small>{checkedCount}/{episodeCount || episodes.length} 集已看</small></div>{episodes.length > 0 && <button type="button" onClick={toggleAllEpisodes}>{allEpisodesChecked ? "取消全选" : "全选本季"}</button>}</div>
                     {shouldCollapseSeason ? (
                       <div className="watch-mobile-season-summary">
                         <div><strong>第 {seasonNumber} 季已完成</strong><span>已看 {checkedCount}/{episodeCount || episodes.length} 集 · 评分 {seasonRating || selected?.seasonRatings?.[String(seasonNumber)]}</span></div>
@@ -4456,6 +4458,8 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
         </>
       )}
       <div className="watch-checkin-history">
+        {compact && <button className="watch-history-toggle" type="button" aria-expanded={historyPanelOpen} aria-controls="watch-history-content" onClick={() => setHistoryPanelOpen(value => !value)}><strong>观看记录 <small>{watchCheckins.length} 条</small></strong><span>{historyPanelOpen ? "收起" : "查看"}</span></button>}
+        {(!compact || historyPanelOpen) && <div id="watch-history-content">
         <div className="watch-checkin-history-head"><strong>最近记录</strong><input value={historyQuery} onChange={(event) => setHistoryQuery(event.target.value)} placeholder="搜索作品或季集" />{!historyKeyword && filteredHistory.length > 5 && <button type="button" onClick={() => setHistoryOpen(!historyOpen)}>{historyOpen ? "收起" : "全部"}</button>}</div>
         {filteredHistory.length === 0 ? <p className="watch-checkin-history-empty">还没有观看记录。</p> : <div className="watch-checkin-history-list">{visibleHistory.map((record) => {
           const recordMeta = record.mode === "season"
@@ -4463,6 +4467,7 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
             : record.type === "电影" ? "电影" : `第 ${record.season ? `${record.season} 季 · ` : ""}第 ${record.episode || "?"} 集`;
           return <div className="watch-checkin-history-item" key={record.id}>{record.posterUrl ? <img src={record.posterUrl} alt="" /> : <div className="watch-checkin-history-poster">{mediaTitle(record).slice(0, 1)}</div>}<div className="watch-checkin-history-meta"><strong>{mediaTitle(record)}</strong><span>{recordMeta} · {record.date || ""} {record.time || ""}{record.tmdbRating ? ` · TMDB ${record.tmdbRating}` : ""}</span></div><button type="button" className="watch-checkin-remove" onClick={() => { if (window.confirm(`移除《${mediaTitle(record)}》这条记录吗？`)) onRemoveCheckin?.(record.id); }}>移除</button></div>;
         })}</div>}
+        </div>}
       </div>
     </section>
   );
@@ -8119,6 +8124,7 @@ export default function Workbench() {
             <>
               <AccountPanel session={session} username={accountUsername} accountState={accountState} status={syncStatus} onLogin={login} onLogout={logout} onSync={() => syncAll()} onRetry={() => restoreAccount()} />
               <PushSettings androidApp={androidApp} session={session} />
+              {androidApp && <AppUpdatePanel />}
               <section className="panel">
                 <div className="panel-head">
                   <div>

@@ -279,7 +279,7 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
       </div>
         <form onSubmit={submit}>
           <label className={styles.label} htmlFor={inputId}>说一句，或直接写下来</label>
-          <textarea id={inputId} aria-describedby={`${inputId}-status`} className={styles.input} rows={2} maxLength={2000} value={text} disabled={busy || !draftReady} placeholder="例如：喝了300毫升水，跑步30分钟" onChange={(event) => { setText(event.target.value); setPending(null); }} />
+          <textarea id={inputId} aria-describedby={`${inputId}-status`} className={styles.input} rows={2} maxLength={2000} value={text} disabled={busy || !draftReady} placeholder="例如：喝了300毫升水，看到《某部剧》第8集" onChange={(event) => { setText(event.target.value); setPending(null); }} />
           <div className={styles.actions}>
             {phase === "recording" && <button className={styles.textButton} type="button" onClick={cancelRecording}>取消录音</button>}
             {micDenied && native && <button className={styles.textButton} type="button" onClick={() => window.QiyeNative.openPermissions()}>开启麦克风权限</button>}
@@ -292,6 +292,7 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
         <details className={styles.disclosure}>
           <summary>支持的栏目与录入说明</summary>
           <p>可写入饮水、饮食、运动、体重、任务、习惯、观影、资产、订阅、旅行、纪念日、星光目标、生活记录、基金及指数追踪。更新已有内容时请说清完整名称；缺少字段或存在同名记录时会提示补充。</p>
+          <p>观影可说“看到《某部剧》第二季第8集”，会将该季前8集标为已看；“看了第8集”只记录这一集。不说季数时沿用片单当前季或唯一的一季，请先将作品加入片单。</p>
           <p>录音最多60秒。在线识别会将本次录音和文字发送到 Cloudflare，已有记录在本机匹配。完整识别后直接保存，有缺项时由你确认可保存的部分。</p>
         </details>
         {pending && <div className={styles.results}>

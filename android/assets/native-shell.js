@@ -4,6 +4,11 @@
   const pending = new Map();
   function receive(message) {
     const data = JSON.parse(message.data);
+    if (data.action === 'update-status') {
+      window.QiyeNative.updateStatus = data.status;
+      window.dispatchEvent(new CustomEvent('qiye-update-status', { detail: data.status }));
+      return;
+    }
     const task = pending.get(data.id);
     if (!task) return;
     if (data.started) { task.onStarted?.(); return; }
@@ -25,7 +30,13 @@
   });
   const send = action => port?.postMessage(JSON.stringify({ action }));
   window.QiyeNative = {
-    version: '1.1.1',
+    version: '1.1.2',
+    updateStatus: '',
+    checkUpdates() {
+      if (!port) return false;
+      send('update-check');
+      return true;
+    },
     recordAudio(onStarted) {
       if (!port) return Promise.reject(new Error('手机录音尚未就绪，请稍后重试'));
       if (pending.size) return Promise.reject(new Error('已有录音正在进行'));

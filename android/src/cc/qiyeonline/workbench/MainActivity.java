@@ -54,6 +54,7 @@ public final class MainActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable recordingLimit = () -> finishNativeAudio(false);
     private boolean keyboardVisible;
+    private AppUpdater updater;
 
     private boolean trusted(Uri uri) {
         return uri != null && "https".equals(uri.getScheme()) && "qiyeonline.cc.cd".equals(uri.getHost()) && (uri.getPort() == -1 || uri.getPort() == 443);
@@ -85,7 +86,13 @@ public final class MainActivity extends Activity {
         root.addView(web, new LinearLayout.LayoutParams(-1, -1));
         web.getSettings().setJavaScriptEnabled(true);
         web.getSettings().setDomStorageEnabled(true);
-        web.getSettings().setUserAgentString(web.getSettings().getUserAgentString() + " QiyeAndroid/1.1.0");
+        try { web.getSettings().setUserAgentString(web.getSettings().getUserAgentString() + " QiyeAndroid/" + getPackageManager().getPackageInfo(getPackageName(), 0).versionName); }
+        catch (PackageManager.NameNotFoundException ignored) { }
+        updater = new AppUpdater(this, () -> nativeRecorder == null, status -> {
+            if (nativePort == null) return;
+            try { nativePort.postMessage(new WebMessage(new JSONObject().put("action", "update-status").put("status", status).toString())); }
+            catch (Exception ignored) { }
+        });
         web.getSettings().setAllowFileAccess(false);
         web.getSettings().setAllowContentAccess(true);
         CookieManager.getInstance().setAcceptCookie(true);
@@ -167,6 +174,7 @@ public final class MainActivity extends Activity {
                         try {
                             JSONObject data = new JSONObject(message.getData());
                             switch (data.optString("action")) {
+                                case "update-check": updater.check(true); break;
                                 case "audio-start":
                                     if (audioId != null) { replyNative(data.optString("id"), "已有录音正在进行", "Error"); return; }
                                     audioId = data.getString("id");
@@ -351,9 +359,10 @@ public final class MainActivity extends Activity {
     }
     @Override public void onBackPressed() { goBack(); }
     @Override public void onSaveInstanceState(Bundle state) { web.saveState(state); super.onSaveInstanceState(state); }
-    @Override public void onPause() { if (nativeRecorder != null) finishNativeAudio(true); CookieManager.getInstance().flush(); web.onPause(); super.onPause(); }
-    @Override public void onResume() { super.onResume(); if (web != null) web.onResume(); }
+    @Override public void onPause() { if (updater != null) updater.pause(); if (nativeRecorder != null) finishNativeAudio(true); CookieManager.getInstance().flush(); web.onPause(); super.onPause(); }
+    @Override public void onResume() { super.onResume(); if (web != null) web.onResume(); if (updater != null) updater.resume(); }
     @Override public void onDestroy() {
+        if (updater != null) updater.close();
         finishNativeAudio(true);
         if (nativePort != null) nativePort.close();
         if (fileCallback != null) fileCallback.onReceiveValue(null);
