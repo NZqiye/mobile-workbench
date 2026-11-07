@@ -1,0 +1,159 @@
+/* One spacing and type rhythm across the existing themes and modules. */
+.phone-shell.ios18-shell.visual-aligned {
+  --ui-gap: 16px;
+  --ui-inset: 20px;
+  --ui-radius: 20px;
+  font-family: system-ui, "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  line-height: 1.5;
+}
+.phone-shell.ios18-shell.visual-aligned .content {
+  gap: var(--ui-gap);
+  padding: var(--ui-inset) var(--ui-inset) 32px;
+}
+.phone-shell.ios18-shell.visual-aligned :is(.panel, .market-panel, .diet-card, .exercise-card, .news-card, .arrange-card, .asset-board, .travel-board, .life-goal-card, .watch-list-panel, .watch-checkin-panel, .tmdb-panel) {
+  min-width: 0;
+  padding: var(--ui-inset);
+  border-radius: var(--ui-radius);
+}
+.phone-shell.ios18-shell.visual-aligned :is(.diet-shell, .exercise-shell, .arrange-shell, .news-shell, .watch-shell, .life-goal-grid, .travel-list) {
+  gap: var(--ui-gap);
+  min-width: 0;
+}
+.phone-shell.ios18-shell.visual-aligned .panel-head {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-bottom: 0;
+}
+.phone-shell.ios18-shell.visual-aligned .panel-head > div { min-width: 0; flex: 1; }
+.phone-shell.ios18-shell.visual-aligned :is(.panel-head h2, .life-goal-card-head h2, .travel-board h2) {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -.02em;
+}
+.phone-shell.ios18-shell.visual-aligned .panel-head p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 1.6;
+}
+.phone-shell.ios18-shell.visual-aligned :is(.panel-head > button, .panel-head > .tag) { flex-shrink: 0; }
+.phone-shell.ios18-shell.visual-aligned :is(.chip-button, .record-actions button) {
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+.phone-shell.ios18-shell.visual-aligned :is(.module-tabs, .news-tabs, .meal-tabs, .asset-section-tabs, .asset-status-tabs) { align-items: stretch; }
+.phone-shell.ios18-shell.visual-aligned :is(.module-tabs, .news-tabs, .meal-tabs, .asset-section-tabs, .asset-status-tabs) button {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.4;
+}
+.phone-shell.ios18-shell.visual-aligned :is(.stack-form, .filter-panel, .inline-fields, .quick-form) { gap: 12px; }
+.phone-shell.ios18-shell.visual-aligned :is(.stack-form, .filter-panel, .inline-fields, .quick-form) > * { min-width: 0; }
+.phone-shell.ios18-shell.visual-aligned :is(.record-head, .life-goal-card-head, .travel-card-head) { gap: 8px 12px; align-items: baseline; }
+.phone-shell.ios18-shell.visual-aligned .record-head strong { min-width: 0; font-size: 16px; line-height: 1.6; overflow-wrap: anywhere; }
+.phone-shell.ios18-shell.visual-aligned .record-head > span { flex-shrink: 0; color: var(--ios-muted) !important; font-size: 12px; font-weight: 450; font-variant-numeric: tabular-nums; }
+.phone-shell.ios18-shell.visual-aligned .record > p { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; }
+.phone-shell.ios18-shell.visual-aligned .record-meta { color: var(--ios-muted) !important; font-size: 13px; font-weight: 450; }
+.phone-shell.ios18-shell.visual-aligned .record-actions button { color: var(--ios-blue) !important; background: var(--ios-blue-soft) !important; }
+.phone-shell.ios18-shell.visual-aligned .record-actions button:last-child { color: var(--ios-red, #b42332) !important; background: transparent !important; }
+.phone-shell.ios18-shell.visual-aligned.page-notes .filter-panel { grid-template-columns: minmax(0, 1fr) 128px; }
+.phone-shell.ios18-shell.visual-aligned.page-notes .ui-select-trigger { font-weight: 500; }
+.phone-shell.ios18-shell.visual-aligned .empty { padding: 20px 16px; line-height: 1.7; }
+.phone-shell.ios18-shell.visual-aligned input { caret-color: var(--ios-blue); }
+.phone-shell.ios18-shell.visual-aligned ::selection { color: var(--ios-ink); background: var(--ios-blue-soft); }
+.phone-shell.ios18-shell.visual-aligned :is(button, input, textarea, summary):focus-visible { outline: 2px solid var(--ios-blue); outline-offset: 3px; }
+
+/* The capture, confirmation and saved ideas belong to one home surface. */
+.phone-shell.ios18-shell.visual-aligned .quick-note-panel { grid-column: 1 / -1; gap: 0; }
+.phone-shell.ios18-shell.visual-aligned .quick-note-panel .panel-head { margin-bottom: 12px; }
+.phone-shell.ios18-shell.visual-aligned .quick-note-panel .quick-note-bar {
+  min-height: 56px;
+  margin: 0;
+  padding: 4px 4px 4px 12px;
+  border: 1px solid var(--ios-separator);
+  border-radius: 14px;
+  background: var(--ios-panel-muted) !important;
+  box-shadow: none;
+}
+.phone-shell.ios18-shell.visual-aligned .quick-note-bar input { min-height: 44px; height: auto; font-size: 15px; }
+.phone-shell.ios18-shell.visual-aligned .quick-note-bar button {
+  width: auto;
+  min-width: 56px;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: #fff !important;
+  background: var(--ios-blue) !important;
+  font-size: 14px;
+  font-weight: 650;
+}
+.phone-shell.ios18-shell.visual-aligned .quick-note-status {
+  margin: 10px 0 0;
+  color: var(--ios-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.phone-shell.ios18-shell.visual-aligned .quick-note-recent { display: grid; margin-top: 12px; }
+.phone-shell.ios18-shell.visual-aligned .quick-note-recent button {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  min-height: 48px;
+  padding: 12px 0;
+  border: 0;
+  border-top: 1px solid var(--ios-separator);
+  border-radius: 0;
+  color: var(--ios-ink);
+  background: transparent;
+  text-align: left;
+}
+.phone-shell.ios18-shell.visual-aligned .quick-note-recent span { min-width: 0; overflow-wrap: anywhere; font-size: 14px; }
+.phone-shell.ios18-shell.visual-aligned .quick-note-recent small { flex-shrink: 0; color: var(--ios-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.phone-shell.ios18-shell.visual-aligned .quick-note-recent button:hover { color: var(--ios-blue); }
+
+/* Date, poster, title and episode facts share a quiet, readable hierarchy. */
+.phone-shell.ios18-shell.visual-aligned.page-consultations .watch-time {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--ios-muted) !important;
+  font-size: 14px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.phone-shell.ios18-shell.visual-aligned.page-consultations .watch-title-row strong { font-size: 20px; font-weight: 700; line-height: 1.45; }
+.phone-shell.ios18-shell.visual-aligned.page-consultations .watch-title-row small { color: var(--ios-muted) !important; font-size: 12px; font-weight: 450; line-height: 1.5; }
+.phone-shell.ios18-shell.visual-aligned.page-consultations .watch-info { gap: 6px; }
+.phone-shell.ios18-shell.visual-aligned.page-consultations .watch-info p { color: var(--ios-muted) !important; font-size: 13px; font-weight: 450; white-space: normal; line-height: 1.5; }
+.phone-shell.ios18-shell.visual-aligned.page-consultations .watch-item { gap: 10px; }
+.phone-shell.ios18-shell.visual-aligned.page-consultations .watch-card { align-items: start; }
+.phone-shell.ios18-shell.visual-aligned.page-consultations .timeline-dot { top: 5px; width: 10px; height: 10px; box-shadow: none; border-color: var(--ios-panel); background: var(--ios-blue); }
+
+@media (max-width: 959px) {
+  .phone-shell.ios18-shell.visual-aligned.mobile-shell { --ui-inset: 16px; }
+  .phone-shell.ios18-shell.visual-aligned.mobile-shell .content { padding-inline: 16px; }
+  .phone-shell.ios18-shell.visual-aligned.mobile-shell .module-head {
+    margin: 12px 16px 0;
+    padding: 16px;
+    border: 1px solid var(--ios-separator);
+    border-radius: var(--ui-radius);
+  }
+  .phone-shell.ios18-shell.visual-aligned.mobile-shell .module-head h1 { font-size: 24px; line-height: 1.4; }
+  .phone-shell.ios18-shell.visual-aligned.mobile-shell .module-head p { line-height: 1.6; }
+  .phone-shell.ios18-shell.visual-aligned.mobile-shell .module-tabs button { min-height: 48px; }
+  .phone-shell.ios18-shell.visual-aligned.mobile-shell.page-notes .record-head { flex-wrap: wrap; }
+}
+@media (max-width: 359px) {
+  .phone-shell.ios18-shell.visual-aligned.page-notes .filter-panel { grid-template-columns: minmax(0, 1fr); }
+}

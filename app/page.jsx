@@ -27,6 +27,7 @@ import "./components/stock-lists.css";
 import "./components/android-app.css";
 import "./components/mobile-watch.css";
 import "./components/mobile-surface.css";
+import "./components/visual-alignment.css";
 
 const storagePrefix = "qiyeworkbench:";
 
@@ -38,6 +39,10 @@ function mediaTitle(item) {
   const localized = item?.titleZh || "";
   const original = item?.originalTitle || item?.title || "";
   return hasChineseText(localized) ? localized : original || localized || "未命名";
+}
+
+function visibleMediaTags(tags = []) {
+  return (tags || []).filter((tag) => !/^sci[\s-]*fi(?:\s*&\s*fantasy)?$/i.test(String(tag).trim()));
 }
 
 function mediaDescription(item) {
@@ -142,6 +147,7 @@ function mergeRecommendationSources(baseSections = [], mediaData, animeData) {
 const statePage = "app_state";
 const pages = [
   { id: "today", name: "今日速看", icon: "home" },
+  { id: "notes", name: "想法笔记", icon: "checklist" },
   { id: "consultations", name: "观影记录", icon: "chat" },
   { id: "market", name: "股市行情", icon: "trend" },
   { id: "diet", name: "饮食记录", icon: "food" },
@@ -152,7 +158,7 @@ const pages = [
   { id: "life", name: "星光计划", icon: "life" },
   { id: "settings", name: "设置", icon: "settings" },
 ];
-const pageNames = { ...Object.fromEntries(pages.map((page) => [page.id, page.name])), notes: "生活记录" };
+const pageNames = Object.fromEntries(pages.map((page) => [page.id, page.name]));
 const pageDescriptions = {
   notes: "保存生活、树洞、复盘和灵感笔记",
   today: "时间、天气、计划和行情集中整理",
@@ -4363,7 +4369,7 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
                <div>
                  <span className="watch-rating-type">{categoryLabel(selected)}</span>
                  <h3>{detailTitle}</h3>
-                 <p>{[details?.year || selected.year, details?.tmdbRating || selected.tmdbRating ? `TMDB ${details?.tmdbRating || selected.tmdbRating}` : "", ...(details?.tags || selected.tags || [])].filter(Boolean).join(" · ")}</p>
+                 <p>{[details?.year || selected.year, details?.tmdbRating || selected.tmdbRating ? `TMDB ${details?.tmdbRating || selected.tmdbRating}` : "", ...visibleMediaTags(details?.tags || selected.tags)].filter(Boolean).join(" · ")}</p>
                </div>
              </div>
               {!compact && <div className="watch-rating-detail-body watch-rating-desktop-body">
@@ -4598,7 +4604,7 @@ function MediaUpdates({ watchItems = [] }) {
                 const tracked = isTracked(item.title);
                 const itemTitle = mediaTitle(item);
                 const titleSource = item.titleSource === "manual" ? "中译" : item.titleSource === "tvmaze-aka" ? "别名" : item.titleSource === "tmdb" ? "TMDB" : "";
-                const meta = [item.airtime || "--:--", item.platformZh || item.platform, item.type === "premiere" ? "首播" : item.type === "finale" ? "季终" : "", item.season ? "S" + item.season + "E" + item.number : ""].filter(Boolean).join(" · ");
+                const meta = [hasLiveClock(item.airtime) ? item.airtime : "", item.platformZh || item.platform, item.type === "premiere" ? "首播" : item.type === "finale" ? "季终" : "", item.season ? "S" + item.season + "E" + item.number : ""].filter(Boolean).join(" · ");
                 return (
                   <div className="media-update-row" key={selectedDay.date + "-" + (item.id || item.title) + "-" + item.season + "-" + item.number}>
                     {item.posterUrl ? <img className="media-update-poster" src={item.posterUrl} alt="" loading="lazy" /> : <span className="media-update-poster" />}
@@ -5009,7 +5015,7 @@ function WatchSchedule({ items = [], compact = false, activeView = "today", tmdb
               return (
                 <article className="watch-item" key={`${item.id}-${updateEpisode || "next"}`}>
                   <div className="timeline-dot" />
-                  <div className="watch-time">{weekdayText(selected.date)} {selected.dateKey.slice(5).replace("-", "/")} {item.airTime || "--:--"}</div>
+                  <div className="watch-time">{weekdayText(selected.date)} {selected.dateKey.slice(5).replace("-", "/")}{hasLiveClock(item.airTime) && <span>{item.airTime}</span>}</div>
                   <div className="watch-card">
                     <div className="poster-box">
                       {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{mediaTitle(item).slice(0, 1)}</span>}
@@ -5019,7 +5025,7 @@ function WatchSchedule({ items = [], compact = false, activeView = "today", tmdb
                         <strong>{mediaTitle(item)}</strong>
                         <small>{item.platform || "本地"}</small>
                       </div>
-                      <p>{[item.year, item.type || "剧集", ...(item.tags || [])].filter(Boolean).join(" · ")}</p>
+                      <p>{[item.year, item.type || "剧集", ...visibleMediaTags(item.tags)].filter(Boolean).join(" · ")}</p>
                       <div className="episode-line">
                         <span>第 {item.season || 1} 季</span>
                         <strong>{updateEpisode ? `${updateEpisode} 集` : "-- 集"}</strong>
@@ -5252,7 +5258,7 @@ function ConsultationList({ consultations, onDelete, onEdit }) {
         {filteredConsultations.map((item) => (
           <article className="record" key={item.id}>
             <div className="record-head"><strong>{mediaTitle(item)}</strong><span>{item.status || "想看的剧"}</span></div>
-            <p className="record-meta">{[item.year, item.type || "剧集", item.rating ? `${item.rating} 分` : "", ...Object.entries(item.seasonRatings || {}).map(([season, rating]) => `第 ${season} 季 ${rating} 分`), item.imdbRating ? `IMDb ${item.imdbRating}` : "", item.tmdbRating ? `TMDB ${item.tmdbRating}` : "", item.platform || item.source, item.nextAirDate ? `更新 ${item.nextAirDate} ${item.airTime || ""}` : "", item.updateEpisodes ? `更新第 ${item.updateEpisodes} 集` : "", item.currentEpisode ? `当前第 ${item.currentEpisode} 集` : "", item.totalEpisodes ? `共 ${item.totalEpisodes} 集` : "", item.watchedDate, ...(item.tags || [])].filter(Boolean).join(" · ")}</p>
+            <p className="record-meta">{[item.year, item.type || "剧集", item.rating ? `${item.rating} 分` : "", ...Object.entries(item.seasonRatings || {}).map(([season, rating]) => `第 ${season} 季 ${rating} 分`), item.imdbRating ? `IMDb ${item.imdbRating}` : "", item.tmdbRating ? `TMDB ${item.tmdbRating}` : "", item.platform || item.source, item.nextAirDate ? `更新 ${item.nextAirDate}${hasLiveClock(item.airTime) ? ` ${item.airTime}` : ""}` : "", item.updateEpisodes ? `更新第 ${item.updateEpisodes} 集` : "", item.currentEpisode ? `当前第 ${item.currentEpisode} 集` : "", item.totalEpisodes ? `共 ${item.totalEpisodes} 集` : "", item.watchedDate, ...visibleMediaTags(item.tags)].filter(Boolean).join(" · ")}</p>
             {(item.review || item.conclusion) && <p><strong>评价：</strong>{mediaDescription(item)}</p>}
             {(item.note || item.nextAction) && <p><strong>后续：</strong>{item.note || item.nextAction}</p>}
             <div className="record-actions">
@@ -6177,6 +6183,7 @@ export default function Workbench() {
   const [clock, setClock] = useState("--:--:--");
   const [plans, setPlans] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [quickNoteStatus, setQuickNoteStatus] = useState("");
   const [consultations, setConsultations] = useState([]);
   const [watchCheckins, setWatchCheckins] = useState([]);
   const [assetItems, setAssetItems] = useState([]);
@@ -7319,16 +7326,21 @@ export default function Workbench() {
     if (!title) return;
     const note = {
       id: crypto.randomUUID(),
-      type: "life",
+      type: "idea",
       title,
       date: todayKey(),
       time: nowText(),
       tags: ["闪念"],
     };
     const next = [note, ...notes];
-    setNotes(next);
-    persist("notes", next);
-    input.value = "";
+    try {
+      persist("notes", next);
+      setNotes(next);
+      input.value = "";
+      setQuickNoteStatus("已保存到本机 · 想法笔记");
+    } catch {
+      setQuickNoteStatus("保存失败，内容已保留，请检查本机存储后重试。");
+    }
   }
 
   function deleteNote(id) {
@@ -7869,10 +7881,12 @@ export default function Workbench() {
   }
 
   const sortedRecent = [...recent].sort((a, b) => String(b.time || "").localeCompare(String(a.time || "")));
+  const recentIdeas = notes.filter((note) => note.type === "idea" || note.tags?.includes("闪念")).slice(0, 3);
   const dateKey = visibleTodayKey(clock);
   const expiringSubscriptions = upcomingSubscriptions(subscriptionRecords, dateKey);
   const skillSummaries = [
     { id: "today", name: "今日速看", icon: "home", badge: "首页", summary: `打卡 ${stats.checkin}` },
+    { id: "notes", name: "想法笔记", icon: "checklist", badge: "笔记", summary: `${notes.length} 条记录` },
     { id: "consultations", name: "观影记录", icon: "chat", badge: "观影", summary: `${stats.consultations} 条` },
     { id: "market", name: "股市行情", icon: "trend", badge: "行情", summary: "金价、指数、自选股" },
     { id: "diet", name: "饮食记录", icon: "food", badge: "饮食", summary: `${dietRecords.filter((item) => item.date === todayKey()).length} 条` },
@@ -7884,6 +7898,7 @@ export default function Workbench() {
     { id: "settings", name: "数据设置", icon: "settings", badge: "备份", summary: session ? "云同步在线" : "本地模式" },
   ];
   const quickRecorder = <VoiceQuickRecord session={session} onPrepare={prepareQuickRecords} onSave={saveQuickRecords} onUndo={undoQuickRecords} onOpen={openQuickRecord} onSettings={() => switchPage("settings")} saved={quickSaved} onSaved={setQuickSaved} />;
+  const noteEditor = <NoteForm key={editing?.kind === "note" ? editing.item.id : "new"} editing={editing} onSave={(note) => { saveNote(note); setEditing(null); }} onCancel={() => setEditing(null)} />;
   const todayTasksPanel = <section className="panel today-task-panel">
     <div className="panel-head"><h2>今日任务</h2>{androidApp ? <button className="chip-button" type="button" onClick={() => { setArrangementView("tasks"); switchPage("plans"); }}>全部安排</button> : <span className="tag">{dateKey}</span>}</div>
     <div className="record-list">
@@ -7897,7 +7912,7 @@ export default function Workbench() {
   </section>;
 
   return (
-    <main className={`phone-shell ios18-shell ${androidApp ? "android-app-shell" : ""} ${displayMode === "desktop" ? "desktop-shell desktop-redesign" : "mobile-shell"} ${menuOpen ? "menu-open" : ""} page-${activePage} pony-theme-${ponyTheme}`}>
+    <main className={`phone-shell ios18-shell visual-aligned ${androidApp ? "android-app-shell" : ""} ${displayMode === "desktop" ? "desktop-shell desktop-redesign" : "mobile-shell"} ${menuOpen ? "menu-open" : ""} page-${activePage} pony-theme-${ponyTheme}`}>
       <div className="phone-status">
         <button className="menu-toggle" type="button" aria-label="打开菜单" onClick={() => setMenuOpen(true)}>☰</button>
         <strong>{androidApp ? "七夜online" : <ClockText />}</strong>
@@ -7919,7 +7934,7 @@ export default function Workbench() {
               </button>
             ))}
             <span className="nav-section-label">记录</span>
-            {pages.filter((page) => ["diet", "assets", "exercise", "life"].includes(page.id)).map((page) => (
+            {pages.filter((page) => ["notes", "diet", "assets", "exercise", "life"].includes(page.id)).map((page) => (
               <button className={`nav-item ${activePage === page.id ? "active" : ""}`} aria-current={activePage === page.id ? "page" : undefined} type="button" key={page.id} onClick={() => switchPage(page.id)}>
                 <span className="nav-symbol"><CrewNavIcon name={page.icon} /></span>
                 <small>{page.name}</small>
@@ -7981,7 +7996,7 @@ export default function Workbench() {
                       <button key={tab.id} className={exerciseView === tab.id ? "active" : ""} type="button" aria-pressed={exerciseView === tab.id} onClick={() => setExerciseView(tab.id)}>{tab.label}</button>
                     ))}
                   </div>
-                ) : ["assets", "settings"].includes(activePage) ? null : (
+                ) : ["notes", "assets", "settings"].includes(activePage) ? null : (
                   <div className="module-tabs" aria-label="内容切换">
                     <button className="active" type="button">{activePage === "life" ? "目标清单" : "今日内容"}</button>
                   </div>
@@ -8007,10 +8022,15 @@ export default function Workbench() {
               {androidApp && <>{quickRecorder}{todayTasksPanel}</>}
               <WeatherCard compact clock={clock} phoneApp={androidApp} />
               {!androidApp && <>{quickRecorder}<DailyQuoteCard /></>}
-              <form className="quick-note-bar" onSubmit={addQuickNote}>
-                <input name="note" type="text" placeholder="有什么想法？回车即存..." aria-label="闪念笔记" autoComplete="off" />
-                <button type="submit" aria-label="保存闪念笔记">✓</button>
-              </form>
+              <section className="panel quick-note-panel" aria-label="随手记想法">
+                <div className="panel-head"><h2>随手记想法</h2><button className="chip-button" type="button" onClick={() => switchPage("notes")}>全部笔记 · {notes.length}</button></div>
+                <form className="quick-note-bar" onSubmit={addQuickNote}>
+                  <input name="note" type="text" placeholder="有什么想法？回车保存" aria-label="闪念笔记" aria-describedby="quick-note-status" autoComplete="off" onInput={() => setQuickNoteStatus("")} onKeyDown={(event) => { if (event.key === "Enter" && (event.nativeEvent.isComposing || event.keyCode === 229)) event.preventDefault(); }} />
+                  <button type="submit" aria-label="保存闪念笔记">保存</button>
+                </form>
+                <p className="quick-note-status" id="quick-note-status" role="status">{quickNoteStatus || "想法收在这里，也可以到「想法笔记」搜索和编辑。"}</p>
+                {recentIdeas.length > 0 && <div className="quick-note-recent" aria-label="最近想法">{recentIdeas.map((note) => <button type="button" key={note.id} onClick={() => editNote(note)}><span>{note.title}</span><small>{note.date}</small></button>)}</div>}
+              </section>
               <section className="dashboard-strip" aria-label="今日概览">
                 <PetCompanionCard supplies={petSupplies} action={petAction} onUse={usePetSupply} />
                 <div className="dashboard-tile">
@@ -8066,8 +8086,9 @@ export default function Workbench() {
 
           {activePage === 'notes' && (
             <>
-              <NoteForm editing={editing} onSave={(note) => { saveNote(note); setEditing(null); }} onCancel={() => setEditing(null)} />
+              {editing?.kind === "note" && noteEditor}
               <NoteList notes={notes} onDelete={deleteNote} onEdit={editNote} />
+              {editing?.kind !== "note" && noteEditor}
             </>
           )}
 
@@ -8203,6 +8224,7 @@ export default function Workbench() {
           { id: "more", label: "更多", icon: "settings" },
         ] : [
           { id: "today", label: "今日速看", icon: "home" },
+          { id: "notes", label: "想法笔记", icon: "checklist" },
           { id: "plans", label: "每日安排", icon: "checklist" },
           { id: "market", label: "股市行情", icon: "trend" },
           { id: "consultations", label: "观影记录", icon: "chat" },
