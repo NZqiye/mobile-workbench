@@ -130,6 +130,43 @@
 .phone-shell.ios18-shell.visual-aligned .quick-note-recent small { flex-shrink: 0; color: var(--ios-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 .phone-shell.ios18-shell.visual-aligned .quick-note-recent button:hover { color: var(--ios-blue); }
 
+/* Backup actions share one row, with the native file picker behind the import action. */
+.phone-shell.ios18-shell.visual-aligned .backup-panel { display: grid; gap: 16px; }
+.phone-shell.ios18-shell.visual-aligned .backup-panel .panel-head { padding: 0; border: 0; }
+.phone-shell.ios18-shell.visual-aligned .backup-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.phone-shell.ios18-shell.visual-aligned .backup-actions > * {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 8px;
+  border: 0;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+  text-align: center;
+  cursor: pointer;
+}
+.phone-shell.ios18-shell.visual-aligned .backup-export { color: #fff !important; background: var(--ios-blue) !important; box-shadow: none; }
+.phone-shell.ios18-shell.visual-aligned .backup-import { position: relative; color: var(--ios-blue) !important; background: var(--ios-blue-soft) !important; }
+.phone-shell.ios18-shell.visual-aligned .backup-import span { color: inherit; }
+.phone-shell.ios18-shell.visual-aligned .backup-import input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.phone-shell.ios18-shell.visual-aligned .backup-import:focus-within { outline: 2px solid var(--ios-blue); outline-offset: 3px; }
+.phone-shell.ios18-shell.visual-aligned .backup-actions > *:hover { filter: brightness(.96); }
+.phone-shell.ios18-shell.visual-aligned .backup-description { margin: 0; color: var(--ios-muted); font-size: 13px; line-height: 1.65; }
+
 /* Date, poster, title and episode facts share a quiet, readable hierarchy. */
 .phone-shell.ios18-shell.visual-aligned.page-consultations .watch-time {
   display: flex;

@@ -8181,21 +8181,21 @@ export default function Workbench() {
               <AccountPanel session={session} username={accountUsername} accountState={accountState} status={syncStatus} onLogin={login} onLogout={logout} onSync={() => syncAll()} onRetry={() => restoreAccount()} />
               <PushSettings androidApp={androidApp} session={session} />
               {androidApp && <AppUpdatePanel />}
-              <section className="panel">
+              <section className="panel backup-panel" aria-label="备份与恢复">
                 <div className="panel-head">
                   <div>
                     <h2>备份与恢复</h2>
                     <p role="status">{backupStatus}</p>
                   </div>
-                  <button className="chip-button" type="button" onClick={exportMarkdown}>导出 Markdown</button>
                 </div>
-                <div className="stack-form">
-                  <label className="file-row">
+                <div className="backup-actions">
+                  <button className="backup-export" type="button" onClick={exportMarkdown}>导出 Markdown</button>
+                  <label className="backup-import">
                     <span>导入 Markdown</span>
-                    <input type="file" accept=".md,.markdown,.json,text/markdown,text/plain,application/json" onChange={importBackup} />
+                    <input type="file" aria-label="导入 Markdown" aria-describedby="backup-description" accept=".md,.markdown,.json,text/markdown,text/plain,application/json" onChange={importBackup} />
                   </label>
                 </div>
-                <p className="notification-description">导出的 Markdown 保留完整记录，可用于恢复；也兼容旧版 JSON 备份。</p>
+                <p className="backup-description" id="backup-description">导出的 Markdown 保留完整记录，可用于恢复；也兼容旧版 JSON 备份。</p>
               </section>
               <PonyThemePanel value={ponyTheme} onChange={changePonyTheme} />
             </>
