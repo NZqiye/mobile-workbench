@@ -8,6 +8,8 @@ const animationByAction = {
   water: "bubbles",
   toy: "cube",
   stick: "dance",
+  gift: "gift",
+  cat: "cat",
   reward: "happy",
 };
 

@@ -12,6 +12,7 @@ function payload() {
   for(const field of ['plans','notes','consultations','watchCheckins','assetRecords','subscriptionRecords','travelRecords','dietRecords','exerciseRecords','weightRecords','anniversaries','lifeGoals','habits','fundPortfolio','indexTrackerItems']) result[field] = [{id:field,title:'中文记录',extra:{preserved:true}}];
   result.deletedHabitIds = ['deleted'];
   result.notes[0].content = '# 日记\n```json\n{"version":999}\n```\n<!-- qiyeworkbench-backup:v1 -->';
+  result.petSupplies = { bone: 2, water: 3, toy: 4, stick: 5, gift: 6, cat: 7, happiness: 42 };
   return result;
 }
 

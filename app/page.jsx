@@ -175,12 +175,14 @@ const pageDescriptions = {
   exercise: "记录跑步、球类训练与每日对战战绩",
   settings: "账号、通知与数据备份",
 };
-const defaultPetSupplies = { bone: 0, water: 0, toy: 0, stick: 0 };
+const defaultPetSupplies = { bone: 0, water: 0, toy: 0, stick: 0, gift: 0, cat: 0, happiness: 0 };
 const petSupplyItems = [
-  { id: "bone", label: "零食包", icon: "🍪", action: "鲸鱼娘拆开零食包，开心地吃起来。", earn: "记录一次运动，获得 1 份零食包。" },
-  { id: "water", label: "泡泡水", icon: "🫧", action: "鲸鱼娘吹起了泡泡，一起放松一下。", earn: "每记录一杯饮水，获得 1 份泡泡水。" },
-  { id: "toy", label: "魔方", icon: "🧩", action: "鲸鱼娘抱着魔方，认真地转起来。", earn: "完成一个任务或一次习惯打卡，获得 1 个魔方。" },
-  { id: "stick", label: "舞会票", icon: "🎟️", action: "鲸鱼娘收下舞会票，跳起了摇摆舞。", earn: "看完一集剧或一部电影，获得 1 张舞会票。" },
+  { id: "bone", label: "零食包", icon: "🍪", action: "鲸鱼娘拆开零食包，开心地吃起来。" },
+  { id: "water", label: "泡泡水", icon: "🫧", action: "鲸鱼娘吹起了泡泡，一起放松一下。" },
+  { id: "toy", label: "魔方", icon: "🧩", action: "鲸鱼娘抱着魔方，认真地转起来。" },
+  { id: "stick", label: "舞会票", icon: "🎟️", action: "鲸鱼娘收下舞会票，跳起了摇摆舞。" },
+  { id: "gift", label: "礼物盒", icon: "🎁", action: "鲸鱼娘拆开礼物盒，看看里面的惊喜。" },
+  { id: "cat", label: "猫咪券", icon: "🐈", action: "鲸鱼娘抱着猫咪，轻轻地摸摸它。" },
 ];
 const ponyThemes = [
   { id: "rmb", name: "赤焰", note: "红金烈焰", primary: "#8f1d2c", accent: "#f0c56a" },
@@ -1245,6 +1247,7 @@ function PetCompanionCard({ supplies, action, onUse, onRest }) {
         <div>
           <span>宠物陪伴</span>
           <strong>鲸鱼娘</strong>
+          <span className="pet-happiness" role="status">幸福值 {supplies.happiness || 0}</span>
         </div>
         <small>{action.text}</small>
       </div>
@@ -1260,11 +1263,6 @@ function PetCompanionCard({ supplies, action, onUse, onRest }) {
           </button>
         ))}
       </div>
-      <details className="pet-reward-help">
-        <summary>奖励怎么获得</summary>
-        <p>点一次使用一份奖励，播放对应动作。</p>
-        {petSupplyItems.map((item) => <p key={item.id}>{item.earn}</p>)}
-      </details>
     </section>
   );
 }
@@ -6611,13 +6609,14 @@ export default function Workbench() {
     localStorage.setItem(key("ponyTheme"), theme);
   }
 
-  function changePetSupply(type, amount, actionText, actionType = type) {
+  function changePetSupply(type, amount, actionText, actionType = type, happinessDelta = Math.max(0, amount)) {
     setPetSupplies((current) => {
       const updatedAt = Date.now();
       const next = {
         ...defaultPetSupplies,
         ...current,
         [type]: Math.max(0, Number(current[type] || 0) + amount),
+        happiness: Math.max(0, Number(current.happiness || 0) + happinessDelta),
       };
       writeStorage("petSupplies", next);
       writeStorage("petSuppliesUpdatedAt", updatedAt);
@@ -6625,7 +6624,7 @@ export default function Workbench() {
       persist("petSuppliesUpdatedAt", updatedAt);
       return next;
     });
-    setPetAction({ type: actionType, text: actionText, startedAt: Date.now() });
+    setPetAction({ type: actionType, text: happinessDelta > 0 ? `${actionText} 幸福值 +${happinessDelta}。` : actionText, startedAt: Date.now() });
   }
 
   function rewardPetOnce(rewardId, type, amount, actionText) {
@@ -6932,6 +6931,7 @@ export default function Workbench() {
       ...item,
     }, ...dietRecords];
     saveDietRecords(next);
+    changePetSupply("cat", 1, "饮食已记录，猫咪券 +1。", "reward");
   }
 
   function deleteDietRecord(id) {
@@ -6987,7 +6987,7 @@ export default function Workbench() {
       return true;
     });
     if (actualRewards.some((reward) => reward.key)) persist('petRewardHistory', history);
-    for (const type of ['water', 'bone', 'toy', 'stick']) {
+    for (const { id: type } of petSupplyItems) {
       const amount = actualRewards.filter((reward) => reward.type === type).reduce((sum, reward) => sum + reward.amount, 0);
       if (amount) changePetSupply(type, amount, '相关记录已更新，鲸鱼娘收到了奖励。', 'reward');
     }
@@ -7003,9 +7003,9 @@ export default function Workbench() {
     const history = readStorage('petRewardHistory', {});
     receipt.rewards.forEach((reward) => { if (reward.key) delete history[reward.key]; });
     if (receipt.rewards.some((reward) => reward.key)) persist('petRewardHistory', history);
-    for (const type of ['water', 'bone', 'toy', 'stick']) {
+    for (const { id: type } of petSupplyItems) {
       const amount = receipt.rewards.filter((reward) => reward.type === type).reduce((sum, reward) => sum + reward.amount, 0);
-      if (amount) changePetSupply(type, -amount, '已撤销本次记录和奖励。', 'idle');
+      if (amount) changePetSupply(type, -amount, '已撤销本次记录和奖励。', 'idle', -amount);
     }
     return '已撤销本次记录，相关统计已恢复。';
   }
@@ -7223,11 +7223,13 @@ export default function Workbench() {
   }
 
   function saveNote(note) {
-    const next = notes.some((item) => item.id === note.id)
+    const existing = notes.some((item) => item.id === note.id);
+    const next = existing
       ? mapItemsById(notes, note.id, () => note)
       : [note, ...notes];
     setNotes(next);
     persist("notes", next);
+    if (!existing) rewardPetOnce(`note:${note.id}`, "gift", 1, "笔记已保存，礼物盒 +1。");
   }
 
   function addQuickNote(event) {
@@ -7251,7 +7253,9 @@ export default function Workbench() {
       setQuickNoteStatus("已保存到本机 · 想法笔记");
     } catch {
       setQuickNoteStatus("保存失败，内容已保留，请检查本机存储后重试。");
+      return;
     }
+    rewardPetOnce(`note:${note.id}`, "gift", 1, "闪念已保存，礼物盒 +1。");
   }
 
   function deleteNote(id) {

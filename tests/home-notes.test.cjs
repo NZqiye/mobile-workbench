@@ -20,6 +20,7 @@ function capture(title, fails = false) {
     crypto: { randomUUID: () => "new" }, todayKey: () => "2026-11-07", nowText: () => "18:30",
     persist: (name, value) => { if (fails) throw new Error("Storage full"); saved.push({ name, value }); },
     setNotes: value => states.push(value), setQuickNoteStatus: value => statuses.push(value),
+    rewardPetOnce: () => {},
   });
   vm.runInContext(functionSource("addQuickNote"), context);
   context.addQuickNote({ preventDefault() {}, currentTarget: { elements: { note: input } } });

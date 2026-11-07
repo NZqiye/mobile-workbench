@@ -62,6 +62,14 @@ test('model fields are whitelisted, evidence is required, and invalid commands p
   assert.equal(normalize([draft('watch', { title: '测试电影', type: '电影', status: '看过的剧' })], '还没看测试电影').records.length, 0);
 });
 
+test('new notes and meals earn gift and cat rewards; editing a note earns nothing', () => {
+  const created = plan([draft('note', { title: '新想法' }), draft('meal', { meal: '午餐', calories: 500 })]);
+  assert.deepEqual(created.rewards.map(item => item.type), ['gift', 'cat']);
+  assert.equal(created.rewards[0].key, `note:${created.collections.notes[0].id}`);
+  const edited = plan([draft('note', { content: '补充' }, 'update', '新想法')], created.collections);
+  assert.equal(edited.rewards.length, 0);
+});
+
 test('updates preserve unspecified dates, notes, prices and metadata', () => {
   const parsed = normalize([draft('asset', { status: '已出售', saleDate: '2026-11-04', salePrice: 100 }, 'update', '旧手机')]);
   const before = { id: 'asset', name: '旧手机', price: 2000, purchaseDate: '2025-01-01', status: '服役中', notes: '保留内容', icon: 'custom' };
