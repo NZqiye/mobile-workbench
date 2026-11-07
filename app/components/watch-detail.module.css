@@ -1,0 +1,62 @@
+:global(.phone-shell.ios18-shell.mobile-shell.page-consultations) .panel { border-radius: 16px !important; background: var(--ios-panel) !important; box-shadow: none !important; }
+:global(.phone-shell.ios18-shell.mobile-shell.page-consultations) .panel :global(.watch-rating-layout),
+:global(.phone-shell.ios18-shell.mobile-shell.page-consultations) .panel :global(.watch-rating-detail),
+:global(.phone-shell.ios18-shell.mobile-shell.page-consultations) .panel :global(.watch-rating-mobile-body) { background: transparent !important; box-shadow: none !important; }
+:global(.phone-shell.ios18-shell.mobile-shell.page-consultations .watch-shell):has(.panel) { background: transparent !important; box-shadow: none !important; }
+:global(.phone-shell.ios18-shell.mobile-shell.page-consultations) .panel :global(.watch-mobile-episodes-head) { background: transparent !important; }
+:global(.phone-shell.ios18-shell.mobile-shell.page-consultations) .season,
+:global(.phone-shell.ios18-shell.mobile-shell.page-consultations) .historyToggle { color: var(--ios-ink) !important; background: transparent !important; }
+.header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--ios-separator); color: var(--ios-ink); }
+.heading { min-width: 0; }
+.heading h3 { margin: 0; font-size: 22px; line-height: 1.4; font-weight: 700; overflow-wrap: anywhere; }
+.heading small { display: block; margin-top: 6px; color: var(--ios-muted); font-size: 13px; line-height: 1.5; }
+.totalProgress { grid-column: 1 / -1; display: grid; gap: 6px; margin-top: 2px; }
+.totalProgress > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.totalProgress span { color: var(--ios-muted); font-size: 13px; }
+.totalProgress strong { color: var(--ios-blue); font-size: 16px; font-variant-numeric: tabular-nums; }
+.totalProgress small { color: var(--ios-muted); font-size: 12px; line-height: 1.5; }
+.totalProgress progress { display: block; appearance: none; width: 100%; height: 6px; border: 0; border-radius: 3px; overflow: hidden; background: var(--ios-blue-soft); }
+.totalProgress progress::-webkit-progress-bar { border-radius: 3px; background: var(--ios-blue-soft); }
+.totalProgress progress::-webkit-progress-value { border-radius: 3px; background: var(--ios-blue); }
+.totalProgress progress::-moz-progress-bar { border-radius: 3px; background: var(--ios-blue); }
+.actions { display: flex; align-items: center; gap: 6px; }
+.actions button { min-height: 44px; min-width: 44px; padding: 10px; border: 0; border-radius: 12px; color: var(--ios-blue); background: var(--ios-blue-soft); font-size: 14px; font-weight: 650; }
+.actions svg { display: block; width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.next { display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--ios-separator); color: var(--ios-ink); }
+.next img, .nextPlaceholder { display: block; width: 112px; height: 63px; border-radius: 10px; object-fit: cover; background: var(--ios-blue-soft); }
+.nextPlaceholder { display: grid; place-items: center; color: var(--ios-blue); font-size: 18px; font-weight: 650; }
+.next > div { display: grid; gap: 5px; min-width: 0; }
+.next small { color: var(--ios-blue); font-size: 13px; line-height: 1.5; }
+.next strong { font-size: 16px; line-height: 1.5; overflow-wrap: anywhere; }
+.next span { color: var(--ios-muted); font-size: 12px; line-height: 1.5; }
+.seasonHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 4px; color: var(--ios-ink); }
+.seasonHeading strong { font-size: 18px; }
+.seasonHeading span { color: var(--ios-muted); font-size: 13px; }
+.seasons { display: grid; gap: 0; }
+.season { display: grid; grid-template-columns: 52px minmax(0, 1fr) 20px; align-items: center; gap: 14px; width: 100%; min-width: 0; min-height: 102px; padding: 12px 0; border: 0; border-bottom: 1px solid var(--ios-separator); border-radius: 0; color: var(--ios-ink); background: transparent; text-align: left; }
+.season:last-child { border-bottom: 0; }
+.season img, .seasonPoster { display: grid; place-items: center; width: 52px; height: 78px; border-radius: 10px; object-fit: cover; color: var(--ios-blue); background: var(--ios-blue-soft); font-size: 14px; }
+.seasonCopy { display: grid; gap: 4px; min-width: 0; }
+.seasonCopy strong { font-size: 16px; line-height: 1.5; }
+.seasonCopy small { color: var(--ios-muted); font-size: 12px; line-height: 1.5; }
+.seasonCopy b { color: var(--ios-blue); font-size: 13px; line-height: 1.5; font-weight: 600; font-variant-numeric: tabular-nums; }
+.season > svg { width: 20px; height: 20px; fill: none; stroke: var(--ios-muted); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.history { margin: 0 20px 20px; padding: 0; border-top: 1px solid var(--ios-separator); color: var(--ios-ink); background: transparent; }
+.historyToggle { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 12px 0; border: 0; border-radius: 0; color: var(--ios-ink); background: transparent; text-align: left; }
+.historyToggle strong { font-size: 16px; line-height: 1.5; }
+.historyToggle small { margin-left: 6px; color: var(--ios-muted); font-size: 13px; font-weight: 500; }
+.historyToggle > span { color: var(--ios-blue); font-size: 14px; }
+.header button:hover { background: var(--ios-blue-soft); }
+.header button:active, .season:active, .historyToggle:active { opacity: .8; }
+.header button:focus-visible, .season:focus-visible, .historyToggle:focus-visible { outline: 2px solid var(--ios-blue); outline-offset: 3px; }
+@media (hover: hover) {
+  :global(.phone-shell.ios18-shell.mobile-shell.page-consultations) .season:hover { background: var(--ios-blue-soft) !important; }
+}
+@media (max-width: 359px) {
+  .header { gap: 8px; }
+  .heading h3 { font-size: 20px; }
+  .actions { gap: 4px; }
+  .actions button { padding: 8px; }
+  .next { grid-template-columns: 96px minmax(0, 1fr); gap: 12px; }
+  .next img, .nextPlaceholder { width: 96px; height: 54px; }
+}

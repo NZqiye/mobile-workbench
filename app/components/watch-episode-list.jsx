@@ -14,6 +14,7 @@ export default function WatchEpisodeList({ episodes, checkedEpisodes, onToggle, 
   const [episodeInput, setEpisodeInput] = useState("");
   const [notice, setNotice] = useState("");
   const [highlight, setHighlight] = useState(null);
+  const [expandedImage, setExpandedImage] = useState(null);
   const pageCount = Math.ceil(episodes.length / pageSize);
   const currentPage = Math.min(page, Math.max(0, pageCount - 1));
   const visible = episodes.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
@@ -56,13 +57,14 @@ export default function WatchEpisodeList({ episodes, checkedEpisodes, onToggle, 
     {visible.map(episode => {
       const number = Number(episode.episodeNumber);
       const image = episode.stillUrl || posterUrl;
+      const largeImage = image?.startsWith("https://image.tmdb.org/t/p/w300/") ? image.replace("/t/p/w300/", "/t/p/w780/") : image;
       const checked = checkedEpisodes.has(number);
       return <article className={`${styles.episode} ${highlight === number ? styles.highlight : ""}`} key={episode.id || number} data-episode={number}>
-        <label className={styles.row}>
-          {image ? <img className={styles.image} src={image} alt="" loading="lazy" width="64" height="42" /> : <span className={styles.placeholder}>E{number}</span>}
-          <span className={styles.copy}><strong><span className={styles.number}>E{number}</span>{episode.name || `第 ${number} 集`}</strong><small>{[episode.airDate, episode.runtime ? `${episode.runtime} 分钟` : ""].filter(Boolean).join(" · ")}</small></span>
-          <input className={styles.checkbox} type="checkbox" aria-label={`第 ${number} 集已看`} checked={checked} onChange={() => onToggle(number)} />
-        </label>
+        <div className={styles.row}>
+          {image ? <button className={styles.preview} type="button" aria-label={`${expandedImage === number ? "收起" : "放大"}第 ${number} 集截图`} aria-expanded={expandedImage === number} onClick={() => setExpandedImage(expandedImage === number ? null : number)}><img className={styles.image} src={image} alt="" loading="lazy" width="112" height="63" /></button> : <span className={styles.placeholder}>E{number}</span>}
+          <label className={styles.selection}><span className={styles.copy}><strong><span className={styles.number}>E{number}</span>{episode.name || `第 ${number} 集`}</strong><small>{[episode.airDate, episode.runtime ? `${episode.runtime} 分钟` : ""].filter(Boolean).join(" · ")}</small></span><input className={styles.checkbox} type="checkbox" aria-label={`第 ${number} 集已看`} checked={checked} onChange={() => onToggle(number)} /></label>
+        </div>
+        {expandedImage === number && image && <div className={styles.expandedImage}><img src={largeImage} alt={`第 ${number} 集截图`} width="640" height="360" /><button type="button" onClick={() => setExpandedImage(null)}>收起图片</button></div>}
         {episode.overview && <details className={styles.overview}><summary>单集简介</summary><p>{episode.overview}</p></details>}
       </article>;
     })}

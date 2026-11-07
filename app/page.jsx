@@ -14,6 +14,8 @@ import AppUpdatePanel from "./components/app-update-panel";
 import WatchEpisodeList from "./components/watch-episode-list";
 import NativeNotificationPanel from "./components/native-notification-panel";
 import { nativeReminderTasks } from "../lib/native-reminders";
+import watchDetailStyles from "./components/watch-detail.module.css";
+import { seriesWatchProgress } from "../lib/watch-progress";
 import { encodeMarkdownBackup, decodeMarkdownBackup } from "../lib/markdown-backup";
 import { planQuickRecordChanges, undoQuickRecordChanges } from "../lib/workbench-records";
 import { anniversaryIcon, anniversaryIcons } from "../lib/anniversary-icons";
@@ -4099,6 +4101,7 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
   const episodes = Array.isArray(seasonData?.episodes) ? seasonData.episodes : [];
   const episodeCount = Number(seasonData?.episodeCount || activeSeason?.episodeCount || episodes.length || 0);
   const checkedCount = checkedEpisodes.size;
+  const overallWatchProgress = !isMovie ? seriesWatchProgress(seasonOptions, selected?.seasonProgress, seasonNumber, checkedEpisodes, episodeCount) : null;
   const allEpisodesChecked = episodes.length > 0 && episodes.every((episode) => checkedEpisodes.has(Number(episode.episodeNumber)));
   const completedSeasonKey = `${selected?.id || ""}:${seasonNumber}`;
   const hasSeasonRating = Boolean(String(seasonRating || selected?.seasonRatings?.[String(seasonNumber)] || "").trim());
@@ -4283,7 +4286,7 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
   }
 
   return (
-    <section className={`watch-rating-panel ${mobileLibraryVisible ? "mobile-library-open" : ""}`}>
+    <section className={`watch-rating-panel ${mobileLibraryVisible ? "mobile-library-open" : compact ? watchDetailStyles.panel : ""}`}>
       <div className="watch-rating-heading">
         <div>
           <h2>观影评分</h2>
@@ -4392,13 +4395,16 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
                 {ratingStatus && <p className="watch-rating-status success">{ratingStatus}</p>}
               </div>}
               {compact && <div className="watch-rating-mobile-body">
-                <div className="watch-mobile-titlebar">
-                  {mobileRatingView === "episodes" ? <button type="button" onClick={() => setMobileRatingView("seasons")} aria-label="返回季列表">←</button> : <span />}
-                  <div>
+                <div className={watchDetailStyles.header} data-watch-header>
+                  <div className={watchDetailStyles.heading}>
                     <h3>{detailTitle}</h3>
                     {mobileRatingView === "episodes" && <small>第 {seasonNumber} 季</small>}
                   </div>
-                  <button type="button" className="watch-mobile-search-button" onClick={() => setMobileLibraryOpen(true)} aria-label="返回片单">片单</button>
+                  <div className={watchDetailStyles.actions}>
+                    {mobileRatingView === "episodes" && <button type="button" onClick={() => setMobileRatingView("seasons")} aria-label="返回季列表"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6" /></svg></button>}
+                    <button type="button" onClick={() => setMobileLibraryOpen(true)} aria-label="返回片单">片单</button>
+                  </div>
+                  {overallWatchProgress && <div className={watchDetailStyles.totalProgress} data-watch-total-progress><div><span>全剧进度</span><strong>{overallWatchProgress.percent}%</strong></div><progress max={overallWatchProgress.total} value={overallWatchProgress.watched} aria-label="全剧观看进度" /><small>已看 {overallWatchProgress.watched} / {overallWatchProgress.total} 集</small></div>}
                 </div>
                 {detailsLoading && <p className="watch-rating-status">正在读取 TMDB 详情…</p>}
                 {detailStatus && <p className="watch-rating-status error">{detailStatus}</p>}
@@ -4409,26 +4415,26 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
                   </div>
                 ) : mobileRatingView === "seasons" ? (
                   <>
-                    {episodes.find((episode) => episode.airDate && episode.airDate >= todayKey()) && <div className="watch-mobile-next">
+                    {episodes.find((episode) => episode.airDate && episode.airDate >= todayKey()) && <div className={watchDetailStyles.next} data-watch-next>
                       {(() => {
                         const nextEpisode = episodes.find((episode) => episode.airDate && episode.airDate >= todayKey());
-                        return nextEpisode.stillUrl || detailPoster ? <img src={nextEpisode.stillUrl || detailPoster} alt="" /> : <span className="watch-mobile-next-placeholder">E{nextEpisode.episodeNumber}</span>;
+                        return nextEpisode.stillUrl || detailPoster ? <img src={nextEpisode.stillUrl || detailPoster} alt="" width="112" height="63" /> : <span className={watchDetailStyles.nextPlaceholder}>E{nextEpisode.episodeNumber}</span>;
                       })()}
                       {(() => {
                         const nextEpisode = episodes.find((episode) => episode.airDate && episode.airDate >= todayKey());
-                        return <div><small>下一集 · {nextEpisode.airDate}</small><strong>{nextEpisode.name || "下一集"}</strong><span>S{seasonNumber} E{nextEpisode.episodeNumber}</span></div>;
+                        return <div><small>下一集 · {nextEpisode.airDate}</small><strong>{nextEpisode.name || `第 ${nextEpisode.episodeNumber} 集`}</strong><span>第 {seasonNumber} 季 · 第 {nextEpisode.episodeNumber} 集</span></div>;
                       })()}
                     </div>}
-                    <div className="watch-mobile-section-title"><strong>季</strong><span>{seasonList.length} 季</span></div>
-                    {seasonOptions.length === 0 ? <p className="watch-rating-status">{detailsLoading ? "正在读取 TMDB 季列表…" : "暂无季集信息，可搜索并更换已绑定 TMDB 的作品。"}</p> : <div className="watch-mobile-seasons">
+                    <div className={watchDetailStyles.seasonHeading}><strong>季</strong><span>{seasonList.length} 季</span></div>
+                    {seasonOptions.length === 0 ? <p className="watch-rating-status">{detailsLoading ? "正在读取 TMDB 季列表…" : "暂无季集信息，可搜索并更换已绑定 TMDB 的作品。"}</p> : <div className={watchDetailStyles.seasons}>
                       {seasonOptions.map((season) => {
                         const key = String(season.seasonNumber);
                         const progress = key === String(seasonNumber) ? checkedEpisodes.size : (Array.isArray(selected?.seasonProgress?.[key]) ? selected.seasonProgress[key].length : 0);
                         const count = Number(season.episodeCount || 0);
-                        return <button type="button" className="watch-mobile-season" key={season.seasonNumber} onClick={() => { setExpandedCompletedSeasons((previous) => ({ ...previous, [`${selected?.id || ""}:${key}`]: false })); setSeasonNumber(key); setMobileRatingView("episodes"); }}>
-                          {season.posterUrl ? <img src={season.posterUrl} alt="" loading="lazy" /> : <span className="watch-mobile-season-poster">S{season.seasonNumber}</span>}
-                          <span><strong>第 {season.seasonNumber} 季</strong><small>{season.airDate || "日期待定"}</small></span>
-                          <b>{progress}/{count || "-"}</b><i aria-hidden="true">{count > 0 && hasCompleteEpisodeSet(key === String(seasonNumber) ? Array.from(checkedEpisodes) : selected?.seasonProgress?.[key], count) ? "✓" : ""}</i>
+                        return <button type="button" className={watchDetailStyles.season} data-watch-season={season.seasonNumber} key={season.seasonNumber} onClick={() => { setExpandedCompletedSeasons((previous) => ({ ...previous, [`${selected?.id || ""}:${key}`]: false })); setSeasonNumber(key); setMobileRatingView("episodes"); }}>
+                          {season.posterUrl ? <img src={season.posterUrl} alt="" loading="lazy" width="52" height="78" /> : <span className={watchDetailStyles.seasonPoster}>S{season.seasonNumber}</span>}
+                          <span className={watchDetailStyles.seasonCopy}><strong>第 {season.seasonNumber} 季</strong><small>{season.airDate || "日期待定"}</small><b>已看 {progress}{count ? ` / ${count}` : ""} 集{count > 0 ? ` · ${Math.min(100, Math.round(progress / count * 100))}%` : ""}{count > 0 && hasCompleteEpisodeSet(key === String(seasonNumber) ? Array.from(checkedEpisodes) : selected?.seasonProgress?.[key], count) ? " · 已完成" : ""}</b></span>
+                          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
                         </button>;
                       })}
                     </div>}
@@ -4455,8 +4461,8 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
           </div>
         </>
       )}
-      <div className="watch-checkin-history">
-        {compact && <button className="watch-history-toggle" type="button" aria-expanded={historyPanelOpen} aria-controls="watch-history-content" onClick={() => setHistoryPanelOpen(value => !value)}><strong>观看记录 <small>{watchCheckins.length} 条</small></strong><span>{historyPanelOpen ? "收起" : "查看"}</span></button>}
+      <div className={compact ? watchDetailStyles.history : "watch-checkin-history"}>
+        {compact && <button className={watchDetailStyles.historyToggle} type="button" aria-expanded={historyPanelOpen} aria-controls="watch-history-content" onClick={() => setHistoryPanelOpen(value => !value)}><strong>观看记录 <small>{watchCheckins.length} 条</small></strong><span>{historyPanelOpen ? "收起" : "查看"}</span></button>}
         {(!compact || historyPanelOpen) && <div id="watch-history-content">
         <div className="watch-checkin-history-head"><strong>最近记录</strong><input value={historyQuery} onChange={(event) => setHistoryQuery(event.target.value)} placeholder="搜索作品或季集" />{!historyKeyword && filteredHistory.length > 5 && <button type="button" onClick={() => setHistoryOpen(!historyOpen)}>{historyOpen ? "收起" : "全部"}</button>}</div>
         {filteredHistory.length === 0 ? <p className="watch-checkin-history-empty">还没有观看记录。</p> : <div className="watch-checkin-history-list">{visibleHistory.map((record) => {

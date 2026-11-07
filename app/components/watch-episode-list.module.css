@@ -10,15 +10,20 @@
 .quick p { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: var(--ios-ink); }
 .highlight { background: var(--ios-blue-soft); }
 .episode { padding: 16px 0 8px; border-bottom: 1px solid var(--ios-separator); }
-.row { display: grid; grid-template-columns: 64px minmax(0, 1fr) 28px; align-items: start; gap: 12px; cursor: pointer; min-height: 48px; }
-.image, .placeholder { display: block; width: 64px; height: 42px; object-fit: cover; border-radius: 8px; background: var(--ios-blue-soft); }
+.row { display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: start; gap: 12px; min-height: 64px; }
+.preview { display: block; width: 112px; padding: 0; border: 0; border-radius: 10px; background: var(--ios-blue-soft); cursor: zoom-in; }
+.image, .placeholder { display: block; width: 112px; height: 63px; object-fit: cover; border-radius: 10px; background: var(--ios-blue-soft); }
+.selection { display: grid; grid-template-columns: minmax(0, 1fr) 24px; gap: 10px; align-items: start; min-height: 64px; cursor: pointer; }
+.expandedImage { margin-top: 12px; }
+.expandedImage img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: contain; border-radius: 12px; background: var(--ios-panel); }
+.expandedImage button { display: block; margin: 4px 0 0 auto; min-height: 44px; padding: 8px 12px; border: 0; border-radius: 10px; color: var(--ios-blue); background: transparent; font-size: 13px; }
 .placeholder { display: grid; place-items: center; color: var(--ios-blue); font-size: 14px; }
 .copy { display: grid; gap: 6px; min-width: 0; }
-.copy strong { color: var(--ios-ink); font-size: 15px; line-height: 1.5; font-weight: 650; overflow-wrap: anywhere; }
+.copy strong { color: var(--ios-ink); font-size: 16px; line-height: 1.5; font-weight: 650; overflow-wrap: anywhere; }
 .number { margin-right: 8px; color: var(--ios-blue); font-variant-numeric: tabular-nums; }
 .copy small { color: var(--ios-muted); font-size: 12px; line-height: 1.5; }
 .row .checkbox { position: static; display: block; appearance: auto; opacity: 1; width: 24px; height: 24px; margin: 2px 0 0; accent-color: var(--ios-blue); cursor: pointer; }
-.overview { margin-left: 76px; }
+.overview { margin-left: 124px; }
 .overview summary { width: fit-content; min-height: 44px; padding: 10px 0; color: var(--ios-blue); font-size: 13px; line-height: 24px; cursor: pointer; }
 .overview p { margin: 0 0 12px; color: var(--ios-ink); font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
 .pager { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 12px 0; }
@@ -27,9 +32,11 @@
 .pager button:disabled { color: var(--ios-muted); background: transparent; cursor: default; }
 .list :is(button, select, input, summary):focus-visible { outline: 2px solid var(--ios-blue); outline-offset: 3px; }
 @media (max-width: 359px) {
-  .row { grid-template-columns: 52px minmax(0, 1fr) 24px; gap: 10px; }
-  .image, .placeholder { width: 52px; height: 36px; }
-  .overview { margin-left: 62px; }
+  .row { grid-template-columns: 96px minmax(0, 1fr); gap: 10px; }
+  .preview, .image, .placeholder { width: 96px; }
+  .image, .placeholder { height: 54px; }
+  .selection { gap: 8px; }
+  .overview { margin-left: 106px; }
   .pager { gap: 4px; }
   .pager button, .pager select { padding-inline: 6px; font-size: 12px; }
 }
