@@ -159,39 +159,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .pet-card-head strong { color: var(--ink); font-size: 20px; line-height: 1.05; }
 .pet-card-head small { max-width: 112px; color: var(--muted); font-size: 11px; line-height: 1.35; text-align: right; }
 .pet-stage { position: relative; z-index: 1; display: grid; place-items: center; min-height: 96px; }
-.codex-pet-stage { --pet-cell-w: 96px; --pet-cell-h: 104px; position: relative; display: grid; place-items: center; width: 132px; height: 104px; filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.22)); }
-.codex-pet-sprite { --pet-row: 0; display: block; width: var(--pet-cell-w); height: var(--pet-cell-h); background-image: url("/codex-pets/fat-guga/spritesheet.webp"); background-repeat: no-repeat; background-size: calc(var(--pet-cell-w) * 8) calc(var(--pet-cell-h) * 11); background-position: 0 calc(var(--pet-row) * var(--pet-cell-h) * -1); image-rendering: auto; }
-.codex-pet-prop { position: absolute; z-index: 2; opacity: 0; pointer-events: none; }
-.codex-pet-prop.bone { left: 26px; top: 55px; width: 23px; height: 18px; border-radius: 4px 4px 8px 8px; background: linear-gradient(180deg, #fff3f8 0 36%, #ff91b8 37% 58%, #f5d28b 59% 100%); box-shadow: inset -3px -3px 0 rgba(122, 64, 38, 0.18); transform-origin: 100% 70%; }
-.codex-pet-prop.bone::before, .codex-pet-prop.bone::after { content: none; }
-.codex-pet-prop.water { left: 25px; top: 55px; width: 22px; height: 27px; border-radius: 5px 5px 9px 9px; background: linear-gradient(180deg, #f3ddbd 0 18%, #d89a64 19% 100%); box-shadow: inset -3px -4px 0 rgba(100, 53, 30, 0.2); transform-origin: 100% 70%; }
-.codex-pet-prop.water::before { content: ""; position: absolute; left: 5px; top: -9px; width: 12px; height: 14px; border-left: 3px solid #f2c37b; transform: rotate(12deg); }
-.codex-pet-prop.toy { right: 17px; top: 55px; width: 28px; height: 22px; border-radius: 999px 999px 9px 9px; background: radial-gradient(circle at 38% 45%, #f8ddc8 0 30%, transparent 32%), radial-gradient(circle at 68% 43%, #f8ddc8 0 22%, transparent 24%), #ffd7bf; box-shadow: inset -4px -4px 0 rgba(128, 68, 44, 0.16); }
-.codex-pet-prop.toy::before, .codex-pet-prop.toy::after { content: ""; position: absolute; top: 6px; width: 8px; height: 13px; border-radius: 999px; background: #f3bd9c; }
-.codex-pet-prop.toy::before { left: -5px; transform: rotate(-28deg); }
-.codex-pet-prop.toy::after { right: -5px; transform: rotate(28deg); }
-.codex-pet-prop.stick { right: 14px; top: 56px; width: 28px; height: 18px; border-radius: 4px; background: linear-gradient(135deg, #ffd86b 0 48%, #e75d86 49% 100%); transform: rotate(12deg); box-shadow: inset -3px -3px 0 rgba(93, 32, 48, 0.16); }
-.codex-pet-prop.stick::before { content: ""; position: absolute; left: 11px; top: -3px; width: 6px; height: 24px; background: rgba(255,255,255,0.75); transform: rotate(18deg); }
+.whale-pet-stage { position: relative; width: 100%; height: 136px; overflow: hidden; filter: drop-shadow(0 7px 8px rgba(0, 0, 0, 0.16)); }
+.whale-pet-media { position: absolute; left: 50%; top: 50%; width: 300px; height: 168.75px; max-width: none; transform: translate(-50%, -50%); object-fit: contain; }
+.whale-pet-media[hidden] { display: none; }
 .pet-supplies { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
 .pet-supplies button { display: grid; justify-items: center; gap: 1px; min-width: 0; min-height: 47px; padding: 5px 3px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 11px; color: var(--ink); background: rgba(255, 255, 255, 0.08); font-weight: 850; }
 .pet-supplies button:disabled { opacity: 0.46; }
 .pet-supplies button span { color: inherit; font-size: 15px; }
 .pet-supplies button strong { color: color-mix(in srgb, var(--theme-accent) 84%, #fff); font-size: 14px; line-height: 1; }
 .pet-supplies button small { color: var(--muted); font-size: 9px; line-height: 1.1; }
-.pet-action-bone .codex-pet-sprite, .pet-action-reward .codex-pet-sprite { --pet-row: 4; animation: codexPetFrames5 850ms steps(5) infinite; }
-.pet-action-bone .codex-pet-prop.bone { opacity: 1; animation: codexPetFeed 850ms ease both; }
-.pet-action-water .codex-pet-sprite { --pet-row: 6; animation: codexPetFrames6 900ms steps(6) infinite; }
-.pet-action-water .codex-pet-prop.water { opacity: 1; animation: codexPetFeed 900ms ease both; }
-.pet-action-toy .codex-pet-sprite { --pet-row: 5; animation: codexPetFrames8 900ms steps(8) infinite; }
-.pet-action-toy .codex-pet-prop.toy { opacity: 1; animation: codexPetBall 1.05s ease both; }
-.pet-action-stick .codex-pet-sprite { --pet-row: 3; animation: codexPetFrames4 720ms steps(4) infinite; }
-.pet-action-stick .codex-pet-prop.stick { opacity: 1; }
-@keyframes codexPetFrames4 { to { background-position: calc(var(--pet-cell-w) * -4) calc(var(--pet-row) * var(--pet-cell-h) * -1); } }
-@keyframes codexPetFrames5 { to { background-position: calc(var(--pet-cell-w) * -5) calc(var(--pet-row) * var(--pet-cell-h) * -1); } }
-@keyframes codexPetFrames6 { to { background-position: calc(var(--pet-cell-w) * -6) calc(var(--pet-row) * var(--pet-cell-h) * -1); } }
-@keyframes codexPetFrames8 { to { background-position: calc(var(--pet-cell-w) * -8) calc(var(--pet-row) * var(--pet-cell-h) * -1); } }
-@keyframes codexPetFeed { 0% { transform: translate(-16px, 10px) scale(0.88); opacity: 0; } 35% { opacity: 1; } 72% { transform: translate(4px, -4px) scale(1); opacity: 1; } 100% { transform: translate(2px, -2px) scale(0.96); opacity: 0.9; } }
-@keyframes codexPetBall { 0% { transform: translateX(0) rotate(0); } 45% { transform: translateX(-16px) rotate(-160deg); } 100% { transform: translateX(0) rotate(-360deg); } }
 .panel, .market-panel { display: grid; gap: 14px; padding: 17px 15px; border: 1px solid var(--line); }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; font-weight: 700; }
@@ -1707,26 +1683,14 @@ select:focus-visible {
 .cultivation-avatar { display: block; width: 48px; height: 48px; object-fit: contain; object-position: 50% 50%; filter: drop-shadow(0 2px 6px rgba(111, 243, 201, 0.35)); }
 
 .crew-nav-icon { display: block; width: 38px; height: 38px; object-fit: contain; object-position: 50% 50%; filter: drop-shadow(0 1px 2px rgba(58,15,18,0.35)); }
+.crew-nav-icon-notes { border-radius: 22%; }
+.skill-card .crew-nav-icon, .desktop-active-module .crew-nav-icon, .desktop-switch-list .crew-nav-icon { width: 30px; height: 30px; }
 .nav-item:hover .crew-nav-icon { filter: drop-shadow(0 0 4px rgba(255,248,230,0.45)); }
 .nav-item.active .crew-nav-icon { filter: drop-shadow(0 0 6px rgba(255,215,100,0.55)); }
 .module-icon .crew-nav-icon { width: 46px; height: 46px; filter: drop-shadow(0 2px 4px rgba(58,15,18,0.28)); }
 
 .ui-icon { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 .solid-nav-icon { width: 19px; height: 19px; fill: currentColor; }
-.anime-nav-icon { width: 25px; height: 25px; overflow: visible; filter: drop-shadow(0 1.5px 0 rgba(58, 15, 18, 0.3)); }
-.nav-item .anime-nav-icon { width: 23px; height: 23px; }
-.anime-nav-icon .anime-shadow { fill: rgba(64, 18, 20, 0.32); transform: translate(1.2px, 1.4px); }
-.anime-nav-icon .anime-main { fill: #fff6df; stroke: rgba(88, 20, 24, 0.38); stroke-width: 0.35; }
-.anime-nav-icon .anime-light { fill: #ffd35e; stroke: rgba(88, 20, 24, 0.28); stroke-width: 0.25; }
-.anime-nav-icon .anime-accent { fill: #ff8a50; stroke: rgba(88, 20, 24, 0.28); stroke-width: 0.25; }
-.anime-nav-icon .anime-ribbon { fill: #d73543; }
-.anime-nav-icon .anime-dot { fill: #fff06a; stroke: rgba(88, 20, 24, 0.3); stroke-width: 0.25; }
-.nav-item.active .anime-nav-icon .anime-shadow, .module-icon .anime-nav-icon .anime-shadow { fill: rgba(117, 25, 35, 0.22); }
-.nav-item.active .anime-nav-icon .anime-main, .module-icon .anime-nav-icon .anime-main { fill: var(--theme-main); stroke: rgba(80, 12, 18, 0.34); }
-.nav-item.active .anime-nav-icon .anime-light, .module-icon .anime-nav-icon .anime-light { fill: #fff4ba; }
-.nav-item.active .anime-nav-icon .anime-accent, .module-icon .anime-nav-icon .anime-accent { fill: var(--theme-accent); }
-.nav-item.active .anime-nav-icon .anime-ribbon, .module-icon .anime-nav-icon .anime-ribbon { fill: var(--theme-warm); }
-.nav-item.active .anime-nav-icon .anime-dot, .module-icon .anime-nav-icon .anime-dot { fill: #fff06a; }
 .icon-button .ui-icon { width: 20px; height: 20px; }
 .hero-card .ui-icon { width: 22px; height: 22px; stroke-width: 1.7; }
 .skill-card .ui-icon { width: 18px; height: 18px; }

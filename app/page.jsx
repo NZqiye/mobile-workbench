@@ -12,6 +12,7 @@ import AccountPanel from "./components/account-panel";
 import MediaPoster from "./components/media-poster";
 import AppUpdatePanel from "./components/app-update-panel";
 import WatchEpisodeList from "./components/watch-episode-list";
+import WhaleCompanion from "./components/whale-companion";
 import NativeNotificationPanel from "./components/native-notification-panel";
 import { nativeReminderTasks } from "../lib/native-reminders";
 import watchDetailStyles from "./components/watch-detail.module.css";
@@ -149,7 +150,7 @@ function mergeRecommendationSources(baseSections = [], mediaData, animeData) {
 const statePage = "app_state";
 const pages = [
   { id: "today", name: "今日速看", icon: "home" },
-  { id: "notes", name: "想法笔记", icon: "checklist" },
+  { id: "notes", name: "想法笔记", icon: "notes" },
   { id: "consultations", name: "观影记录", icon: "chat" },
   { id: "market", name: "股市行情", icon: "trend" },
   { id: "diet", name: "饮食记录", icon: "food" },
@@ -176,10 +177,10 @@ const pageDescriptions = {
 };
 const defaultPetSupplies = { bone: 0, water: 0, toy: 0, stick: 0 };
 const petSupplyItems = [
-  { id: "bone", label: "小蛋糕", icon: "🍰", action: "胖咕嘎收到了小蛋糕，开心地蹦了一下。" },
-  { id: "water", label: "奶茶", icon: "🧋", action: "胖咕嘎喝了奶茶，精神更好了。" },
-  { id: "toy", label: "摸摸头", icon: "🤲", action: "胖咕嘎被摸摸头，乖乖地晃了晃。" },
-  { id: "stick", label: "电影票", icon: "🎟️", action: "胖咕嘎收下电影票，开心地挥手。" },
+  { id: "bone", label: "小蛋糕", icon: "🍰", action: "鲸鱼娘收到了小蛋糕，开心地吃起零食。" },
+  { id: "water", label: "奶茶", icon: "🧋", action: "鲸鱼娘喝了奶茶，精神更好了。" },
+  { id: "toy", label: "摸摸头", icon: "🤲", action: "鲸鱼娘被摸摸头，开心地笑了。" },
+  { id: "stick", label: "电影票", icon: "🎟️", action: "鲸鱼娘收下电影票，开心地挥手。" },
 ];
 const ponyThemes = [
   { id: "rmb", name: "赤焰", note: "红金烈焰", primary: "#8f1d2c", accent: "#f0c56a" },
@@ -638,116 +639,22 @@ function SolidNavIcon({ name }) {
   );
 }
 
-function AnimeNavIcon({ name }) {
-  const icons = {
-    home: (
-      <>
-        <path className="anime-shadow" d="M8 22h10c2 0 3-1 3-3v-7l-9-8-9 8v7c0 2 1 3 3 3z" />
-        <path className="anime-main" d="M5 11.5 12 5l7 6.5V20H5z" />
-        <path className="anime-light" d="M9 20v-5h6v5zM7.5 11.5 12 7.3l4.5 4.2z" />
-        <circle className="anime-dot" cx="17.5" cy="7" r="2" />
-      </>
-    ),
-    checklist: (
-      <>
-        <path className="anime-shadow" d="M8 3h10c1.7 0 3 1.3 3 3v13c0 1.7-1.3 3-3 3H8c-1.7 0-3-1.3-3-3V6c0-1.7 1.3-3 3-3z" />
-        <path className="anime-main" d="M7 5h12v15H7z" />
-        <path className="anime-light" d="M9 8h8v2H9zM9 12h8v2H9zM9 16h5v2H9z" />
-        <path className="anime-accent" d="M10 2h6v4h-6z" />
-      </>
-    ),
-    note: (
-      <>
-        <path className="anime-shadow" d="M6 4h10l4 4v12c0 1.2-.8 2-2 2H6c-1.2 0-2-.8-2-2V6c0-1.2.8-2 2-2z" />
-        <path className="anime-main" d="M7 5h8.2L19 8.8V20H7z" />
-        <path className="anime-light" d="M15 5v5h4M9 12h7v1.8H9zM9 16h5v1.8H9z" />
-        <path className="anime-ribbon" d="M6 7c2-2 4-2 6 0-2 2-4 2-6 0zm7 0c2-2 4-2 6 0-2 2-4 2-6 0z" />
-      </>
-    ),
-    chat: (
-      <>
-        <path className="anime-shadow" d="M5 5h14c1.4 0 2.5 1.1 2.5 2.5v7c0 1.4-1.1 2.5-2.5 2.5h-7l-5.5 4v-4H5c-1.4 0-2.5-1.1-2.5-2.5v-7C2.5 6.1 3.6 5 5 5z" />
-        <path className="anime-main" d="M5 6.5h14v9H9.5L6 18v-2.5H5z" />
-        <circle className="anime-light" cx="8" cy="11" r="1.5" />
-        <circle className="anime-light" cx="12" cy="11" r="1.5" />
-        <circle className="anime-light" cx="16" cy="11" r="1.5" />
-      </>
-    ),
-    trend: (
-      <>
-        <path className="anime-shadow" d="M4 20h16v2H4z" />
-        <rect className="anime-main" x="5" y="12" width="3" height="7" rx="1" />
-        <rect className="anime-accent" x="10.5" y="8" width="3" height="11" rx="1" />
-        <rect className="anime-light" x="16" y="5" width="3" height="14" rx="1" />
-        <path className="anime-ribbon" d="M4.5 10.5 9 7l4 2.6L19 4l1.4 1.5-7.1 6.7L9.1 9.5 5.8 12z" />
-      </>
-    ),
-    food: (
-      <>
-        <path className="anime-shadow" d="M6 4h5v7c0 1.8-1.1 3.2-2.5 3.6V22h-2v-7.4C5.1 14.2 4 12.8 4 11V4h2v6h1V4h2v6h1V4z" />
-        <path className="anime-main" d="M6 4h4v7c0 1.4-.9 2.4-2 2.4S6 12.4 6 11z" />
-        <path className="anime-accent" d="M16 3c2.2 1.8 3.4 4.6 3.4 8.1 0 2.1-.8 3.4-2.1 4V22h-2.2V3z" />
-        <path className="anime-light" d="M17 6.5c.7 1.1 1 2.5 1 4.1 0 1.2-.2 2-.7 2.4z" />
-      </>
-    ),
-    wear: (
-      <>
-        <path className="anime-shadow" d="M8 4 12 7l4-3 4 3.2-2.3 4V21H6.3v-9.8L4 7.2z" />
-        <path className="anime-main" d="M8.2 5.2 12 8l3.8-2.8 2.4 2-1.8 3.3V19H7.6v-8.5L5.8 7.2z" />
-        <path className="anime-light" d="M10 6.6c.5 1 1.2 1.6 2 1.6s1.5-.6 2-1.6v4.2h-4z" />
-        <path className="anime-accent" d="M7.6 11.2 9.4 13l-1.8 1.2zm8.8 0L14.6 13l1.8 1.2z" />
-      </>
-    ),
-    news: (
-      <>
-        <path className="anime-shadow" d="M5 4h12c1.3 0 2.2.9 2.2 2.2V20H6.8A2.8 2.8 0 0 1 4 17.2V5c0-.6.4-1 1-1z" />
-        <path className="anime-main" d="M6 5.5h10.5V19H6z" />
-        <path className="anime-accent" d="M8 8h6.5v3H8z" />
-        <path className="anime-light" d="M8 13h7v1.5H8zM8 16h5v1.5H8z" />
-        <circle className="anime-dot" cx="18" cy="6" r="2" />
-      </>
-    ),
-    calendar: (
-      <>
-        <path className="anime-shadow" d="M6 4h12c1.7 0 3 1.3 3 3v12c0 1.7-1.3 3-3 3H6c-1.7 0-3-1.3-3-3V7c0-1.7 1.3-3 3-3z" />
-        <path className="anime-main" d="M5 8h14v12H5z" />
-        <path className="anime-accent" d="M5 7c0-1 .8-2 2-2h10c1.2 0 2 1 2 2v3H5z" />
-        <path className="anime-light" d="M8 12h3v3H8zM13 12h3v3h-3zM8 16h3v2H8z" />
-      </>
-    ),
-    settings: (
-      <>
-        <circle className="anime-shadow" cx="12" cy="12" r="9" />
-        <path className="anime-main" d="M12 3.5 14 8l4.8-.5-2.8 4 2.8 4-4.8-.5-2 4.5-2-4.5-4.8.5 2.8-4-2.8-4L10 8z" />
-        <circle className="anime-light" cx="12" cy="12" r="3.2" />
-        <circle className="anime-dot" cx="17.5" cy="6.5" r="1.8" />
-      </>
-    ),
-  };
-
-  return (
-    <svg className="anime-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
-      {icons[name] || icons.home}
-    </svg>
-  );
-}
-
-
 const crewImgById = {
-  home: "/crew/zoro.png",
+  home: "/crew/yinyan-transparent.png",
   life: "/crew/doflamingo.png",
   chat: "/crew/nami.png",
-  trend: "/crew/sanji.png",
-  food: "/crew/usopp.png",
+  trend: "/crew/usopp.png",
+  food: "/crew/sanji.png",
   news: "/crew/chopper.png",
   checklist: "/crew/robin.png",
+  notes: "/crew/kuma.png",
   diamond: "/crew/franky.png",
   settings: "/crew/jinbe.png",
-  exercise: "/crew/yinyan-transparent.png",
+  exercise: "/crew/zoro.png",
 };
 
 function CrewNavIcon({ name }) {
-  return <img className="crew-nav-icon" src={crewImgById[name] || "/crew/zoro.png"} alt="" loading="lazy" />;
+  return <img className={`crew-nav-icon${name === "notes" ? " crew-nav-icon-notes" : ""}`} src={crewImgById[name] || "/crew/zoro.png"} alt="" loading="lazy" />;
 }
 
 function PonyMark({ theme = "rmb", compact = false }) {
@@ -1331,24 +1238,18 @@ function StatButton({ label, value, onClick }) {
   );
 }
 
-function PetCompanionCard({ supplies, action, onUse }) {
+function PetCompanionCard({ supplies, action, onUse, onRest }) {
   return (
     <section className={`dashboard-tile dashboard-tile-primary pet-card pet-action-${action.type}`} aria-label="宠物陪伴">
       <div className="pet-card-head">
         <div>
           <span>宠物陪伴</span>
-          <strong>胖咕嘎</strong>
+          <strong>鲸鱼娘</strong>
         </div>
         <small>{action.text}</small>
       </div>
       <div className="pet-stage" aria-hidden="true">
-        <div className="codex-pet-stage">
-          <i className="codex-pet-sprite" />
-          <i className="codex-pet-prop bone" />
-          <i className="codex-pet-prop water" />
-          <i className="codex-pet-prop toy" />
-          <i className="codex-pet-prop stick" />
-        </div>
+        <WhaleCompanion action={action} onRest={onRest} />
       </div>
       <div className="pet-supplies">
         {petSupplyItems.map((item) => (
@@ -1401,7 +1302,7 @@ function SkillOverview({ open, skills, activePage, stats, session, onClose, onSe
                 onClose();
               }}
             >
-              <span><WorkbenchIcon name={skill.icon} /></span>
+              <span><CrewNavIcon name={skill.icon} /></span>
               <strong>{skill.name}</strong>
               <small className="skill-badge">{skill.badge}</small>
               <small>{skill.summary}</small>
@@ -1439,7 +1340,7 @@ function DesktopContextRail({ activePage, displayMode, ponyTheme, session, stats
           <b>{activeSkill?.badge}</b>
         </div>
         <div className="desktop-active-module">
-          <span><AnimeNavIcon name={activeSkill?.icon || "spark"} /></span>
+          <span><CrewNavIcon name={activeSkill?.icon || "home"} /></span>
           <div>
             <strong>{activeSkill?.name}</strong>
             <small>{pageDescriptions[activePage] || activeSkill?.summary}</small>
@@ -1470,7 +1371,7 @@ function DesktopContextRail({ activePage, displayMode, ponyTheme, session, stats
         <div className="desktop-switch-list">
           {skills.filter((skill) => skill.id !== activePage).slice(0, 5).map((skill) => (
             <button type="button" key={skill.id} onClick={() => onSelect(skill.id)}>
-              <span><AnimeNavIcon name={skill.icon} /></span>
+              <span><CrewNavIcon name={skill.icon} /></span>
               <div>
                 <strong>{skill.name}</strong>
                 <small>{skill.summary}</small>
@@ -6613,9 +6514,9 @@ export default function Workbench() {
     if (petAction.type === "idle") return;
     const timer = setTimeout(() => {
       setPetAction({ type: "idle", text: "摸着肚子等你投喂。" });
-    }, 2400);
+    }, 11000);
     return () => clearTimeout(timer);
-  }, [petAction.type, petAction.text]);
+  }, [petAction.type, petAction.text, petAction.startedAt]);
 
   const stats = useMemo(() => {
     const finishedHabits = habits.filter((item) => done[item.id]).length;
@@ -6719,7 +6620,7 @@ export default function Workbench() {
       persist("petSuppliesUpdatedAt", updatedAt);
       return next;
     });
-    setPetAction({ type: actionType, text: actionText });
+    setPetAction({ type: actionType, text: actionText, startedAt: Date.now() });
   }
 
   function rewardPetOnce(rewardId, type, amount, actionText) {
@@ -7009,7 +6910,7 @@ export default function Workbench() {
       time: clock.slice(0, 5),
     }, ...dietRecords];
     saveDietRecords(next);
-    changePetSupply("water", cupCount, `奶茶 +${cupCount}，胖咕嘎跟你互动了一下。`, "water");
+    changePetSupply("water", cupCount, `奶茶 +${cupCount}，鲸鱼娘跟你互动了一下。`, "water");
   }
 
   function saveWaterTarget(value) {
@@ -7083,7 +6984,7 @@ export default function Workbench() {
     if (actualRewards.some((reward) => reward.key)) persist('petRewardHistory', history);
     for (const type of ['water', 'bone', 'toy', 'stick']) {
       const amount = actualRewards.filter((reward) => reward.type === type).reduce((sum, reward) => sum + reward.amount, 0);
-      if (amount) changePetSupply(type, amount, '相关记录已更新，胖咕嘎收到了奖励。', 'reward');
+      if (amount) changePetSupply(type, amount, '相关记录已更新，鲸鱼娘收到了奖励。', 'reward');
     }
     return { changes: prepared.changes, rewards: actualRewards };
   }
@@ -7891,7 +7792,7 @@ export default function Workbench() {
   const expiringSubscriptions = upcomingSubscriptions(subscriptionRecords, dateKey);
   const skillSummaries = [
     { id: "today", name: "今日速看", icon: "home", badge: "首页", summary: `打卡 ${stats.checkin}` },
-    { id: "notes", name: "想法笔记", icon: "checklist", badge: "笔记", summary: `${notes.length} 条记录` },
+    { id: "notes", name: "想法笔记", icon: "notes", badge: "笔记", summary: `${notes.length} 条记录` },
     { id: "consultations", name: "观影记录", icon: "chat", badge: "观影", summary: `${stats.consultations} 条` },
     { id: "market", name: "股市行情", icon: "trend", badge: "行情", summary: "金价、指数、自选股" },
     { id: "diet", name: "饮食记录", icon: "food", badge: "饮食", summary: `${dietRecords.filter((item) => item.date === todayKey()).length} 条` },
@@ -8037,7 +7938,7 @@ export default function Workbench() {
                 {recentIdeas.length > 0 && <details className="quick-note-disclosure"><summary><span>最近想法</span><span className="quick-note-expand">展开</span><span className="quick-note-collapse">收起</span><SelectChevron /></summary><div className="quick-note-recent" aria-label="最近想法">{recentIdeas.map((note) => <button type="button" key={note.id} onClick={() => editNote(note)}><span>{note.title}</span><small>{note.date}</small></button>)}</div></details>}
               </section>
               <section className="dashboard-strip" aria-label="今日概览">
-                <PetCompanionCard supplies={petSupplies} action={petAction} onUse={usePetSupply} />
+                <PetCompanionCard supplies={petSupplies} action={petAction} onUse={usePetSupply} onRest={() => setPetAction({ type: "idle", text: "摸着肚子等你投喂。" })} />
                 <div className="dashboard-tile">
                   <span>打卡任务</span>
                   <strong>{stats.checkin}</strong>
@@ -8229,7 +8130,7 @@ export default function Workbench() {
           { id: "more", label: "更多", icon: "settings" },
         ] : [
           { id: "today", label: "今日速看", icon: "home" },
-          { id: "notes", label: "想法笔记", icon: "checklist" },
+          { id: "notes", label: "想法笔记", icon: "notes" },
           { id: "plans", label: "每日安排", icon: "checklist" },
           { id: "market", label: "股市行情", icon: "trend" },
           { id: "consultations", label: "观影记录", icon: "chat" },
