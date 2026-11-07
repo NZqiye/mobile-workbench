@@ -1,0 +1,83 @@
+/* Fast acknowledgment and continuity for the existing workbench. */
+.phone-shell.app-motion {
+  --motion-quick: 120ms;
+  --motion-state: 200ms;
+  --motion-ease: cubic-bezier(.16, 1, .3, 1);
+}
+.phone-shell.app-motion :is(button, summary, .backup-import) {
+  transition: background-color var(--motion-state) var(--motion-ease), color var(--motion-state) var(--motion-ease), border-color var(--motion-state) var(--motion-ease), box-shadow var(--motion-state) var(--motion-ease), transform var(--motion-quick) ease-out;
+}
+.phone-shell.app-motion button:active:not(:disabled):not(.menu-backdrop) {
+  transform: scale(.97);
+}
+.phone-shell.app-motion button:disabled { transform: none; }
+.phone-shell.app-motion :is(.nav-symbol, .bottom-nav-item > span, .ui-select-chevron, summary > svg, .travel-icon-change svg) {
+  transition: transform var(--motion-state) var(--motion-ease), filter var(--motion-state) var(--motion-ease);
+}
+.phone-shell.app-motion :is(.bottom-nav-item.active > span, .nav-item.active .nav-symbol) { transform: translateY(-2px); }
+.phone-shell.app-motion .side-nav { transition: transform 260ms var(--motion-ease); }
+.phone-shell.app-motion .menu-backdrop { transition: opacity 180ms ease-out; transform: none; }
+.phone-shell.app-motion.menu-open .side-nav { transition-duration: 300ms; }
+.phone-shell.app-motion :is(.asset-form, .travel-icon-options, .daybook-inline-picker, .watch-rating-detail) {
+  animation: app-open 200ms var(--motion-ease);
+}
+.phone-shell.app-motion .overview-backdrop { animation: app-feedback 160ms ease-out; }
+.phone-shell.app-motion .overview-panel { animation: app-open 260ms var(--motion-ease); }
+.ui-select-content[data-state="open"] {
+  transform-origin: var(--radix-select-content-transform-origin);
+  animation: app-select-open 160ms cubic-bezier(.16, 1, .3, 1);
+}
+.ui-select-content[data-state="closed"] { animation: app-feedback 100ms ease-in reverse; }
+.phone-shell.app-motion .ui-select-trigger[data-state="open"] .ui-select-chevron { transform: rotate(180deg); }
+.phone-shell.app-motion :is(.habit-row, .life-checkin-row) {
+  transition: background-color var(--motion-state) var(--motion-ease), border-color var(--motion-state) var(--motion-ease);
+}
+.phone-shell.app-motion .habit-row:has(input:checked) { background-color: var(--ios-blue-soft); }
+.phone-shell.app-motion .habit-row label > span { transition: color var(--motion-state) ease-out; }
+.phone-shell.app-motion .habit-row:has(input:checked) label > span { color: var(--ios-blue); }
+.phone-shell.app-motion .content input[type="checkbox"]:checked { animation: app-check 220ms var(--motion-ease); }
+.phone-shell.app-motion :is(.watch-progress > i, .life-progress-line > i > b, .daybook-track > span) {
+  width: 100%;
+  transform-origin: left center;
+  transition: transform 260ms var(--motion-ease);
+}
+.phone-shell.app-motion :is(.quick-note-status.saved, .watch-rating-status.success) { animation: app-confirm 300ms var(--motion-ease); }
+.phone-shell.app-motion .quick-note-status.saved { color: var(--ios-blue) !important; }
+
+/* Native details keeps keyboard behavior; older WebViews get the immediate toggle. */
+@supports (interpolate-size: allow-keywords) and selector(details::details-content) {
+  .phone-shell.app-motion details { interpolate-size: allow-keywords; }
+  .phone-shell.app-motion details::details-content {
+    block-size: 0;
+    overflow: clip;
+    transition: block-size 220ms var(--motion-ease), content-visibility 220ms allow-discrete;
+  }
+  .phone-shell.app-motion details[open]::details-content { block-size: auto; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .phone-shell.app-motion :is(.travel-icon-choice, .daybook-icon-options button):hover img { transform: scale(1.08); }
+  .phone-shell.app-motion :is(.travel-icon-choice, .daybook-icon-options button) img { transition: transform 180ms var(--motion-ease); }
+}
+@keyframes app-open {
+  from { opacity: .7; clip-path: inset(0 0 10px 0); }
+  to { opacity: 1; clip-path: inset(0); }
+}
+@keyframes app-feedback { from { opacity: 0; } to { opacity: 1; } }
+@keyframes app-select-open { from { opacity: .6; transform: scale(.97); } to { opacity: 1; transform: scale(1); } }
+@keyframes app-check { from { transform: scale(.8); } to { transform: scale(1); } }
+@keyframes app-confirm { from { opacity: .55; } to { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-shell.app-motion :is(button, summary, .backup-import, .habit-row, .life-checkin-row) {
+    transition-duration: 100ms !important;
+    transition-property: color, background-color, border-color !important;
+  }
+  .phone-shell.app-motion button:active:not(:disabled):not(.menu-backdrop),
+  .phone-shell.app-motion :is(.travel-icon-choice, .daybook-icon-options button):hover img { transform: none; }
+  .phone-shell.app-motion :is(.nav-symbol, .bottom-nav-item > span, .side-nav, .ui-select-chevron, summary > svg, .travel-icon-change svg) { transition: none !important; }
+  .phone-shell.app-motion :is(.asset-form, .travel-icon-options, .daybook-inline-picker, .watch-rating-detail, .overview-panel, input[type="checkbox"]),
+  .ui-select-content { animation: none !important; }
+  .phone-shell.app-motion :is(.quick-note-status.saved, .watch-rating-status.success) { animation: app-confirm 100ms ease-out !important; }
+  .phone-shell.app-motion details::details-content { transition: none !important; }
+  .phone-shell.app-motion :is(.watch-progress > i, .life-progress-line > i > b, .daybook-track > span) { transition: none !important; }
+}

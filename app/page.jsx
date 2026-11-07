@@ -28,6 +28,8 @@ import "./components/android-app.css";
 import "./components/mobile-watch.css";
 import "./components/mobile-surface.css";
 import "./components/visual-alignment.css";
+import useAppMotion from "./components/use-app-motion";
+import "./components/app-motion.css";
 
 const storagePrefix = "qiyeworkbench:";
 
@@ -3489,7 +3491,7 @@ function DailyArrangement({ view = "habits", habits, done, tasks, anniversaries,
             {archived || meta.nextDays === null ? <b className="daybook-past-label">{primary}</b> : <><b>{meta.nextDays === 0 ? "今天" : meta.nextDays}</b><span>{meta.nextDays === 0 ? ["memorial", "qingming"].includes(icon.id) ? "留一份思念" : "好日子就在此刻" : "天后"}</span></>}
           </div>
         </div>
-        {timeline && <div className="daybook-timeline"><div className="daybook-track" role="progressbar" aria-label={`${item.title}日期进度`} aria-valuenow={timeline.percent} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${timeline.percent}%` }} /></div>{featured && <div className="daybook-progress-copy"><span>已过 {timeline.elapsed}/{timeline.total} 天 · {timeline.percent}%</span><span>按自然日计算</span></div>}</div>}
+        {timeline && <div className="daybook-timeline"><div className="daybook-track" role="progressbar" aria-label={`${item.title}日期进度`} aria-valuenow={timeline.percent} aria-valuemin={0} aria-valuemax={100}><span style={{ transform: `scaleX(${timeline.percent / 100})` }} /></div>{featured && <div className="daybook-progress-copy"><span>已过 {timeline.elapsed}/{timeline.total} 天 · {timeline.percent}%</span><span>按自然日计算</span></div>}</div>}
         {featured && <div className="daybook-metrics"><div><strong>{timeline ? `${timeline.percent}%` : targetDate.slice(5).replace("-", ".")}</strong><span>{timeline ? "日期进度" : "目标日期"}</span></div><div><strong>{Math.floor(meta.nextDays / 7)} <small>周</small></strong><span>余 {meta.nextDays % 7} 天</span></div><div><strong>{meta.nextDays.toLocaleString()}</strong><span>剩余天数</span></div></div>}
         <div className="daybook-entry-actions"><span>{featured ? ["memorial", "qingming"].includes(icon.id) ? "把思念，留给重要的人" : meta.nextDays === 0 ? "今天，记得好好珍惜" : "下一份期待，正在靠近" : ""}</span><button className="daybook-delete" type="button" aria-label={`删除${item.title}`} onClick={() => onDeleteAnniversary(item.id)}>删除</button></div>
         {editingAnniversaryIcon === item.id && <div className="daybook-inline-picker"><div className="daybook-picker-head"><strong>选择日子图标</strong><button type="button" onClick={() => setEditingAnniversaryIcon(null)}>收起</button></div><AnniversaryIconPicker value={icon.id} onChange={(iconId) => { onUpdateAnniversaryIcon(item.id, iconId); setEditingAnniversaryIcon(null); }} /></div>}
@@ -5031,7 +5033,7 @@ function WatchSchedule({ items = [], compact = false, activeView = "today", tmdb
                         <strong>{updateEpisode ? `${updateEpisode} 集` : "-- 集"}</strong>
                         {total > 0 && <span>共 {total} 集</span>}
                       </div>
-                      {total > 0 && <div className="watch-progress"><i style={{ width: `${progress}%` }} /></div>}
+                      {total > 0 && <div className="watch-progress"><i style={{ transform: `scaleX(${progress / 100})` }} /></div>}
                     </div>
                   </div>
                 </article>
@@ -6111,7 +6113,7 @@ function LifeListBoard({ goals, onAddGoal, onDeleteGoal, onAddItem, onToggleItem
                 <strong>{days === null ? "--" : days < 0 ? "已超过 " + Math.abs(days) + " 天" : days === 0 ? "就是今天" : days}</strong>
                 {days !== null && days >= 0 && <span>天</span>}
               </div>
-              <div className="life-progress-line"><span>完成 {completedCount}/{goal.items.length}</span><i><b style={{ width: goal.items.length ? (completedCount / goal.items.length) * 100 + "%" : "0%" }} /></i></div>
+              <div className="life-progress-line"><span>完成 {completedCount}/{goal.items.length}</span><i><b style={{ transform: `scaleX(${goal.items.length ? completedCount / goal.items.length : 0})` }} /></i></div>
               <div className="life-checkin-list">
                 {items.length === 0 && <p className="empty">在这里添加具体的完成打卡项目。</p>}
                 {pendingItems.map((item) => (
@@ -6225,6 +6227,9 @@ export default function Workbench() {
   const [petSupplies, setPetSupplies] = useState(defaultPetSupplies);
   const [petAction, setPetAction] = useState({ type: "idle", text: "摸着肚子等你投喂。" });
   const cloudCollectionSaveRef = useRef({});
+  const shellRef = useRef(null);
+  const motionView = { plans: arrangementView, diet: dietView, exercise: exerciseView, consultations: consultationView, market: marketView, assets: `${assetSection}:${assetView}` }[activePage] || "";
+  useAppMotion(shellRef, `${activePage}:${motionView}`);
 
   function persist(name, value) {
     const nextValue = syncedCollections.includes(name) && Array.isArray(value) ? stampItems(value) : value;
@@ -7912,7 +7917,7 @@ export default function Workbench() {
   </section>;
 
   return (
-    <main className={`phone-shell ios18-shell visual-aligned ${androidApp ? "android-app-shell" : ""} ${displayMode === "desktop" ? "desktop-shell desktop-redesign" : "mobile-shell"} ${menuOpen ? "menu-open" : ""} page-${activePage} pony-theme-${ponyTheme}`}>
+    <main ref={shellRef} className={`phone-shell ios18-shell visual-aligned app-motion ${androidApp ? "android-app-shell" : ""} ${displayMode === "desktop" ? "desktop-shell desktop-redesign" : "mobile-shell"} ${menuOpen ? "menu-open" : ""} page-${activePage} pony-theme-${ponyTheme}`}>
       <div className="phone-status">
         <button className="menu-toggle" type="button" aria-label="打开菜单" onClick={() => setMenuOpen(true)}>☰</button>
         <strong>{androidApp ? "七夜online" : <ClockText />}</strong>
@@ -8028,7 +8033,7 @@ export default function Workbench() {
                   <input name="note" type="text" placeholder="有什么想法？回车保存" aria-label="闪念笔记" aria-describedby="quick-note-status" autoComplete="off" onInput={() => setQuickNoteStatus("")} onKeyDown={(event) => { if (event.key === "Enter" && (event.nativeEvent.isComposing || event.keyCode === 229)) event.preventDefault(); }} />
                   <button type="submit" aria-label="保存闪念笔记">保存</button>
                 </form>
-                <p className="quick-note-status" id="quick-note-status" role="status">{quickNoteStatus || "想法收在这里，也可以到「想法笔记」搜索和编辑。"}</p>
+                <p className={`quick-note-status${quickNoteStatus.startsWith("已保存") ? " saved" : ""}`} id="quick-note-status" role="status">{quickNoteStatus || "想法收在这里，也可以到「想法笔记」搜索和编辑。"}</p>
                 {recentIdeas.length > 0 && <details className="quick-note-disclosure"><summary><span>最近想法</span><span className="quick-note-expand">展开</span><span className="quick-note-collapse">收起</span><SelectChevron /></summary><div className="quick-note-recent" aria-label="最近想法">{recentIdeas.map((note) => <button type="button" key={note.id} onClick={() => editNote(note)}><span>{note.title}</span><small>{note.date}</small></button>)}</div></details>}
               </section>
               <section className="dashboard-strip" aria-label="今日概览">
