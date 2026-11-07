@@ -5,9 +5,9 @@ import { useEffect, useRef, useState } from "react";
 const animationByAction = {
   idle: "idle",
   bone: "snack",
-  water: "breakfast",
-  toy: "laugh",
-  stick: "wave",
+  water: "bubbles",
+  toy: "cube",
+  stick: "dance",
   reward: "happy",
 };
 

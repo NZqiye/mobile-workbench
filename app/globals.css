@@ -168,6 +168,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .pet-supplies button span { color: inherit; font-size: 15px; }
 .pet-supplies button strong { color: color-mix(in srgb, var(--theme-accent) 84%, #fff); font-size: 14px; line-height: 1; }
 .pet-supplies button small { color: var(--muted); font-size: 9px; line-height: 1.1; }
+.pet-reward-help { position: relative; z-index: 1; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.pet-reward-help summary { width: fit-content; padding-block: 5px; cursor: pointer; }
+.pet-reward-help p { margin: 5px 0; font-size: inherit; line-height: inherit; }
 .panel, .market-panel { display: grid; gap: 14px; padding: 17px 15px; border: 1px solid var(--line); }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; font-weight: 700; }
