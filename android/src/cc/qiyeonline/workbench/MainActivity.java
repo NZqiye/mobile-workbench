@@ -39,7 +39,7 @@ import org.json.JSONObject;
 
 public final class MainActivity extends Activity {
     private static final String HOME = "https://qiyeonline.cc.cd/";
-    private static final int FILE_PICK = 10, FILE_SAVE = 11, AUDIO_PERMISSION = 12, NATIVE_AUDIO_PERMISSION = 13;
+    private static final int FILE_PICK = 10, FILE_SAVE = 11, AUDIO_PERMISSION = 12, NATIVE_AUDIO_PERMISSION = 13, NOTIFICATION_PERMISSION = 14;
     private LinearLayout root;
     private WebView web;
     private LinearLayout errorView;
@@ -55,6 +55,7 @@ public final class MainActivity extends Activity {
     private final Runnable recordingLimit = () -> finishNativeAudio(false);
     private boolean keyboardVisible;
     private AppUpdater updater;
+    private String notificationId;
 
     private boolean trusted(Uri uri) {
         return uri != null && "https".equals(uri.getScheme()) && "qiyeonline.cc.cd".equals(uri.getHost()) && (uri.getPort() == -1 || uri.getPort() == 443);
@@ -171,9 +172,27 @@ public final class MainActivity extends Activity {
                 nativePort.setWebMessageCallback(new WebMessagePort.WebMessageCallback() {
                     @Override public void onMessage(WebMessagePort port, WebMessage message) {
                         if (!trusted(Uri.parse(web.getUrl()))) return;
+                        JSONObject data = null;
                         try {
-                            JSONObject data = new JSONObject(message.getData());
+                            data = new JSONObject(message.getData());
                             switch (data.optString("action")) {
+                                case "notification-state": replyNotifications(data.optString("id")); break;
+                                case "notification-sync": NativeReminders.sync(MainActivity.this, data.getJSONArray("tasks")); replyNotifications(data.optString("id")); break;
+                                case "notification-enable":
+                                    if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                        if (notificationId != null) { replyNative(data.optString("id"), "通知授权正在进行", "Error"); break; }
+                                        notificationId = data.getString("id");
+                                        requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, NOTIFICATION_PERMISSION);
+                                    } else { NativeReminders.enable(MainActivity.this, true); replyNotifications(data.optString("id")); }
+                                    break;
+                                case "notification-disable": NativeReminders.enable(MainActivity.this, false); replyNotifications(data.optString("id")); break;
+                                case "notification-test":
+                                    if (!NativeReminders.permitted(MainActivity.this)) throw new Exception("请先允许系统通知");
+                                    NativeReminders.test(MainActivity.this); replyNotifications(data.optString("id")); break;
+                                case "notification-settings": startActivity(new Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, getPackageName())); break;
+                                case "notification-exact-settings":
+                                    if (Build.VERSION.SDK_INT >= 31) startActivity(new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + getPackageName())));
+                                    break;
                                 case "update-check": updater.check(true); break;
                                 case "audio-start":
                                     if (audioId != null) { replyNative(data.optString("id"), "已有录音正在进行", "Error"); return; }
@@ -186,12 +205,13 @@ public final class MainActivity extends Activity {
                                 case "permissions": startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()))); break;
                             }
                         } catch (Exception error) {
-                            replyNative(audioId, "手机录音连接失败，请重试", "Error");
-                            finishNativeAudio(true);
+                            if (data != null && data.optString("action").startsWith("notification-")) replyNative(data.optString("id"), error.getMessage() == null ? "提醒连接失败，请重试" : error.getMessage(), "Error");
+                            else { replyNative(audioId, "手机录音连接失败，请重试", "Error"); finishNativeAudio(true); }
                         }
                     }
                 });
                 web.postWebMessage(new WebMessage("qiye-native-port", new WebMessagePort[] { ports[1] }), Uri.parse(HOME));
+                openTasksFromNotification();
             });
         } catch (Exception error) { toast("手机录音尚未就绪，请重新打开应用"); }
     }
@@ -200,6 +220,22 @@ public final class MainActivity extends Activity {
         if (nativePort == null || id == null) return;
         try { nativePort.postMessage(new WebMessage(new JSONObject().put("id", id).put("error", error).put("name", name).toString())); }
         catch (Exception ignored) { }
+    }
+
+    private void replyNotifications(String id) throws Exception {
+        if (nativePort != null) nativePort.postMessage(new WebMessage(new JSONObject().put("id", id).put("notifications", NativeReminders.state(this)).toString()));
+    }
+
+    private void openTasksFromNotification() {
+        if (!getIntent().getBooleanExtra("openTasks", false) || web == null || !trusted(Uri.parse(web.getUrl()))) return;
+        web.evaluateJavascript("window.__qiyeOpenTasks ? window.__qiyeOpenTasks() : (window.__qiyeTasksPending = true)", null);
+        getIntent().removeExtra("openTasks");
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        openTasksFromNotification();
     }
 
     private void startNativeAudio() {
@@ -303,6 +339,11 @@ public final class MainActivity extends Activity {
 
     @Override public void onRequestPermissionsResult(int request, String[] permissions, int[] grants) {
         super.onRequestPermissionsResult(request, permissions, grants);
+        if (request == NOTIFICATION_PERMISSION && notificationId != null) {
+            NativeReminders.enable(this, grants.length > 0 && grants[0] == PackageManager.PERMISSION_GRANTED);
+            try { replyNotifications(notificationId); } catch (Exception error) { replyNative(notificationId, "提醒状态读取失败，请重试", "Error"); }
+            notificationId = null;
+        }
         if (request == NATIVE_AUDIO_PERMISSION && audioId != null) {
             if (grants.length > 0 && grants[0] == PackageManager.PERMISSION_GRANTED) startNativeAudio();
             else {
@@ -360,7 +401,16 @@ public final class MainActivity extends Activity {
     @Override public void onBackPressed() { goBack(); }
     @Override public void onSaveInstanceState(Bundle state) { web.saveState(state); super.onSaveInstanceState(state); }
     @Override public void onPause() { if (updater != null) updater.pause(); if (nativeRecorder != null) finishNativeAudio(true); CookieManager.getInstance().flush(); web.onPause(); super.onPause(); }
-    @Override public void onResume() { super.onResume(); if (web != null) web.onResume(); if (updater != null) updater.resume(); }
+    @Override public void onResume() {
+        super.onResume();
+        if (web != null) web.onResume();
+        NativeReminders.refresh(this);
+        if (web != null && trusted(Uri.parse(web.getUrl()))) {
+            try { web.evaluateJavascript("window.dispatchEvent(new CustomEvent('qiye-notification-state', {detail:" + NativeReminders.state(this).toString() + "}))", null); }
+            catch (Exception ignored) { }
+        }
+        if (updater != null) updater.resume();
+    }
     @Override public void onDestroy() {
         if (updater != null) updater.close();
         finishNativeAudio(true);

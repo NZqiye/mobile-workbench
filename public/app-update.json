@@ -1,7 +1,7 @@
 {
-  "version": "1.1.2",
-  "versionCode": 4,
-  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.2/qiyeonline-1.1.2.apk",
-  "sha256": "7bc1fac8d101b567b3aff4b04daf39ad694d614aa704711dafcc6b639faec43d",
-  "notes": "新增自动检查版本、App 内下载和系统确认安装；继续保留首页返回退到后台。观影评分布局更宽松，语音支持说出片名、季数和观看集数后直接保存进度。"
+  "version": "1.1.3",
+  "versionCode": 5,
+  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.3/qiyeonline-1.1.3.apk",
+  "sha256": "4a8b22bbb0ce04914895335fb9f7200737e13cbb4f0654bace75ee09ec7c0e6a",
+  "notes": "观看进度支持输入集数定位、标记看到哪集及快捷保存；优化单集列表，新增安卓本机任务到时通知。"
 }

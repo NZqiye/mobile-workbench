@@ -11,6 +11,9 @@ import VoiceQuickRecord from "./components/voice-quick-record";
 import AccountPanel from "./components/account-panel";
 import MediaPoster from "./components/media-poster";
 import AppUpdatePanel from "./components/app-update-panel";
+import WatchEpisodeList from "./components/watch-episode-list";
+import NativeNotificationPanel from "./components/native-notification-panel";
+import { nativeReminderTasks } from "../lib/native-reminders";
 import { encodeMarkdownBackup, decodeMarkdownBackup } from "../lib/markdown-backup";
 import { planQuickRecordChanges, undoQuickRecordChanges } from "../lib/workbench-records";
 import { anniversaryIcon, anniversaryIcons } from "../lib/anniversary-icons";
@@ -942,7 +945,8 @@ function PushSettings({ androidApp, session }) {
     } catch (error) { setStatus(error.message || "开启失败"); }
     finally { setBusy(false); }
   }
-  return <section className="panel notification-settings"><div className="panel-head"><div><h2>消息提醒</h2><p>{androidApp ? "安卓安装版暂不支持锁屏推送" : status}</p></div>{!androidApp && <button className="chip-button" type="button" onClick={enablePush} disabled={busy || !session}>{busy ? "开启中…" : "开启提醒"}</button>}</div><p className="notification-description">{androidApp ? "目前任务提醒通过手机浏览器中的工作台接收。安卓安装版尚未接入系统推送，关闭应用后不会直接收到通知。" : "登录后可开启浏览器通知。已设置提醒时间的未完成任务，会在服务器检查到期时推送；目前每天北京时间 10:00 和 15:00 检查，并非按分钟即时提醒。"}</p></section>;
+  if (androidApp) return <NativeNotificationPanel />;
+  return <section className="panel notification-settings"><div className="panel-head"><div><h2>消息提醒</h2><p>{status}</p></div><button className="chip-button" type="button" onClick={enablePush} disabled={busy || !session}>{busy ? "开启中…" : "开启提醒"}</button></div><p className="notification-description">登录后可开启浏览器通知。已设置提醒时间的未完成任务，会在服务器检查到期时推送；目前每天北京时间 10:00 和 15:00 检查，并非按分钟即时提醒。</p></section>;
 }
 
 function writeStorage(name, value) {
@@ -4213,6 +4217,11 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
     setCheckedEpisodes(allEpisodesChecked ? new Set() : new Set(episodes.map((episode) => Number(episode.episodeNumber))));
   }
 
+  function watchThroughEpisode(episodeNumber) {
+    setCheckedEpisodes(current => new Set([...current, ...episodes.map(episode => Number(episode.episodeNumber)).filter(number => number > 0 && number <= episodeNumber)]));
+    setRatingStatus("");
+  }
+
   function validRating(value) {
     const raw = Number(value);
     if (!Number.isFinite(raw) || raw < 0.5 || raw > 10) return null;
@@ -4346,7 +4355,7 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
                  <p>{[details?.year || selected.year, details?.tmdbRating || selected.tmdbRating ? `TMDB ${details?.tmdbRating || selected.tmdbRating}` : "", ...(details?.tags || selected.tags || [])].filter(Boolean).join(" · ")}</p>
                </div>
              </div>
-              <div className="watch-rating-detail-body watch-rating-desktop-body">
+              {!compact && <div className="watch-rating-detail-body watch-rating-desktop-body">
                 <p className="watch-rating-summary">{detailSummary}</p>
                 {detailsLoading && <p className="watch-rating-status">正在读取 TMDB 详情…</p>}
                 {detailStatus && <p className="watch-rating-status error">{detailStatus}</p>}
@@ -4381,8 +4390,8 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
                 </>
                 )}
                 {ratingStatus && <p className="watch-rating-status success">{ratingStatus}</p>}
-              </div>
-              <div className="watch-rating-mobile-body">
+              </div>}
+              {compact && <div className="watch-rating-mobile-body">
                 <div className="watch-mobile-titlebar">
                   {mobileRatingView === "episodes" ? <button type="button" onClick={() => setMobileRatingView("seasons")} aria-label="返回季列表">←</button> : <span />}
                   <div>
@@ -4434,25 +4443,14 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
                       </div>
                     ) : (
                       <>
-                        {seasonLoading ? <p className="watch-rating-status">正在读取 TMDB 集数…</p> : <div className="watch-mobile-episodes">
-                          {episodes.map((episode) => {
-                            const episodeNumber = Number(episode.episodeNumber);
-                            const episodeImage = episode.stillUrl || activeSeason?.posterUrl || detailPoster;
-                            return <label className={`watch-mobile-episode ${checkedEpisodes.has(episodeNumber) ? "checked" : ""}`} key={episode.id || episodeNumber}>
-                              <input type="checkbox" checked={checkedEpisodes.has(episodeNumber)} onChange={() => toggleEpisode(episodeNumber)} />
-                              {episodeImage ? <img src={episodeImage} alt="" loading="lazy" /> : <span>E{episodeNumber}</span>}
-                              <div><strong>E{episodeNumber} · {episode.name || `第 ${episodeNumber} 集`}</strong><small>{[episode.airDate, episode.runtime ? `${episode.runtime} 分钟` : ""].filter(Boolean).join(" · ")}</small>{episode.overview && <p>{episode.overview}</p>}</div>
-                              <i className="watch-mobile-episode-check" aria-hidden="true">{checkedEpisodes.has(episodeNumber) ? "✓" : ""}</i>
-                            </label>;
-                          })}
-                        </div>}
+                        {seasonLoading ? <p className="watch-rating-status">正在读取 TMDB 集数…</p> : <WatchEpisodeList key={`${completedSeasonKey}:${episodes.length}`} episodes={episodes} checkedEpisodes={checkedEpisodes} onToggle={toggleEpisode} onWatchThrough={watchThroughEpisode} onSave={saveProgress} posterUrl={activeSeason?.posterUrl || detailPoster} />}
                         <div className="watch-mobile-rating-footer"><label>本季整体评分<input type="text" inputMode="decimal" value={seasonRating} onChange={(event) => { setSeasonRating(event.target.value); setRatingStatus(""); }} placeholder="看完本季后评分" /></label><button type="button" onClick={saveProgress}>保存观看进度</button><button type="button" className="secondary" onClick={saveSeasonRating} disabled={!seasonRating}>保存本季评分</button></div>
                       </>
                     )}
                   </>
                 )}
                 {ratingStatus && <p className="watch-rating-status success">{ratingStatus}</p>}
-              </div>
+              </div>}
             </div>}
           </div>
         </>
@@ -6193,6 +6191,8 @@ export default function Workbench() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [displayMode, setDisplayMode] = useState("mobile");
   const [androidApp, setAndroidApp] = useState(false);
+  const [storageLoaded, setStorageLoaded] = useState(false);
+  const [nativeConnection, setNativeConnection] = useState(0);
   const [ponyTheme, setPonyTheme] = useState("jade");
   const [tmdbResults, setTmdbResults] = useState([]);
   const [tmdbStatus, setTmdbStatus] = useState("输入剧名搜索，点击结果即可加入观影列表");
@@ -6539,6 +6539,7 @@ export default function Workbench() {
     setHabits(readStorage("habits", readStorage("checkins", [])));
     setDone(readStorage(`done:${todayKey()}`, {}));
     setPetSupplies({ ...defaultPetSupplies, ...readStorage("petSupplies", defaultPetSupplies) });
+    setStorageLoaded(true);
     const applyResponsiveMode = () => {
       const isAndroidApp = Boolean(window.QiyeNative) || /QiyeAndroid\//.test(navigator.userAgent);
       setAndroidApp(isAndroidApp);
@@ -6549,7 +6550,8 @@ export default function Workbench() {
     };
     if (applyResponsiveMode() === "mobile" && nextPage === "consultations") setConsultationView("rating");
     window.addEventListener("resize", applyResponsiveMode);
-    window.addEventListener("qiye-native-ready", applyResponsiveMode);
+    const nativeReady = () => { applyResponsiveMode(); setNativeConnection(value => value + 1); };
+    window.addEventListener("qiye-native-ready", nativeReady);
     setPonyTheme(ponyThemes.some((theme) => theme.id === localStorage.getItem(key("ponyTheme"))) ? localStorage.getItem(key("ponyTheme")) : "jade");
     setClock(clockText());
     loadTmdbRecommendations();
@@ -6567,7 +6569,7 @@ export default function Workbench() {
       accountController.abort();
       clearInterval(timer);
       window.removeEventListener("resize", applyResponsiveMode);
-      window.removeEventListener("qiye-native-ready", applyResponsiveMode);
+      window.removeEventListener("qiye-native-ready", nativeReady);
     };
   }, []);
 
@@ -6624,6 +6626,25 @@ export default function Workbench() {
     setMenuOpen(false);
     if (androidApp) document.querySelector(".work-area")?.scrollTo({ top: 0 });
   }
+
+  useEffect(() => {
+    if (!storageLoaded || !androidApp || !window.QiyeNative?.syncReminders) return;
+    let current = true;
+    window.QiyeNative.syncReminders(nativeReminderTasks(plans)).then(state => {
+      if (current) window.dispatchEvent(new CustomEvent("qiye-notification-state", { detail: state }));
+    }).catch(error => {
+      if (current) window.dispatchEvent(new CustomEvent("qiye-notification-error", { detail: error.message }));
+    });
+    return () => { current = false; };
+  }, [androidApp, storageLoaded, nativeConnection, plans]);
+
+  useEffect(() => {
+    if (!androidApp) return;
+    const open = () => { switchPage("plans"); setArrangementView("tasks"); delete window.__qiyeTasksPending; };
+    window.__qiyeOpenTasks = open;
+    if (window.__qiyeTasksPending) open();
+    return () => { if (window.__qiyeOpenTasks === open) delete window.__qiyeOpenTasks; };
+  }, [androidApp]);
 
   useEffect(() => {
     if (!androidApp) return;

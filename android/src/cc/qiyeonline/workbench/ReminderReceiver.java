@@ -1,0 +1,9 @@
+package cc.qiyeonline.workbench;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+
+public final class ReminderReceiver extends BroadcastReceiver {
+    @Override public void onReceive(Context context, Intent intent) { NativeReminders.refresh(context); }
+}

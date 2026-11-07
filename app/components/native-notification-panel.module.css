@@ -1,0 +1,8 @@
+.panel { min-width: 0; }
+.description { margin: 12px 0 0; color: var(--ios-muted); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.actions button { min-height: 44px; padding: 10px 12px; border: 0; border-radius: 12px; color: var(--ios-blue); background: var(--ios-blue-soft); font: inherit; font-size: 13px; }
+.actions button:disabled { opacity: .55; cursor: default; }
+.panel a { color: var(--ios-blue); font-size: 14px; }
+.panel :is(button, a):focus-visible { outline: 2px solid var(--ios-blue); outline-offset: 3px; }
+.status { margin: 12px 0 0; color: var(--ios-ink); font-size: 13px; line-height: 1.7; }
