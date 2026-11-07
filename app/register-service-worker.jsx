@@ -16,15 +16,22 @@ export default function RegisterServiceWorker() {
       }
 
       let refreshing = false;
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
+      let hadController = Boolean(navigator.serviceWorker.controller);
+      const onControllerChange = () => {
+        if (!hadController) {
+          hadController = true;
+          return;
+        }
         if (refreshing) return;
         refreshing = true;
         window.location.reload();
-      });
+      };
+      navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
-      navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).then((registration) => {
-        registration.update();
-      });
+      navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" })
+        .then((registration) => registration.update())
+        .catch(() => {});
+      return () => navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
     }
   }, []);
 

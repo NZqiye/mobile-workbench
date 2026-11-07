@@ -1,4 +1,4 @@
-const CACHE_NAME = "qiyeworkbench-v13";
+const CACHE_NAME = "qiyeworkbench-v14";
 const APP_SHELL = ["/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/avatar-cultivation.webp"];
 
 self.addEventListener("install", (event) => {
@@ -13,6 +13,33 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+async function cacheResponse(request, response) {
+  if (response.status === 200) {
+    const copy = response.clone();
+    const cache = await caches.open(CACHE_NAME);
+    await cache.put(request, copy);
+  }
+}
+
+async function loadNavigation(request, event) {
+  const network = fetch(new Request(request, { cache: "no-store" }));
+  event.waitUntil(network.then((response) => cacheResponse(request, response)).catch(() => {}));
+  const cached = await caches.match(request);
+  if (!cached) return network;
+  let timer;
+  try {
+    const response = await Promise.race([
+      network,
+      new Promise((resolve) => { timer = setTimeout(() => resolve(cached), 2000); }),
+    ]);
+    return response.ok ? response : cached;
+  } catch {
+    return cached;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
@@ -23,20 +50,23 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Navigations always bypass the browser HTTP cache. This makes every app
-  // open check the newest HTML; cached content remains an offline fallback.
-  const request = event.request.mode === "navigate"
-    ? new Request(event.request, { cache: "no-store" })
-    : event.request;
-  event.respondWith(
-    fetch(request).then((response) => {
-      if (response.ok) {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-      }
-      return response;
-    }).catch(() => caches.match(event.request))
-  );
+  if (event.request.mode === "navigate") {
+    event.respondWith(loadNavigation(event.request, event));
+    return;
+  }
+
+  // Partial video responses cannot be stored as complete files in Cache API.
+  if (event.request.headers.has("range")) return;
+  if (url.pathname.startsWith("/_next/static/") || /\.(?:png|webp|jpg|jpeg|svg|ico|webm|woff2?)$/i.test(url.pathname) || APP_SHELL.includes(url.pathname)) {
+    const response = caches.match(event.request).then(async (cached) => {
+      if (cached) return cached;
+      const loaded = await fetch(event.request);
+      await cacheResponse(event.request, loaded).catch(() => {});
+      return loaded;
+    });
+    event.respondWith(response);
+    event.waitUntil(response.then(() => {}).catch(() => {}));
+  }
 });
 
 self.addEventListener("push", (event) => {

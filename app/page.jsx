@@ -6362,7 +6362,6 @@ export default function Workbench() {
         saveCloudItem(nextSession, "petRewardHistory", merged.petRewardHistory),
       ]);
       setSyncStatus(`云同步已连接 · ${nowText()}`);
-      loadTmdbRecommendations();
     } catch (error) {
       setSyncStatus(`同步失败：${error.message || "请稍后再试"}`);
     }
@@ -6484,7 +6483,6 @@ export default function Workbench() {
     window.addEventListener("qiye-native-ready", nativeReady);
     setPonyTheme(ponyThemes.some((theme) => theme.id === localStorage.getItem(key("ponyTheme"))) ? localStorage.getItem(key("ponyTheme")) : "jade");
     setClock(clockText());
-    loadTmdbRecommendations();
     let lastMinute = clockText().slice(0, 5);
     const timer = setInterval(() => {
       const nextClock = clockText();
@@ -6504,6 +6502,11 @@ export default function Workbench() {
   }, []);
 
   useEffect(() => {
+    if (!storageLoaded || activePage !== "consultations" || recommendationRequestRef.current) return;
+    loadTmdbRecommendations();
+  }, [activePage, storageLoaded]);
+
+  useEffect(() => {
     if (activePage !== "consultations") return;
     if (!consultations.some((item) => item.tmdbId && (item.tmdbMediaType || "tv") !== "movie")) return;
 
@@ -6512,14 +6515,6 @@ export default function Workbench() {
     localStorage.setItem(refreshKey, todayKey());
     refreshTmdbTrackedItems({ automatic: true });
   }, [activePage, consultations.length]);
-
-  useEffect(() => {
-    if (petAction.type === "idle") return;
-    const timer = setTimeout(() => {
-      setPetAction({ type: "idle", text: "等你来陪我玩。" });
-    }, 11000);
-    return () => clearTimeout(timer);
-  }, [petAction.type, petAction.text, petAction.startedAt]);
 
   const stats = useMemo(() => {
     const finishedHabits = habits.filter((item) => done[item.id]).length;
@@ -7958,7 +7953,7 @@ export default function Workbench() {
                 <p className={`quick-note-status${quickNoteStatus.startsWith("已保存") ? " saved" : ""}`} id="quick-note-status" role="status">{quickNoteStatus || "想法收在这里，也可以到「想法笔记」搜索和编辑。"}</p>
                 {recentIdeas.length > 0 && <details className="quick-note-disclosure"><summary><span>最近想法</span><span className="quick-note-expand">展开</span><span className="quick-note-collapse">收起</span><SelectChevron /></summary><div className="quick-note-recent" aria-label="最近想法">{recentIdeas.map((note) => <button type="button" key={note.id} onClick={() => editNote(note)}><span>{note.title}</span><small>{note.date}</small></button>)}</div></details>}
               </section>
-              <PetCompanionCard supplies={petSupplies} action={petAction} onUse={usePetSupply} onRest={() => setPetAction({ type: "idle", text: "等你来陪我玩。" })} />
+              <PetCompanionCard supplies={petSupplies} action={petAction} onUse={usePetSupply} onRest={(text) => setPetAction((current) => current.startedAt === petAction.startedAt && current.type === petAction.type ? { type: "idle", text: text || "等你来陪我玩。" } : current)} />
               <section className="dashboard-strip" aria-label="今日概览">
                 <div className="dashboard-tile">
                   <span>打卡任务</span>
