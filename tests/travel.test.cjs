@@ -85,27 +85,27 @@ test("selected trip and check-in icons survive saving and can return to automati
 
 test("specific landmarks and scenery match correctly while a selected icon takes priority", () => {
   const context = iconContext();
-  const expected = (id) => `/assets-icons/thiings/travel/${id}.webp`;
+  const expected = (id) => id.startsWith("cn-") ? `/assets-icons/china-landmarks/${id}.svg` : `/assets-icons/thiings/travel/${id}.webp`;
   assert.equal(context.travelCityImage(" 杭州 "), expected("alpine-lake"));
   assert.equal(context.travelCityImage("巴黎"), expected("paris-france"));
   assert.equal(context.travelCityImage("杭州", "tea-plantation"), expected("tea-plantation"));
   assert.equal(context.travelCityImage("杭州", "../../invalid"), expected("alpine-lake"));
-  for (const [name, id] of [["八达岭长城", "great-wall-of-china"], ["富士山", "mount-fuji"], ["布达拉宫", "potala-palace"], ["清水寺", "kiyomizu-dera"], ["埃菲尔铁塔", "eiffel-tower"], ["伦敦塔桥", "london-bridge"], ["西湖", "alpine-lake"], ["灵隐寺", "pagoda"], ["苏州博物馆", "museum"], ["鼓浪屿", "island"], ["上海迪士尼乐园", "theme-park"], ["长江索道", "cableway"], ["广州塔", "skyline"]]) {
+  for (const [name, id] of [["八达岭长城", "great-wall-of-china"], ["富士山", "mount-fuji"], ["布达拉宫", "potala-palace"], ["清水寺", "kiyomizu-dera"], ["埃菲尔铁塔", "eiffel-tower"], ["伦敦塔桥", "london-bridge"], ["西湖", "cn-west-lake"], ["灵隐寺", "pagoda"], ["苏州博物馆", "museum"], ["鼓浪屿", "island"], ["上海迪士尼乐园", "theme-park"], ["长江索道", "cableway"], ["广州塔", "skyline"]]) {
     assert.equal(context.travelPlaceImage("自定义城市", name), expected(id), name);
   }
   assert.equal(context.travelPlaceImage("杭州", "西湖", "sailboat"), expected("sailboat"));
-  assert.equal(context.travelPlaceImage("杭州", "西湖", "missing"), expected("alpine-lake"));
-  assert.equal(context.travelPlaceImage("无锡", "灵山胜境"), expected("buddha-statue"));
+  assert.equal(context.travelPlaceImage("杭州", "西湖", "missing"), expected("cn-west-lake"));
+  assert.equal(context.travelPlaceImage("无锡", "灵山胜境"), expected("cn-lingshan-buddha"));
   assert.equal(context.travelPlaceImage("沈阳", "故宫"), expected("palace"));
   assert.equal(context.travelIconImage("missing"), "");
 });
 
-test("all travel choices have real, transparent local illustrations and legacy IDs remain available", async () => {
+test("all travel choices have transparent local illustrations and legacy IDs remain available", async () => {
   const context = iconContext();
   const sharp = require("sharp");
   assert.equal(context.icons.length, 121);
   assert.equal(new Set(context.icons.map((icon) => icon.id)).size, context.icons.length);
-  assert.equal(new Set(context.icons.map((icon) => icon.imageId)).size, 100);
+  assert.equal(new Set(context.icons.map((icon) => icon.imageId)).size, 121);
   for (const id of ["beijing-china", "terracotta-warrior", "tea-plantation", "sailboat", "eiffel-tower", "great-wall-of-china"]) assert.ok(context.travelIconImage(id));
   for (const icon of context.icons) {
     const image = sharp(path.join(__dirname, "../public", context.travelIconImage(icon.id)));
@@ -114,18 +114,34 @@ test("all travel choices have real, transparent local illustrations and legacy I
   }
 });
 
+test("domestic landmarks have distinct rendered artwork at the picker size", async () => {
+  const context = iconContext();
+  const sharp = require("sharp");
+  const { createHash } = require("node:crypto");
+  const domestic = context.icons.filter((icon) => icon.id.startsWith("cn-"));
+  assert.equal(domestic.length, 36);
+  const hashes = new Set();
+  for (const icon of domestic) {
+    const pixels = await sharp(path.join(__dirname, "../public", context.travelIconImage(icon.id))).resize(40, 40).ensureAlpha().raw().toBuffer();
+    const hash = createHash("sha256").update(pixels).digest("hex");
+    assert.ok(!hashes.has(hash), `${icon.label} must not reuse another landmark's artwork`);
+    hashes.add(hash);
+    assert.equal(context.travelPlaceImage("", icon.label), context.travelIconImage(icon.id), icon.label);
+  }
+});
+
 test("domestic famous places use relevant local representations, including a destination without a city", () => {
   const context = iconContext();
-  const expected = (id) => `/assets-icons/thiings/travel/${id}.webp`;
-  for (const [name, id] of [["黄山风景区", "mountain-peak"], ["张家界国家森林公园", "rocky-cliff"], ["九寨沟五花海", "mirror-lake"], ["桂林漓江", "river"], ["玉龙雪山", "snow-capped-peak"], ["长白山天池", "crater-lake"], ["黄河壶口瀑布", "waterfall-1"], ["黄果树瀑布", "waterfall"], ["鸣沙山月牙泉", "desert-oasis"], ["张掖七彩丹霞", "sandstone-wave"], ["龙脊梯田", "rice-paddy"], ["蜀南竹海", "bamboo-grove"], ["织金洞", "cave-stalagmite"], ["西溪国家湿地公园", "marsh"], ["白洋淀", "lotus-flower"], ["龙门石窟", "buddha-statue"], ["莫高窟", "grotto"], ["乌镇", "bridge-covered"], ["凤凰古城", "tea-house-on-stilts"]]) {
+  const expected = (id) => id.startsWith("cn-") ? `/assets-icons/china-landmarks/${id}.svg` : `/assets-icons/thiings/travel/${id}.webp`;
+  for (const [name, id] of [["黄山风景区", "cn-huangshan"], ["张家界国家森林公园", "cn-zhangjiajie"], ["九寨沟五花海", "cn-jiuzhaigou"], ["桂林漓江", "cn-li-river"], ["玉龙雪山", "cn-yulong-snow-mountain"], ["长白山天池", "cn-changbai-mountain"], ["黄河壶口瀑布", "cn-hukou"], ["黄果树瀑布", "cn-huangguoshu"], ["鸣沙山月牙泉", "cn-crescent-lake"], ["张掖七彩丹霞", "cn-zhangye-danxia"], ["龙脊梯田", "cn-longji-terraces"], ["蜀南竹海", "cn-shunan-bamboo-sea"], ["织金洞", "cn-zhijin-cave"], ["西溪国家湿地公园", "cn-xixi-wetland"], ["白洋淀", "cn-baiyangdian"], ["龙门石窟", "cn-longmen-grottoes"], ["莫高窟", "cn-mogao-caves"], ["乌镇", "cn-wuzhen"], ["凤凰古城", "cn-fenghuang-town"]]) {
     assert.equal(context.travelPlaceImage("", name), expected(id), name);
   }
-  assert.equal(context.travelCityImage("九寨沟三日游"), expected("mirror-lake"));
-  assert.equal(context.travelCityImage("丽江"), expected("snow-capped-peak"));
+  assert.equal(context.travelCityImage("九寨沟三日游"), expected("cn-jiuzhaigou"));
+  assert.equal(context.travelCityImage("丽江"), expected("cn-yulong-snow-mountain"));
   assert.equal(context.travelCityImage("自定义城市"), "/assets-icons/thiings/fashion/suitcase.webp");
   assert.equal(context.travelPlaceImage("", "天山天池"), expected("alpine-lake"));
-  assert.equal(context.travelPlaceImage("", "九寨沟", "cn-huangshan"), expected("mountain-peak"));
-  assert.equal(context.travelIconImage("cn-huangshan"), expected("mountain-peak"));
+  assert.equal(context.travelPlaceImage("", "九寨沟", "cn-huangshan"), expected("cn-huangshan"));
+  assert.equal(context.travelIconImage("cn-huangshan"), expected("cn-huangshan"));
   assert.ok(context.icons.filter((icon) => icon.id.startsWith("cn-")).every((icon) => !icon.label.includes("示意")));
   const trip = { destination: "黄山", startDate: "2026-11-07", endDate: "2026-11-09", icon: "cn-huangshan", checkins: [{ id: "domestic", name: "宏村", date: "2026-11-08", icon: "cn-hongcun" }] };
   const saved = travel.normalizeTravelRecord(trip);
