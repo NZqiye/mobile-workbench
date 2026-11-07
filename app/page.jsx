@@ -15,6 +15,7 @@ import WatchEpisodeList from "./components/watch-episode-list";
 import NativeNotificationPanel from "./components/native-notification-panel";
 import { nativeReminderTasks } from "../lib/native-reminders";
 import watchDetailStyles from "./components/watch-detail.module.css";
+import watchCalendarStyles from "./components/watch-calendar.module.css";
 import { seriesWatchProgress } from "../lib/watch-progress";
 import { encodeMarkdownBackup, decodeMarkdownBackup } from "../lib/markdown-backup";
 import { planQuickRecordChanges, undoQuickRecordChanges } from "../lib/workbench-records";
@@ -1307,7 +1308,7 @@ async function saveMergedCloudCollection(session, name, value) {
   if (!session) return value;
   await cloudWriteQueue.catch(() => {});
   const cloud = await loadCloudItems(session);
-  const merged = mergeSyncedItems(name, value, cloud[name], cloud);
+  const merged = mergeSyncedItems(name, readStorage(name, value), cloud[name], cloud);
   const nextValue = name === "watchCheckins" ? dedupeWatchCheckins(merged) : merged;
   await saveCloudItem(session, name, nextValue);
   return nextValue;
@@ -4066,6 +4067,7 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
   const [seasonData, setSeasonData] = useState(null);
   const [seasonNumber, setSeasonNumber] = useState("");
   const [checkedEpisodes, setCheckedEpisodes] = useState(new Set());
+  const checkedEpisodesRef = useRef(new Set());
   const [seasonRating, setSeasonRating] = useState("");
   const [movieRating, setMovieRating] = useState("");
   const [detailStatus, setDetailStatus] = useState("");
@@ -4104,7 +4106,8 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
   const overallWatchProgress = !isMovie ? seriesWatchProgress(seasonOptions, selected?.seasonProgress, seasonNumber, checkedEpisodes, episodeCount) : null;
   const allEpisodesChecked = episodes.length > 0 && episodes.every((episode) => checkedEpisodes.has(Number(episode.episodeNumber)));
   const completedSeasonKey = `${selected?.id || ""}:${seasonNumber}`;
-  const hasSeasonRating = Boolean(String(seasonRating || selected?.seasonRatings?.[String(seasonNumber)] || "").trim());
+  const savedSeasonRating = String(selected?.seasonRatings?.[String(seasonNumber)] || "");
+  const hasSeasonRating = Boolean(savedSeasonRating.trim());
   const seasonComplete = !isMovie && Number(seasonNumber) > 0 && hasCompleteEpisodeSet(Array.from(checkedEpisodes), episodeCount);
   const shouldCollapseSeason = mobileRatingView === "episodes" && seasonComplete && hasSeasonRating && !expandedCompletedSeasons[completedSeasonKey];
   const detailTitle = details?.title || mediaTitle(selected);
@@ -4168,9 +4171,14 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
 
   useEffect(() => {
     const savedProgress = selected?.seasonProgress?.[String(seasonNumber)] || [];
-    setCheckedEpisodes(new Set(savedProgress.map((episode) => Number(episode)).filter((episode) => episode > 0)));
-    setSeasonRating(String(selected?.seasonRatings?.[String(seasonNumber)] || ""));
-  }, [seasonNumber, selected?.id, selected?.seasonProgress, selected?.seasonRatings]);
+    const next = new Set(savedProgress.map((episode) => Number(episode)).filter((episode) => episode > 0));
+    checkedEpisodesRef.current = next;
+    setCheckedEpisodes(next);
+  }, [seasonNumber, selected?.id, selected?.seasonProgress]);
+
+  useEffect(() => {
+    setSeasonRating(savedSeasonRating);
+  }, [seasonNumber, selected?.id, savedSeasonRating]);
 
   useEffect(() => {
     let cancelled = false;
@@ -4201,28 +4209,26 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
   }, [details, isMovie, seasonNumber, selected?.tmdbId]);
 
   function toggleEpisode(episodeNumber) {
-    setCheckedEpisodes((current) => {
-      const next = new Set(current);
-      if (next.has(episodeNumber)) {
-        next.delete(episodeNumber);
-      } else {
-        // 勾选某一集时，视为已连续看完到该集，自动补齐前面的集数。
-        episodes.forEach((episode) => {
-          const number = Number(episode.episodeNumber);
-          if (Number.isFinite(number) && number > 0 && number <= episodeNumber) next.add(number);
-        });
-      }
-      return next;
-    });
+    const next = new Set(checkedEpisodesRef.current);
+    if (next.has(episodeNumber)) {
+      next.delete(episodeNumber);
+    } else {
+      // 勾选某一集时，视为已连续看完到该集，自动补齐前面的集数。
+      episodes.forEach((episode) => {
+        const number = Number(episode.episodeNumber);
+        if (Number.isFinite(number) && number > 0 && number <= episodeNumber) next.add(number);
+      });
+    }
+    saveProgress(next);
   }
 
   function toggleAllEpisodes() {
-    setCheckedEpisodes(allEpisodesChecked ? new Set() : new Set(episodes.map((episode) => Number(episode.episodeNumber))));
+    const allChecked = episodes.every((episode) => checkedEpisodesRef.current.has(Number(episode.episodeNumber)));
+    saveProgress(allChecked ? new Set() : new Set(episodes.map((episode) => Number(episode.episodeNumber))));
   }
 
   function watchThroughEpisode(episodeNumber) {
-    setCheckedEpisodes(current => new Set([...current, ...episodes.map(episode => Number(episode.episodeNumber)).filter(number => number > 0 && number <= episodeNumber)]));
-    setRatingStatus("");
+    saveProgress(new Set([...checkedEpisodesRef.current, ...episodes.map(episode => Number(episode.episodeNumber)).filter(number => number > 0 && number <= episodeNumber)]));
   }
 
   function validRating(value) {
@@ -4231,10 +4237,12 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
     return Math.round(raw * 2) / 2;
   }
 
-  function saveProgress() {
+  function saveProgress(next) {
     if (!selected || isMovie || !seasonNumber) return;
-    onCheckin?.({ id: selected.id, mode: "season-progress", season: Number(seasonNumber), episodes: Array.from(checkedEpisodes).sort((a, b) => a - b), episodeCount, date: todayKey() });
-    setRatingStatus("本季观看进度已保存");
+    checkedEpisodesRef.current = next;
+    setCheckedEpisodes(next);
+    onCheckin?.({ id: selected.id, mode: "season-progress", season: Number(seasonNumber), episodes: Array.from(next).sort((a, b) => a - b), episodeCount, date: todayKey() });
+    setRatingStatus("观看进度已自动保存");
   }
 
   async function saveSeasonRating() {
@@ -4388,7 +4396,7 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
                   </div>}
                   <div className="watch-rating-season-footer">
                     <label><span>本季整体评分</span><input type="text" inputMode="decimal" value={seasonRating} onChange={(event) => { setSeasonRating(event.target.value); setRatingStatus(""); }} placeholder="看完本季后评分" /></label>
-                    <div className="watch-rating-actions"><button type="button" onClick={saveProgress}>保存观看进度</button><button type="button" className="secondary" onClick={saveSeasonRating} disabled={!seasonRating}>保存本季评分</button></div>
+                    <div className="watch-rating-actions"><button type="button" className="secondary" onClick={saveSeasonRating} disabled={!seasonRating}>保存本季评分</button></div>
                   </div>
                 </>
                 )}
@@ -4444,13 +4452,13 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
                     <div className="watch-mobile-episodes-head"><div><strong>观看进度</strong><small>{checkedCount}/{episodeCount || episodes.length} 集已看</small></div>{episodes.length > 0 && <button type="button" onClick={toggleAllEpisodes}>{allEpisodesChecked ? "取消全选" : "全选本季"}</button>}</div>
                     {shouldCollapseSeason ? (
                       <div className="watch-mobile-season-summary">
-                        <div><strong>第 {seasonNumber} 季已完成</strong><span>已看 {checkedCount}/{episodeCount || episodes.length} 集 · 评分 {seasonRating || selected?.seasonRatings?.[String(seasonNumber)]}</span></div>
+                        <div><strong>第 {seasonNumber} 季已完成</strong><span>已看 {checkedCount}/{episodeCount || episodes.length} 集 · 评分 {savedSeasonRating}</span></div>
                         <button type="button" onClick={() => setExpandedCompletedSeasons((previous) => ({ ...previous, [completedSeasonKey]: true }))}>展开修改</button>
                       </div>
                     ) : (
                       <>
-                        {seasonLoading ? <p className="watch-rating-status">正在读取 TMDB 集数…</p> : <WatchEpisodeList key={`${completedSeasonKey}:${episodes.length}`} episodes={episodes} checkedEpisodes={checkedEpisodes} onToggle={toggleEpisode} onWatchThrough={watchThroughEpisode} onSave={saveProgress} posterUrl={activeSeason?.posterUrl || detailPoster} />}
-                        <div className="watch-mobile-rating-footer"><label>本季整体评分<input type="text" inputMode="decimal" value={seasonRating} onChange={(event) => { setSeasonRating(event.target.value); setRatingStatus(""); }} placeholder="看完本季后评分" /></label><button type="button" onClick={saveProgress}>保存观看进度</button><button type="button" className="secondary" onClick={saveSeasonRating} disabled={!seasonRating}>保存本季评分</button></div>
+                        {seasonLoading ? <p className="watch-rating-status">正在读取 TMDB 集数…</p> : <WatchEpisodeList key={`${completedSeasonKey}:${episodes.length}`} episodes={episodes} checkedEpisodes={checkedEpisodes} onToggle={toggleEpisode} onWatchThrough={watchThroughEpisode} posterUrl={activeSeason?.posterUrl || detailPoster} />}
+                        <div className="watch-mobile-rating-footer"><label>本季整体评分<input type="text" inputMode="decimal" value={seasonRating} onChange={(event) => { setSeasonRating(event.target.value); setRatingStatus(""); }} placeholder="看完本季后评分" /></label><button type="button" className="secondary" onClick={saveSeasonRating} disabled={!seasonRating}>保存本季评分</button></div>
                       </>
                     )}
                   </>
@@ -4973,7 +4981,7 @@ function WatchSchedule({ items = [], compact = false, activeView = "today", tmdb
               ))}
             </div>
           </section>
-          <section className="watch-calendar">
+          <section className={`watch-calendar ${watchCalendarStyles.calendar}`}>
             <div className="panel-head">
               <h2>{monthTitle(selected.date)}</h2>
               <div className="calendar-actions">
@@ -4983,20 +4991,16 @@ function WatchSchedule({ items = [], compact = false, activeView = "today", tmdb
             </div>
             <div id="watch-calendar-days" className={expanded ? "week-grid month-grid" : "week-grid"} key={expanded ? "month" : "week"}>
               {calendarDays.map((day) => (
-                <button className={`${day.dateKey === selectedDate ? "week-day active" : "week-day"} ${day.inMonth === false ? "outside-month" : ""}`} type="button" key={day.dateKey} onClick={() => setSelectedDate(day.dateKey)}>
+                <button className={`${day.dateKey === selectedDate ? "week-day active" : "week-day"} ${day.inMonth === false ? "outside-month" : ""} ${watchCalendarStyles.day}`} type="button" key={day.dateKey} aria-label={`${day.dateKey}${day.updates.length ? ` · ${day.updates.length} 集更新` : ""}`} aria-pressed={day.dateKey === selectedDate} onClick={() => setSelectedDate(day.dateKey)}>
                   <span>{weekdayText(day.date)}</span>
                   <strong>{day.date.getDate()}</strong>
                   <i className={day.updates.length ? "has-update" : ""} />
-                  {day.updates.length > 0 && (
-                    <small className="day-updates">
-                      {dayUpdateLabel(day.updates, expanded)}
-                    </small>
-                  )}
+                  <small className="day-updates">{day.updates.length > 0 ? dayUpdateLabel(day.updates, expanded) : ""}</small>
                 </button>
               ))}
             </div>
           </section>
-          <div className="watch-timeline">
+          <div className={`watch-timeline ${watchCalendarStyles.timeline}`}>
             {timeline.length === 0 && <p className="empty">这一天还没有追剧更新。给剧集填写“下次更新日期”和“更新时间”后，会显示在这里。</p>}
             {timeline.map((item) => {
               const updateEpisode = Number(item.updateEpisode || 0);
@@ -6213,17 +6217,21 @@ export default function Workbench() {
   const [assetView, setAssetView] = useState("服役中");
   const [petSupplies, setPetSupplies] = useState(defaultPetSupplies);
   const [petAction, setPetAction] = useState({ type: "idle", text: "摸着肚子等你投喂。" });
+  const cloudCollectionSaveRef = useRef({});
 
   function persist(name, value) {
     const nextValue = syncedCollections.includes(name) && Array.isArray(value) ? stampItems(value) : value;
     writeStorage(name, nextValue);
     const cloudSession = session;
     if (cloudSession) {
-      const saveTask = ["consultations", "watchCheckins"].includes(name)
+      const mergedCollection = ["consultations", "watchCheckins"].includes(name);
+      if (mergedCollection) cloudCollectionSaveRef.current[name] = nextValue;
+      const saveTask = mergedCollection
         ? saveMergedCloudCollection(cloudSession, name, nextValue)
         : saveCloudItem(cloudSession, name, nextValue);
       saveTask
         .then((savedValue) => {
+          if (mergedCollection && cloudCollectionSaveRef.current[name] !== nextValue) return;
           if (name === "consultations" && Array.isArray(savedValue)) {
             setConsultations(savedValue);
             writeStorage("consultations", savedValue);

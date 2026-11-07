@@ -4,9 +4,7 @@
 .quickActions { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
 .quickActions input { width: 100%; min-width: 0; color: var(--ios-ink); background: var(--ios-panel); }
 .quick button { min-height: 44px; padding: 8px 10px; border: 0; border-radius: 12px; color: var(--ios-blue); background: var(--ios-blue-soft); font: inherit; font-size: 13px; }
-.saveRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
-.saveRow small { color: var(--ios-muted); font-size: 12px; line-height: 1.5; }
-.saveRow button { flex-shrink: 0; }
+.hint { display: block; margin-top: 10px; color: var(--ios-muted); font-size: 12px; line-height: 1.5; }
 .quick p { margin: 8px 0 0; font-size: 13px; line-height: 1.5; color: var(--ios-ink); }
 .highlight { background: var(--ios-blue-soft); }
 .episode { padding: 16px 0 8px; border-bottom: 1px solid var(--ios-separator); }

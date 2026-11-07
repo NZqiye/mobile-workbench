@@ -5,7 +5,7 @@ import styles from "./watch-episode-list.module.css";
 
 const pageSize = 40;
 
-export default function WatchEpisodeList({ episodes, checkedEpisodes, onToggle, onWatchThrough, onSave, posterUrl }) {
+export default function WatchEpisodeList({ episodes, checkedEpisodes, onToggle, onWatchThrough, posterUrl }) {
   const [page, setPage] = useState(() => {
     const next = episodes.findIndex(episode => !checkedEpisodes.has(Number(episode.episodeNumber)));
     return Math.floor(Math.max(0, next) / pageSize);
@@ -31,7 +31,7 @@ export default function WatchEpisodeList({ episodes, checkedEpisodes, onToggle, 
     setHighlight(number);
     if (markWatched) {
       onWatchThrough(number);
-      setNotice(`已标记看到第 ${number} 集，点击“保存进度”保存。`);
+      setNotice(`已看到第 ${number} 集，观看进度已自动保存。`);
     } else setNotice(`已定位到第 ${number} 集。`);
     requestAnimationFrame(() => {
       if (markWatched) top.current?.scrollIntoView({ block: "start" });
@@ -50,7 +50,7 @@ export default function WatchEpisodeList({ episodes, checkedEpisodes, onToggle, 
     {pageCount > 1 && <div className={styles.quick}>
       <label htmlFor="watch-episode-jump">选择集数</label>
       <div className={styles.quickActions}><input id="watch-episode-jump" type="text" inputMode="numeric" pattern="[0-9]*" value={episodeInput} onChange={event => { setEpisodeInput(event.target.value); setNotice(""); }} onKeyDown={event => { if (event.key === "Enter") { event.preventDefault(); locate(false); } }} placeholder={`1–${episodes[episodes.length - 1].episodeNumber}`} aria-label="输入集数" /><button type="button" onClick={() => locate(false)}>跳到该集</button><button type="button" onClick={() => locate(true)}>已看到这集</button></div>
-      <div className={styles.saveRow}><small>“已看到这集”会补齐此前集数</small><button type="button" onClick={() => { onSave(); setNotice("观看进度已保存。"); }}>保存进度</button></div>
+      <small className={styles.hint}>“已看到这集”会补齐此前集数并自动保存</small>
       {notice && <p role="status">{notice}</p>}
     </div>}
     {pager("顶部")}
