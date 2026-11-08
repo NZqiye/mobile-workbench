@@ -2,7 +2,7 @@
 const nextConfig = {
   allowedDevOrigins: ["127.0.0.1", "localhost"],
   poweredByHeader: false,
-  images: { unoptimized: true, dangerouslyAllowSVG: false },
+  images: { unoptimized: true, dangerouslyAllowSVG: false, localPatterns: [], remotePatterns: [] },
   async headers() {
     const csp = [
       "default-src 'self'",

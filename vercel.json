@@ -1,4 +1,12 @@
 {
+  "images": {
+    "sizes": [64],
+    "localPatterns": [],
+    "remotePatterns": [],
+    "dangerouslyAllowSVG": false,
+    "contentDispositionType": "attachment",
+    "contentSecurityPolicy": "default-src 'none'; sandbox;"
+  },
   "crons": [
     { "path": "/api/push/cron", "schedule": "0 2 * * *" },
     { "path": "/api/push/cron", "schedule": "0 7 * * *" }
