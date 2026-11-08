@@ -1,7 +1,7 @@
 {
-  "version": "1.1.4",
-  "versionCode": 6,
-  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.4/qiyeonline-1.1.4.apk",
-  "sha256": "8fd367ecf9047f3631f7213da25a286ae39a905b56c4d796b2424f70e8801101",
-  "notes": "内置702个图标和鲸鱼娘动画，匹配版本直接读取手机资源，减少网络加载；保留网页更新和云同步。请直接覆盖安装，不要先卸载。"
+  "version": "1.1.5",
+  "versionCode": 7,
+  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.5/qiyeonline-1.1.5.apk",
+  "sha256": "59d804ff1868559313edcfef8a235c37c9a0f7dec69be4ef8a0d889003452285",
+  "notes": "新增系统相机拍摄食物、AI估算热量与今日计划/喝水进度桌面小部件，修复文字可读性。请直接覆盖安装，保留数据。"
 }
