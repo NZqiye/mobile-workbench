@@ -1,6 +1,7 @@
 "use client";
 
 import { anniversaryIconGroups, anniversaryIcons } from "../../lib/anniversary-icons";
+import { bundledAssetUrl } from "../../lib/bundled-assets";
 
 export default function AnniversaryIconPicker({ value, onChange }) {
   return <div className="daybook-icon-library">
@@ -8,7 +9,7 @@ export default function AnniversaryIconPicker({ value, onChange }) {
       <legend>{group}</legend>
       <div className="daybook-icon-options">
         {anniversaryIcons.filter((icon) => icon.group === group).map((icon) => <button type="button" key={icon.id} title={icon.label} aria-label={`使用${icon.label}图标`} aria-pressed={value === icon.id} onClick={() => onChange(icon.id)}>
-          <img src={icon.image} width="44" height="44" alt="" loading="lazy" />
+          <img src={bundledAssetUrl(icon.image)} width="44" height="44" alt="" loading="lazy" />
         </button>)}
       </div>
     </fieldset>)}

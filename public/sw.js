@@ -1,4 +1,4 @@
-const CACHE_NAME = "qiyeworkbench-v14";
+const CACHE_NAME = "qiyeworkbench-v15";
 const APP_SHELL = ["/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/avatar-cultivation.webp"];
 
 self.addEventListener("install", (event) => {
@@ -14,7 +14,7 @@ self.addEventListener("activate", (event) => {
 });
 
 async function cacheResponse(request, response) {
-  if (response.status === 200) {
+  if (response.status === 200 && response.headers.get("X-Qiye-Asset") !== "bundled") {
     const copy = response.clone();
     const cache = await caches.open(CACHE_NAME);
     await cache.put(request, copy);

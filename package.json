@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/bundle-android-assets.cjs",
     "dev": "next dev",
+    "prebuild": "node scripts/bundle-android-assets.cjs",
     "build": "next build",
     "start": "next start",
     "build:android": "node scripts/build-android.cjs",

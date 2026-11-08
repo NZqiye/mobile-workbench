@@ -13,6 +13,7 @@ import MediaPoster from "./components/media-poster";
 import AppUpdatePanel from "./components/app-update-panel";
 import WatchEpisodeList from "./components/watch-episode-list";
 import WhaleCompanion from "./components/whale-companion";
+import { bundledAssetUrl } from "../lib/bundled-assets";
 import NativeNotificationPanel from "./components/native-notification-panel";
 import { nativeReminderTasks } from "../lib/native-reminders";
 import watchDetailStyles from "./components/watch-detail.module.css";
@@ -656,7 +657,7 @@ const crewImgById = {
 };
 
 function CrewNavIcon({ name }) {
-  return <img className="crew-nav-icon" src={crewImgById[name] || "/crew/zoro.png"} alt="" loading="lazy" />;
+  return <img className="crew-nav-icon" src={bundledAssetUrl(crewImgById[name] || "/crew/zoro.png")} alt="" loading="lazy" />;
 }
 
 function PonyMark({ theme = "rmb", compact = false }) {
@@ -668,7 +669,7 @@ function PonyMark({ theme = "rmb", compact = false }) {
 
 function CultivationAvatar() {
   return (
-    <img className="cultivation-avatar" src="/crew/luffy.png" alt="" loading="lazy" />
+    <img className="cultivation-avatar" src={bundledAssetUrl("/crew/luffy.png")} alt="" loading="lazy" />
   );
 }
 
@@ -1257,7 +1258,7 @@ function PetCompanionCard({ supplies, action, onUse, onRest }) {
       <div className="pet-supplies">
         {petSupplyItems.map((item) => (
           <button type="button" key={item.id} onClick={() => onUse(item.id)} disabled={!supplies[item.id]} title={item.action}>
-            <span aria-hidden="true">{item.iconImage ? <img src={item.iconImage} alt="" width="20" height="20" /> : item.icon}</span>
+            <span aria-hidden="true">{item.iconImage ? <img src={bundledAssetUrl(item.iconImage)} alt="" width="20" height="20" /> : item.icon}</span>
             <strong>{supplies[item.id] || 0}</strong>
             <small>{item.label}</small>
           </button>
@@ -3385,7 +3386,7 @@ function DailyArrangement({ view = "habits", habits, done, tasks, anniversaries,
     return (
       <article className={`daybook-entry${featured ? " daybook-featured" : ""}${archived ? " daybook-past" : ""}`} key={item.id}>
         <div className="daybook-entry-main">
-            <button className="daybook-icon" type="button" aria-label={`更换${item.title}的图标`} aria-expanded={editingAnniversaryIcon === item.id} onClick={() => setEditingAnniversaryIcon(editingAnniversaryIcon === item.id ? null : item.id)}><img src={icon.image} width="48" height="48" alt="" /></button>
+            <button className="daybook-icon" type="button" aria-label={`更换${item.title}的图标`} aria-expanded={editingAnniversaryIcon === item.id} onClick={() => setEditingAnniversaryIcon(editingAnniversaryIcon === item.id ? null : item.id)}><img src={bundledAssetUrl(icon.image)} width="48" height="48" alt="" /></button>
           <div className="daybook-copy">
             <h3>{item.title}</h3>
             <time dateTime={targetDate}>{targetDate.replaceAll("-", ".")} · {new Date(`${targetDate}T00:00:00`).toLocaleDateString("zh-CN", { weekday: "long" })}</time>
@@ -3501,7 +3502,7 @@ function DailyArrangement({ view = "habits", habits, done, tasks, anniversaries,
           {anniversaryType === "countdown" && <label className="daybook-start-date">倒数起始日期<input name="startDate" type="date" defaultValue={todayKey()} onInput={(event) => event.currentTarget.setCustomValidity("")} required /><small>用于计算已过天数和日期进度</small></label>}
           <input type="hidden" name="icon" value={formIcon.id} />
           <details className="daybook-form-icons">
-            <summary><span><img src={formIcon.image} width="32" height="32" alt="" />日子图标 · {formIcon.label}</span><span>更换 <SelectChevron /></span></summary>
+            <summary><span><img src={bundledAssetUrl(formIcon.image)} width="32" height="32" alt="" />日子图标 · {formIcon.label}</span><span>更换 <SelectChevron /></span></summary>
             <AnniversaryIconPicker value={formIcon.id} onChange={setSelectedAnniversaryIcon} />
           </details>
           <button type="submit">添加纪念日</button>
@@ -3509,7 +3510,7 @@ function DailyArrangement({ view = "habits", habits, done, tasks, anniversaries,
         </details>
         <div className="daybook-filters" role="group" aria-label="筛选纪念日">
           {[{ id: "all", label: "全部日子", icon: "thiings:notebook-223yak" }, ...anniversaryTypes].map((type) => (
-            <button key={type.id} type="button" aria-pressed={anniversaryFilter === type.id} onClick={() => setAnniversaryFilter(type.id)}><img className="daybook-filter-icon" src={thiingsIconByKey[type.icon]} width="24" height="24" alt="" />{type.label}<span>{anniversaries.filter((item) => type.id === "all" || (item.type || "memory") === type.id).length}</span></button>
+            <button key={type.id} type="button" aria-pressed={anniversaryFilter === type.id} onClick={() => setAnniversaryFilter(type.id)}><img className="daybook-filter-icon" src={bundledAssetUrl(thiingsIconByKey[type.icon])} width="24" height="24" alt="" />{type.label}<span>{anniversaries.filter((item) => type.id === "all" || (item.type || "memory") === type.id).length}</span></button>
           ))}
         </div>
         <div className="daybook-events">
@@ -3768,7 +3769,7 @@ function AssetIcon({ name, size = 20 }) {
       </svg>
     );
   }
-  return <img className="asset-icon-img" src={src} width={size} height={size} alt="" loading="eager" decoding="async" onError={() => setErr(true)} />;
+  return <img className="asset-icon-img" src={bundledAssetUrl(src)} width={size} height={size} alt="" loading="eager" decoding="async" onError={() => setErr(true)} />;
 }
 
 const assetIconCategories = [
@@ -5596,7 +5597,7 @@ function exerciseRecordMeta(item) {
 }
 
 function ExerciseIcon({ src }) {
-  return String(src || "").startsWith("/") ? <img src={src} alt="" loading="lazy" /> : src;
+  return String(src || "").startsWith("/") ? <img src={bundledAssetUrl(src)} alt="" loading="lazy" /> : src;
 }
 
 function formatWeight(value) {

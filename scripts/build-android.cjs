@@ -19,7 +19,7 @@ fs.copyFileSync(path.join(root, 'public', 'icons', 'icon-512.png'), path.join(re
 fs.copyFileSync(path.join(root, 'android', 'res', 'drawable', 'notification_icon.xml'), path.join(resources, 'notification_icon.xml'));
 fs.copyFileSync(path.join(root, 'android', 'AndroidManifest.xml'), path.join(build, 'AndroidManifest.xml'));
 fs.copyFileSync(path.join(root, 'android', 'src', 'cc', 'qiyeonline', 'workbench', 'MainActivity.java'), path.join(build, 'MainActivity.java'));
-const sources = ['MainActivity.java', 'AppUpdater.java', 'UpdateFileProvider.java', 'UpdateSecurity.java', 'NativeReminders.java', 'ReminderReceiver.java', 'ReminderPolicy.java'];
+const sources = ['MainActivity.java', 'BundledAssets.java', 'BundledAssetPolicy.java', 'AppUpdater.java', 'UpdateFileProvider.java', 'UpdateSecurity.java', 'NativeReminders.java', 'ReminderReceiver.java', 'ReminderPolicy.java'];
 for (const name of sources.slice(1)) fs.copyFileSync(path.join(root, 'android', 'src', 'cc', 'qiyeonline', 'workbench', name), path.join(build, name));
 const windows = process.platform === 'win32';
 const javaTool = name => process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, 'bin', name + (windows ? '.exe' : '')) : name;
@@ -34,6 +34,7 @@ run(javaTool('jar'), ['cf', path.join(build, 'classes.jar'), '-C', classes, '.']
 run(javaTool('java'), ['-cp', path.join(buildTools, 'lib', 'd8.jar'), 'com.android.tools.r8.D8', '--release', '--min-api', '26', '--lib', platform, '--output', build, path.join(build, 'classes.jar')]);
 fs.mkdirSync(path.join(build, 'assets'), { recursive: true });
 fs.copyFileSync(path.join(root, 'android', 'assets', 'native-shell.js'), path.join(build, 'assets', 'native-shell.js'));
+require('./bundle-android-assets.cjs').copyBundledAssets(path.join(build, 'assets'));
 run(javaTool('jar'), ['uf', path.join(build, 'unsigned.apk'), '-C', build, 'classes.dex', '-C', build, 'assets']);
 run(path.join(buildTools, 'zipalign' + (windows ? '.exe' : '')), ['-f', '4', path.join(build, 'unsigned.apk'), path.join(build, 'aligned.apk')]);
 

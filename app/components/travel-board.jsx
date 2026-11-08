@@ -4,6 +4,7 @@ import { useState } from "react";
 import { normalizeTravelRecord, travelDays, travelStatus } from "../../lib/travel";
 import { travelCities, travelCityImage, travelPlaceImage } from "../../lib/travel-places";
 import { travelIconGroups, travelIcons, travelIconImage } from "../../lib/travel-icons";
+import { bundledAssetUrl } from "../../lib/bundled-assets";
 
 function localDate() {
   const date = new Date();
@@ -23,12 +24,12 @@ function TravelIconPicker({ label, value, automaticImage, onChange }) {
   const [expanded, setExpanded] = useState(false);
   const currentGroup = travelIconGroups.find((entry) => entry.label === group);
   return <details className="travel-icon-picker" onToggle={(event) => setExpanded(event.currentTarget.open)}>
-    <summary><img src={travelIconImage(value) || automaticImage} width="40" height="40" alt="" /><span><strong>{label}</strong><small>{selected?.label || "自动匹配"}</small></span><span className="travel-icon-change">更换<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></span></summary>
+    <summary><img src={bundledAssetUrl(travelIconImage(value) || automaticImage)} width="40" height="40" alt="" /><span><strong>{label}</strong><small>{selected?.label || "自动匹配"}</small></span><span className="travel-icon-change">更换<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></span></summary>
     {expanded && <div className="travel-icon-options">
       <button type="button" className="travel-icon-auto" aria-pressed={!selected} onClick={() => onChange("")}>使用自动匹配</button>
       <div className="travel-icon-groups" role="group" aria-label={`${label}分类`}>{travelIconGroups.map((entry) => <button type="button" key={entry.label} aria-pressed={group === entry.label} onClick={() => setGroup(entry.label)}>{entry.label}</button>)}</div>
       {currentGroup.note && <p className="travel-icon-hint">{currentGroup.note}</p>}
-      <div className="travel-icon-grid" role="group" aria-label={`${label}选择`}>{currentGroup.icons.map(([id, name]) => <button type="button" className="travel-icon-choice" key={id} aria-label={name} title={name} aria-pressed={value === id} onClick={() => onChange(id)}><img src={travelIconImage(id)} width="40" height="40" alt="" loading="lazy" /><span>{name}</span></button>)}</div>
+      <div className="travel-icon-grid" role="group" aria-label={`${label}选择`}>{currentGroup.icons.map(([id, name]) => <button type="button" className="travel-icon-choice" key={id} aria-label={name} title={name} aria-pressed={value === id} onClick={() => onChange(id)}><img src={bundledAssetUrl(travelIconImage(id))} width="40" height="40" alt="" loading="lazy" /><span>{name}</span></button>)}</div>
       <p className="travel-icon-hint">共 {travelIcons.length} 个图标 · 选择后随旅行一起保存</p>
     </div>}
   </details>;
@@ -90,7 +91,7 @@ export default function TravelBoard({ items = [], onAdd, onUpdate, onDelete }) {
   return (
     <section className="travel-board" aria-label="旅游记录">
       <div className="travel-intro">
-        <img src="/assets-icons/thiings/fashion/suitcase.webp" width="48" height="48" alt="" />
+        <img src={bundledAssetUrl("/assets-icons/thiings/fashion/suitcase.webp")} width="48" height="48" alt="" />
         <div><h2>旅游记录</h2><p>记下去过的地方，也留一份下一站的期待。</p></div>
       </div>
       <div className="travel-summary" aria-label="旅行概览">
@@ -104,7 +105,7 @@ export default function TravelBoard({ items = [], onAdd, onUpdate, onDelete }) {
           <div className="asset-form-head"><h3>{editingId ? "编辑旅行" : "记录一段旅行"}</h3><button type="button" onClick={closeForm}>取消</button></div>
           <label><span>所在城市（选填）</span><input list="travel-city-options" value={form.city} maxLength={60} onChange={(event) => setForm({ ...form, city: event.target.value })} placeholder="选择或输入城市，例如：上海" /></label>
           <datalist id="travel-city-options">{travelCities.map((city) => <option key={city.name} value={city.name} />)}</datalist>
-          {cityInfo && <div className="travel-city-preview"><img src={travelCityImage(cityInfo.name)} width="52" height="52" alt="" /><div><strong>{cityInfo.name}</strong><small>{cityInfo.iconNote || "通用旅行图标 · 支持自定义城市"}</small></div></div>}
+          {cityInfo && <div className="travel-city-preview"><img src={bundledAssetUrl(travelCityImage(cityInfo.name))} width="52" height="52" alt="" /><div><strong>{cityInfo.name}</strong><small>{cityInfo.iconNote || "通用旅行图标 · 支持自定义城市"}</small></div></div>}
           <TravelIconPicker label="旅行图标" value={form.icon} automaticImage={travelCityImage(form.city || form.destination)} onChange={(icon) => setForm((current) => ({ ...current, icon }))} />
           <label><span>目的地</span><input value={form.destination} onChange={(event) => setForm({ ...form, destination: event.target.value })} placeholder="例如：杭州 · 西湖周末游" maxLength={120} required /></label>
           <div className="asset-form-row">
@@ -140,10 +141,10 @@ export default function TravelBoard({ items = [], onAdd, onUpdate, onDelete }) {
       <div className="travel-list">
         {visible.map((item) => (
           <article className="travel-record" key={item.id}>
-            <div className="travel-record-head"><div className="travel-record-place"><img src={travelCityImage(item.city || item.destination, item.icon)} width="44" height="44" alt="" /><div><h3>{item.destination}</h3>{item.city && <small>{item.city}</small>}</div></div><span className="travel-status">{travelStatus(item, today)}</span></div>
+            <div className="travel-record-head"><div className="travel-record-place"><img src={bundledAssetUrl(travelCityImage(item.city || item.destination, item.icon))} width="44" height="44" alt="" /><div><h3>{item.destination}</h3>{item.city && <small>{item.city}</small>}</div></div><span className="travel-status">{travelStatus(item, today)}</span></div>
             <p className="travel-dates"><time dateTime={item.startDate}>{item.startDate}</time><span>至</span><time dateTime={item.endDate || item.startDate}>{item.endDate || item.startDate}</time><span>· {travelDays(item)} 天</span></p>
             {item.notes && <p className="travel-notes">{item.notes}</p>}
-            {Array.isArray(item.checkins) && item.checkins.length > 0 && <div className="travel-checkins"><h4>景点打卡 · {item.checkins.length} 处</h4>{item.checkins.map((entry, index) => <div className="travel-checkin" key={entry.id || index}><div className="travel-checkin-top"><div className="travel-record-place"><img src={travelPlaceImage(item.city, entry.name, entry.icon)} width="32" height="32" alt="" /><strong>{entry.name}</strong></div><span className="travel-rating-readout">{entry.rating ? `${entry.rating} / 5 星` : "未评分"}</span></div><time dateTime={entry.date}>{entry.date}</time>{entry.review ? <p>{entry.review}</p> : <small>还没有写评价</small>}</div>)}</div>}
+            {Array.isArray(item.checkins) && item.checkins.length > 0 && <div className="travel-checkins"><h4>景点打卡 · {item.checkins.length} 处</h4>{item.checkins.map((entry, index) => <div className="travel-checkin" key={entry.id || index}><div className="travel-checkin-top"><div className="travel-record-place"><img src={bundledAssetUrl(travelPlaceImage(item.city, entry.name, entry.icon))} width="32" height="32" alt="" /><strong>{entry.name}</strong></div><span className="travel-rating-readout">{entry.rating ? `${entry.rating} / 5 星` : "未评分"}</span></div><time dateTime={entry.date}>{entry.date}</time>{entry.review ? <p>{entry.review}</p> : <small>还没有写评价</small>}</div>)}</div>}
             <div className="travel-record-foot"><strong>{item.cost == null ? "费用未记录" : `¥${money(item.cost)}`}</strong><div className="travel-actions"><button type="button" aria-label={`编辑${item.destination}`} onClick={() => edit(item)}>编辑</button><button type="button" aria-label={`删除${item.destination}`} onClick={() => setDeleteId(item.id)}>删除</button></div></div>
             {deleteId === item.id && <div className="travel-delete-confirm" role="group" aria-label="确认删除旅行"><span>删除这条旅游记录？</span><button type="button" onClick={() => setDeleteId(null)}>取消</button><button type="button" onClick={() => { onDelete(item.id); if (editingId === item.id) closeForm(); setDeleteId(null); }}>确认删除</button></div>}
           </article>

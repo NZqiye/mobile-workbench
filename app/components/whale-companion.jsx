@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { bundledAssetUrl } from "../../lib/bundled-assets";
 
 const animationByAction = {
   idle: "idle",
@@ -19,11 +20,11 @@ export default function WhaleCompanion({ action, onRest }) {
   const [motionAllowed, setMotionAllowed] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [failedPlayback, setFailedPlayback] = useState("");
-  const source = `/codex-pets/whale-girl/${animationByAction[action.type] || "idle"}.webm`;
+  const source = bundledAssetUrl(`/codex-pets/whale-girl/${animationByAction[action.type] || "idle"}.webm`);
   const playbackKey = `${source}-${action.startedAt || 0}`;
   const interactive = action.type !== "idle";
   const canPlay = motionAllowed && (interactive || !reducedMotion) && failedPlayback !== playbackKey;
-  const poster = "/codex-pets/whale-girl/idle.png";
+  const poster = bundledAssetUrl("/codex-pets/whale-girl/idle.png");
 
   useEffect(() => {
     const preference = window.matchMedia("(prefers-reduced-motion: reduce)");

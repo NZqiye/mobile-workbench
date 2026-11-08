@@ -115,6 +115,14 @@ test('API calls remain online and partial videos are not cached as complete file
   assert.equal(partial.stored.size, 0);
 });
 
+test('packaged Android resources are returned without a duplicate in the service worker cache', async () => {
+  const app = worker(async () => new Response('packaged image', { headers: { 'X-Qiye-Asset': 'bundled', 'Cache-Control': 'no-store' } }));
+  const result = await app.request('/crew/luffy.png?bundle=version');
+  assert.equal(await (await result.response).text(), 'packaged image');
+  await Promise.all(result.pending);
+  assert.equal(app.stored.size, 0);
+});
+
 test('first cache installation does not reload the page; an existing installation updates once', () => {
   const source = readFileSync('app/register-service-worker.jsx', 'utf8').replace(/^import .*$/gm, '').replace('export default ', '');
   for (const initiallyControlled of [false, true]) {
