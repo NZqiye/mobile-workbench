@@ -14,6 +14,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
+import android.provider.MediaStore;
 import android.util.Base64;
 import android.view.View;
 import android.view.WindowInsets;
@@ -42,11 +43,13 @@ import org.json.JSONObject;
 
 public final class MainActivity extends Activity {
     private static final String HOME = "https://qiyeonline.cc.cd/";
-    private static final int FILE_PICK = 10, FILE_SAVE = 11, AUDIO_PERMISSION = 12, NATIVE_AUDIO_PERMISSION = 13, NOTIFICATION_PERMISSION = 14;
+    private static final int FILE_PICK = 10, FILE_SAVE = 11, AUDIO_PERMISSION = 12, NATIVE_AUDIO_PERMISSION = 13, NOTIFICATION_PERMISSION = 14, FOOD_CAMERA = 15;
     private LinearLayout root;
     private WebView web;
     private LinearLayout errorView;
     private ValueCallback<Uri[]> fileCallback;
+    private File foodPhoto;
+    private Uri foodPhotoUri;
     private PermissionRequest audioRequest;
     private WebMessagePort downloadPort;
     private byte[] pendingDownload;
@@ -66,6 +69,8 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        foodPhoto = new File(getCacheDir(), "food-photo.jpg");
+        foodPhoto.delete();
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.rgb(231, 239, 238));
@@ -129,9 +134,23 @@ public final class MainActivity extends Activity {
         });
         web.setWebChromeClient(new WebChromeClient() {
             @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
+                if (!trusted(Uri.parse(view.getUrl()))) { callback.onReceiveValue(null); return true; }
                 if (fileCallback != null) fileCallback.onReceiveValue(null);
                 fileCallback = callback;
+                boolean image = params.getAcceptTypes().length > 0 && params.getAcceptTypes()[0].startsWith("image/");
+                if (image && params.isCaptureEnabled()) {
+                    foodPhoto.delete();
+                    foodPhotoUri = Uri.parse("content://cc.qiyeonline.workbench.food-photos/food.jpg");
+                    Intent camera = new Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                        .putExtra(MediaStore.EXTRA_OUTPUT, foodPhotoUri)
+                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                    camera.setClipData(android.content.ClipData.newRawUri("food-photo", foodPhotoUri));
+                    try { startActivityForResult(camera, FOOD_CAMERA); }
+                    catch (ActivityNotFoundException | SecurityException error) { callback.onReceiveValue(null); fileCallback = null; foodPhoto.delete(); toast("无法打开相机，请先用系统相机拍照，再选择照片"); }
+                    return true;
+                }
                 Intent picker = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
+                if (image) picker.setType("image/*").putExtra(Intent.EXTRA_MIME_TYPES, params.getAcceptTypes());
                 try { startActivityForResult(picker, FILE_PICK); }
                 catch (ActivityNotFoundException error) { callback.onReceiveValue(null); fileCallback = null; toast("手机没有可用的文件选择器"); }
                 return true;
@@ -186,6 +205,7 @@ public final class MainActivity extends Activity {
                             switch (data.optString("action")) {
                                 case "notification-state": replyNotifications(data.optString("id")); break;
                                 case "notification-sync": NativeReminders.sync(MainActivity.this, data.getJSONArray("tasks")); replyNotifications(data.optString("id")); break;
+                                case "widgets-sync": WorkbenchWidgets.sync(MainActivity.this, data.getJSONObject("snapshot")); break;
                                 case "notification-enable":
                                     if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                                         if (notificationId != null) { replyNative(data.optString("id"), "通知授权正在进行", "Error"); break; }
@@ -213,13 +233,15 @@ public final class MainActivity extends Activity {
                                 case "permissions": startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()))); break;
                             }
                         } catch (Exception error) {
-                            if (data != null && data.optString("action").startsWith("notification-")) replyNative(data.optString("id"), error.getMessage() == null ? "提醒连接失败，请重试" : error.getMessage(), "Error");
+                            if (data != null && data.optString("action").equals("widgets-sync")) toast("桌面小部件更新失败，请重新打开 App");
+                            else if (data != null && data.optString("action").startsWith("notification-")) replyNative(data.optString("id"), error.getMessage() == null ? "提醒连接失败，请重试" : error.getMessage(), "Error");
                             else { replyNative(audioId, "手机录音连接失败，请重试", "Error"); finishNativeAudio(true); }
                         }
                     }
                 });
                 web.postWebMessage(new WebMessage("qiye-native-port", new WebMessagePort[] { ports[1] }), Uri.parse(HOME));
                 openTasksFromNotification();
+                openPageFromWidget();
             });
         } catch (Exception error) { toast("手机录音尚未就绪，请重新打开应用"); }
     }
@@ -240,10 +262,18 @@ public final class MainActivity extends Activity {
         getIntent().removeExtra("openTasks");
     }
 
+    private void openPageFromWidget() {
+        String page = getIntent().getStringExtra("widgetPage");
+        if ((!"plans".equals(page) && !"diet".equals(page)) || web == null || !trusted(Uri.parse(web.getUrl()))) return;
+        web.evaluateJavascript("window.__qiyeOpenWidget ? window.__qiyeOpenWidget(" + JSONObject.quote(page) + ") : (window.__qiyeWidgetPending = " + JSONObject.quote(page) + ")", null);
+        getIntent().removeExtra("widgetPage");
+    }
+
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
         openTasksFromNotification();
+        openPageFromWidget();
     }
 
     private void startNativeAudio() {
@@ -330,6 +360,12 @@ public final class MainActivity extends Activity {
 
     @Override public void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
+        if (request == FOOD_CAMERA) {
+            boolean captured = result == RESULT_OK && foodPhoto != null && foodPhoto.isFile() && foodPhoto.length() > 0;
+            if (fileCallback != null) fileCallback.onReceiveValue(captured ? new Uri[] { foodPhotoUri } : null);
+            fileCallback = null;
+            if (!captured && foodPhoto != null) foodPhoto.delete();
+        }
         if (request == FILE_PICK && fileCallback != null) {
             fileCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(result, data));
             fileCallback = null;
@@ -424,6 +460,7 @@ public final class MainActivity extends Activity {
         finishNativeAudio(true);
         if (nativePort != null) nativePort.close();
         if (fileCallback != null) fileCallback.onReceiveValue(null);
+        if (foodPhoto != null) foodPhoto.delete();
         if (audioRequest != null) audioRequest.deny();
         if (downloadPort != null) downloadPort.close();
         root.removeView(web);

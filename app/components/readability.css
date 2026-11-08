@@ -1,0 +1,52 @@
+/* Text and its surface must change together, including legacy module styles. */
+.phone-shell.ios18-shell.visual-aligned :is(.diet-log-row > span, .timeline-row strong, .watch-library-topbar h2, .watch-rating-media-copy strong, .watch-rating-media-card strong) {
+  color: var(--ios-ink) !important;
+}
+.phone-shell.ios18-shell.visual-aligned :is(.timeline-row > span, .diet-log-row small, .watch-rating-media-copy small, .watch-rating-media-card small, .clock-calendar) {
+  color: var(--ios-muted) !important;
+}
+.phone-shell.ios18-shell.visual-aligned :is(.module-tabs, .meal-tabs, .news-tabs, .asset-section-tabs, .asset-status-tabs) button.active {
+  color: var(--ios-ink) !important;
+  background: var(--ios-panel) !important;
+}
+.phone-shell.ios18-shell.visual-aligned :is(.record-actions, .asset-row-actions, .habit-row, .task-row, .diet-log-row, .exercise-log-row, .travel-actions) > button {
+  color: var(--ios-ink) !important;
+  background: var(--ios-panel-muted) !important;
+}
+.phone-shell.ios18-shell.visual-aligned :is(.life-countdown, .life-countdown strong, .life-countdown span, .life-edit-button) {
+  color: var(--ios-blue) !important;
+}
+.phone-shell.ios18-shell.visual-aligned .life-edit-button { background: var(--ios-panel) !important; }
+.phone-shell.ios18-shell.visual-aligned .life-countdown.overdue,
+.phone-shell.ios18-shell.visual-aligned .life-countdown.overdue :is(strong, span) { color: #b32d3c !important; }
+.phone-shell.ios18-shell.visual-aligned .watch-rating-media-card { background: var(--ios-panel) !important; }
+.phone-shell.ios18-shell.visual-aligned :is(.watch-library-state, .watch-rating-media-copy > span) { color: var(--ios-muted) !important; background: transparent !important; }
+.phone-shell.ios18-shell.visual-aligned .pony-theme-card :is(strong, small) { color: #17212e !important; }
+.phone-shell.ios18-shell.visual-aligned .pony-theme-card small { color: #354357 !important; }
+.phone-shell.ios18-shell.visual-aligned :is(.bottom-nav, .side-nav) { background: var(--ios-page) !important; }
+.phone-shell.ios18-shell.visual-aligned .nav-item.active small { color: var(--ios-blue) !important; }
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw :is(.today-time-panel, .hero-card, .pet-card, .desktop-context-hero) { background: var(--ios-surface) !important; }
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw :is(.up, .quote-delete, .table-tennis-scoreline .down, .life-countdown.overdue, .life-countdown.overdue strong, .life-countdown.overdue span) { color: #ffb5bb !important; }
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw :is(.down, .table-tennis-scoreline .up) { color: #8bd5ae !important; }
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw :is(.stack-form, .quick-form, .meal-form, .exercise-form, .weight-form, .water-target-form, .task-form, .anniversary-form) > button,
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw :is(.quick-note-bar button, .asset-submit, .life-goal-form-fields button, .tmdb-sync-button, .tmdb-search .chip-button, .watch-calendar .chip-button, .watch-list-panel .chip-button, .week-day.active, .week-day.active span, .week-day.active strong) {
+  color: var(--ios-on-accent) !important;
+}
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw :is(.watch-rating-categories, .watch-rating-actions, .watch-mobile-episodes-head) > button.active { color: var(--ios-on-accent) !important; }
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw .pony-theme-status { color: #17212e !important; }
+body:has(.pony-theme-bw) :is(.ui-select-content, .ui-select-option) { --ios-ink: #f4f4f5; --ios-muted: #c5c7ce; --ios-panel: #282a30; --ios-blue: #b8caf2; --ios-blue-soft: rgba(184,202,242,.14); }
+body:has(.pony-theme-bw) .ui-select-option[data-highlighted] { color: #17212e; }
+.phone-shell.ios18-shell.visual-aligned.page-consultations .watch-rating-media-card.active { background: var(--ios-panel) !important; }
+.phone-shell.ios18-shell.visual-aligned.page-consultations .watch-rating-media-card :is(.watch-rating-media-copy, .watch-rating-media-copy strong, .watch-rating-media-copy small) { background: transparent !important; }
+.phone-shell.ios18-shell.visual-aligned.page-consultations.mobile-shell .watch-shell { background: var(--ios-page) !important; }
+.phone-shell.ios18-shell.visual-aligned .fund-trade-form .chip-button { color: var(--ios-ink) !important; background: var(--ios-panel-muted) !important; }
+.phone-shell.ios18-shell.visual-aligned .news-row > span { color: var(--ios-blue) !important; background: var(--ios-panel-muted) !important; }
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw :is(.note-new-button, .account-login-form > button, .backup-export, .watch-list-summary button.active, .exercise-type-grid button.active strong, .exercise-type-grid button.active small, button[class*="recordButton"], button[class*="saveButton"]) { color: var(--ios-on-accent) !important; }
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw .record-actions > button:last-child { color: #ffb5bb !important; }
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw .recommendation-mode-tabs button { color: var(--ios-muted) !important; }
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw .recommendation-mode-tabs button.active { color: var(--ios-ink) !important; }
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw .table-tennis-scoreline strong:first-child { color: #8bd5ae !important; }
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw .table-tennis-scoreline strong:last-child { color: #ffb5bb !important; }
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw .recommendation-mode-tabs button { background: var(--ios-panel-muted) !important; }
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw .recommendation-mode-tabs button.active { background: var(--ios-panel) !important; }
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw :is(button[class*="recordButton"], button[class*="saveButton"]) { background: var(--ios-blue) !important; }

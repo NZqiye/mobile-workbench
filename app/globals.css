@@ -7803,6 +7803,8 @@ textarea::placeholder {
   --ios-panel-muted: #d2d9e3;
   --ios-ink: #17212e;
   --ios-muted: #354357;
+  --ios-muted-strong: #354357;
+  --ios-on-accent: #ffffff;
   --ios-separator: rgba(43, 57, 74, 0.18);
   --ios-blue: #104a91;
   --ios-blue-soft: rgba(23, 105, 209, 0.14);
@@ -8738,7 +8740,7 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
   --theme-accent: #d69a2e;
 }
 .ios18-shell.pony-theme-gold {
-  --ios-blue: #8a5a14;
+  --ios-blue: #714709;
   --ios-blue-soft: rgba(138, 90, 20, 0.15);
   --ios-page: #e4e2dc;
   --ios-surface: #f0eee8;
@@ -8762,7 +8764,7 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
   --theme-accent: #c884b4;
 }
 .ios18-shell.pony-theme-jade {
-  --ios-blue: #087a70;
+  --ios-blue: #075e57;
   --ios-blue-soft: rgba(8, 122, 112, 0.14);
   --ios-page: #dce5e3;
   --ios-surface: #e8efed;
@@ -8774,7 +8776,7 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
   --theme-accent: #d2a946;
 }
 .ios18-shell.pony-theme-blue {
-  --ios-blue: #1d61c9;
+  --ios-blue: #174fa8;
   --ios-blue-soft: rgba(29, 97, 201, 0.14);
   --ios-page: #dce4ee;
   --ios-surface: #e8eef5;
@@ -8786,7 +8788,7 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
   --theme-accent: #9a76dc;
 }
 .ios18-shell.pony-theme-pine {
-  --ios-blue: #237a4c;
+  --ios-blue: #195f3a;
   --ios-blue-soft: rgba(35, 122, 76, 0.14);
   --ios-page: #dce6e0;
   --ios-surface: #e8f0eb;
@@ -8798,7 +8800,7 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
   --theme-accent: #c49335;
 }
 .ios18-shell.pony-theme-bw {
-  --ios-blue: #303038;
+  --ios-blue: #b8caf2;
   --ios-blue-soft: rgba(48, 48, 56, 0.18);
   --ios-page: #1a1b1f;
   --ios-surface: #222328;
@@ -8806,13 +8808,15 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
   --ios-panel-muted: #30323a;
   --ios-ink: #f4f4f5;
   --ios-muted: #c5c7ce;
+  --ios-muted-strong: #c5c7ce;
+  --ios-on-accent: #17212e;
   --ios-separator: rgba(255, 255, 255, 0.18);
   --theme-main: #303038;
   --theme-warm: #555761;
   --theme-accent: #a7a9b2;
 }
 .ios18-shell.pony-theme-moon {
-  --ios-blue: #496b82;
+  --ios-blue: #365469;
   --ios-blue-soft: rgba(73, 107, 130, 0.14);
   --ios-page: #dce6eb;
   --ios-surface: #e8f0f3;

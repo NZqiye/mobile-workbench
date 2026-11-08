@@ -1,0 +1,28 @@
+.root { min-width: 0; display: grid; gap: 12px; padding: 16px; border: 1px solid var(--ios-separator); border-radius: 16px; color: var(--ios-ink); background: var(--ios-panel); }
+.heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.heading strong { font-size: 16px; }
+.heading > span { color: var(--ios-muted); font-size: 12px; }
+.help, .privacy, .status, .error { margin: 0; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.help, .privacy { color: var(--ios-muted); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.root button { min-height: 44px; padding: 10px 16px; border: 1px solid var(--ios-separator); border-radius: 12px; color: var(--ios-ink); background: var(--ios-panel-muted); font-size: 14px; font-weight: 650; cursor: pointer; }
+.root button.primary { color: var(--ios-on-accent); background: var(--ios-blue); }
+.root button:focus-visible { outline: 2px solid var(--ios-ink); outline-offset: 3px; }
+.root button:active { transform: scale(.98); }
+.root button:disabled { opacity: .65; cursor: wait; }
+.file { display: none; }
+.preview { display: grid; gap: 12px; }
+.preview img { display: block; width: 100%; max-width: 360px; height: 180px; border-radius: 12px; background: var(--ios-panel-muted); object-fit: contain; }
+.result { display: grid; gap: 12px; }
+.result ul { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
+.result li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-block: 10px; border-bottom: 1px solid var(--ios-separator); font-size: 14px; }
+.result li > span { min-width: 0; overflow-wrap: anywhere; }
+.result small { display: block; margin-top: 4px; color: var(--ios-muted); font-size: 12px; }
+.result b { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.total { display: flex; justify-content: space-between; margin: 0; font-size: 14px; }
+.total strong { font-size: 18px; }
+.status { color: var(--ios-ink); }
+.error { color: #b32d3c; }
+:global(.pony-theme-bw) .error { color: #ffb5bb; }
+@media (max-width: 360px) { .root { padding: 12px; } .actions > button { flex: 1; } }
+@media (prefers-reduced-motion: reduce) { .root button:active { transform: none; } }

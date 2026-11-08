@@ -38,7 +38,7 @@
     }).then(data => data.notifications);
   };
   window.QiyeNative = {
-    version: '1.1.3',
+    version: '1.1.5',
     updateStatus: '',
     checkUpdates() {
       if (!port) return false;
@@ -64,6 +64,7 @@
     enableNotifications: () => request('notification-enable'),
     disableNotifications: () => request('notification-disable'),
     syncReminders: tasks => request('notification-sync', { tasks }),
+    syncWidgets: snapshot => { if (!port) return false; port.postMessage(JSON.stringify({ action: 'widgets-sync', snapshot })); return true; },
     testNotification: () => request('notification-test'),
     openNotificationSettings: () => send('notification-settings'),
     openExactAlarmSettings: () => send('notification-exact-settings'),

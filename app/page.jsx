@@ -8,6 +8,7 @@ import TravelBoard from "./components/travel-board";
 import WorkbenchSelect, { SelectChevron } from "./components/workbench-select";
 import AnniversaryIconPicker from "./components/anniversary-icon-picker";
 import VoiceQuickRecord from "./components/voice-quick-record";
+import FoodPhoto from "./components/food-photo";
 import AccountPanel from "./components/account-panel";
 import MediaPoster from "./components/media-poster";
 import AppUpdatePanel from "./components/app-update-panel";
@@ -17,6 +18,7 @@ import MobileNavigation from "./components/mobile-navigation";
 import { bundledAssetUrl } from "../lib/bundled-assets";
 import NativeNotificationPanel from "./components/native-notification-panel";
 import { nativeReminderTasks } from "../lib/native-reminders";
+import { widgetSnapshot } from "../lib/native-widgets";
 import watchDetailStyles from "./components/watch-detail.module.css";
 import watchCalendarStyles from "./components/watch-calendar.module.css";
 import { seriesWatchProgress } from "../lib/watch-progress";
@@ -34,6 +36,7 @@ import "./components/visual-alignment.css";
 import useAppMotion from "./components/use-app-motion";
 import "./components/app-motion.css";
 import "./components/workbench-polish.css";
+import "./components/readability.css";
 
 const storagePrefix = "qiyeworkbench:";
 
@@ -5205,6 +5208,7 @@ function ConsultationList({ consultations, onDelete, onEdit }) {
 function DietTracker({ view = "water", records, waterTarget, onAddWater, onAddMeal, onDelete, onSaveTarget }) {
   const [meal, setMeal] = useState("早餐");
   const [foodInput, setFoodInput] = useState("");
+  const mealForm = useRef(null);
   const target = Number(waterTarget) || defaultWaterTarget;
   const todayRecords = records.filter((item) => item.date === todayKey());
   const waterRecords = todayRecords.filter((item) => item.type === "water");
@@ -5317,7 +5321,13 @@ function DietTracker({ view = "water", records, waterTarget, onAddWater, onAddMe
             <button className={meal === item ? "active" : ""} type="button" key={item} onClick={() => setMeal(item)}>{item}</button>
           ))}
         </div>
-        <form className="meal-form" onSubmit={submitMeal}>
+        <FoodPhoto onUseEstimate={(result) => {
+          setFoodInput(result.title);
+          mealForm.current.elements.calories.value = String(result.totalCalories);
+          mealForm.current.scrollIntoView({ block: "center", behavior: "auto" });
+          mealForm.current.elements.calories.focus({ preventScroll: true });
+        }} />
+        <form ref={mealForm} className="meal-form" onSubmit={submitMeal}>
           <input name="title" value={foodInput} onChange={(event) => setFoodInput(event.target.value)} placeholder="食物名称，可不填" />
           <input name="calories" type="number" min="1" inputMode="numeric" placeholder={`${meal} kcal`} />
           <small>{estimate.calories ? `已估算 ${estimate.calories} kcal · ${estimate.matched.map((item) => item.name).join("、")}；也可以直接改右侧热量` : `直接输入 ${meal} 热量即可，食物名称可选`}</small>
@@ -6587,6 +6597,26 @@ export default function Workbench() {
     });
     return () => { current = false; };
   }, [androidApp, storageLoaded, nativeConnection, plans]);
+
+  const widgetDate = todayKey();
+  useEffect(() => {
+    if (!storageLoaded || !androidApp || !window.QiyeNative?.syncWidgets) return;
+    window.QiyeNative.syncWidgets(widgetSnapshot(plans, dietRecords, waterTarget, widgetDate));
+  }, [androidApp, storageLoaded, nativeConnection, plans, dietRecords, waterTarget, widgetDate]);
+
+  useEffect(() => {
+    if (!androidApp || !storageLoaded) return;
+    const open = (page) => {
+      if (page !== "plans" && page !== "diet") return;
+      switchPage(page);
+      if (page === "plans") setArrangementView("tasks");
+      else setDietView("water");
+      delete window.__qiyeWidgetPending;
+    };
+    window.__qiyeOpenWidget = open;
+    if (window.__qiyeWidgetPending) open(window.__qiyeWidgetPending);
+    return () => { if (window.__qiyeOpenWidget === open) delete window.__qiyeOpenWidget; };
+  }, [androidApp, storageLoaded]);
 
   useEffect(() => {
     if (!androidApp) return;
