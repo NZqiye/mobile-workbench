@@ -5,5 +5,5 @@ import android.content.Context;
 import android.content.Intent;
 
 public final class ReminderReceiver extends BroadcastReceiver {
-    @Override public void onReceive(Context context, Intent intent) { NativeReminders.refresh(context); }
+    @Override public void onReceive(Context context, Intent intent) { NativeReminders.refresh(context); WorkbenchWidgets.updateAll(context); }
 }

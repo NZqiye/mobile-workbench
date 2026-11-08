@@ -19,6 +19,7 @@ import { bundledAssetUrl } from "../lib/bundled-assets";
 import NativeNotificationPanel from "./components/native-notification-panel";
 import { nativeReminderTasks } from "../lib/native-reminders";
 import { widgetSnapshot } from "../lib/native-widgets";
+import { parseEpisodeList, watchEntriesForDate } from "../lib/watch-schedule";
 import watchDetailStyles from "./components/watch-detail.module.css";
 import watchCalendarStyles from "./components/watch-calendar.module.css";
 import { seriesWatchProgress } from "../lib/watch-progress";
@@ -3616,23 +3617,6 @@ function NoteList({ notes, onDelete, onEdit, onNew }) {
   );
 }
 
-function parseEpisodeList(value, fallbackEpisode) {
-  const text = String(value || "").trim();
-  if (!text) return fallbackEpisode ? [fallbackEpisode] : [];
-  const range = text.match(/^(\d+)\s*[-~至到]\s*(\d+)$/);
-  if (range) {
-    const start = Number(range[1]);
-    const end = Number(range[2]);
-    if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
-      return Array.from({ length: end - start + 1 }, (_, index) => start + index);
-    }
-  }
-  return text
-    .split(/[,，、\s]+/)
-    .map((item) => Number(item))
-    .filter((item) => Number.isFinite(item) && item > 0);
-}
-
 function dedupeWatchCheckins(items) {
   const seen = new Set();
   return (Array.isArray(items) ? items : []).filter((record) => {
@@ -3671,27 +3655,6 @@ function upsertWatchCheckin(records, record) {
     ...(Array.isArray(records) ? records : []).filter((entry) => watchCheckinIdentity(entry) !== identity),
     record,
   ]);
-}
-
-function watchEntriesForDate(items, dateKey) {
-  return items.flatMap((item) => {
-    if (Array.isArray(item.episodeSchedule) && item.episodeSchedule.length) {
-      return item.episodeSchedule
-        .filter((episode) => episode.date === dateKey)
-        .map((episode) => ({
-          ...item,
-          nextAirDate: episode.date,
-          updateEpisode: episode.episode,
-          episodeTitle: episode.title || "",
-          season: episode.season || item.season,
-        }));
-    }
-
-    if (item.nextAirDate !== dateKey) return [];
-    const current = Number(item.currentEpisode || 0);
-    const episodes = parseEpisodeList(item.updateEpisodes, current > 0 ? current + 1 : 0);
-    return (episodes.length ? episodes : [0]).map((episode) => ({ ...item, updateEpisode: episode }));
-  });
 }
 
 function dayUpdateLabel(updates, expanded) {
@@ -6541,15 +6504,16 @@ export default function Workbench() {
     loadTmdbRecommendations();
   }, [activePage, storageLoaded]);
 
+  const widgetDate = todayKey();
   useEffect(() => {
-    if (activePage !== "consultations") return;
+    if (!storageLoaded || (activePage !== "consultations" && !androidApp)) return;
     if (!consultations.some((item) => item.tmdbId && (item.tmdbMediaType || "tv") !== "movie")) return;
 
     const refreshKey = key("tmdbTrackedRefreshDate:v2");
     if (localStorage.getItem(refreshKey) === todayKey()) return;
     localStorage.setItem(refreshKey, todayKey());
     refreshTmdbTrackedItems({ automatic: true });
-  }, [activePage, consultations.length]);
+  }, [activePage, consultations.length, androidApp, storageLoaded, widgetDate]);
 
   const stats = useMemo(() => {
     const finishedHabits = habits.filter((item) => done[item.id]).length;
@@ -6598,19 +6562,20 @@ export default function Workbench() {
     return () => { current = false; };
   }, [androidApp, storageLoaded, nativeConnection, plans]);
 
-  const widgetDate = todayKey();
   useEffect(() => {
     if (!storageLoaded || !androidApp || !window.QiyeNative?.syncWidgets) return;
-    window.QiyeNative.syncWidgets(widgetSnapshot(plans, dietRecords, waterTarget, widgetDate));
-  }, [androidApp, storageLoaded, nativeConnection, plans, dietRecords, waterTarget, widgetDate]);
+    window.QiyeNative.syncWidgets(widgetSnapshot(plans, dietRecords, waterTarget, widgetDate, consultations, assetItems));
+  }, [androidApp, storageLoaded, nativeConnection, plans, dietRecords, waterTarget, widgetDate, consultations, assetItems]);
 
   useEffect(() => {
     if (!androidApp || !storageLoaded) return;
     const open = (page) => {
-      if (page !== "plans" && page !== "diet") return;
+      if (!["plans", "diet", "consultations", "assets"].includes(page)) return;
       switchPage(page);
       if (page === "plans") setArrangementView("tasks");
-      else setDietView("water");
+      else if (page === "diet") setDietView("water");
+      else if (page === "consultations") setConsultationView("today");
+      else { setAssetSection("assets"); setAssetView("服役中"); }
       delete window.__qiyeWidgetPending;
     };
     window.__qiyeOpenWidget = open;

@@ -38,7 +38,7 @@
     }).then(data => data.notifications);
   };
   window.QiyeNative = {
-    version: '1.1.5',
+    version: '1.1.6',
     updateStatus: '',
     checkUpdates() {
       if (!port) return false;

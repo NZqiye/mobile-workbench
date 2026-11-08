@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="14dp" android:background="@drawable/widget_card">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="资产记录" android:textColor="#075E57" android:textSize="16sp" android:textStyle="bold" />
+    <TextView android:id="@+id/widget_amount" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="待同步" android:textColor="#17212E" android:textSize="24sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
+    <TextView android:id="@+id/widget_content" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="6dp" android:text="打开 App 同步资产记录" android:textColor="#17212E" android:textSize="14sp" android:maxLines="3" android:ellipsize="end" android:lineSpacingExtra="3dp" />
+    <TextView android:id="@+id/widget_footer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="点击查看资产" android:textColor="#354357" android:textSize="12sp" android:maxLines="1" android:ellipsize="end" />
+</LinearLayout>

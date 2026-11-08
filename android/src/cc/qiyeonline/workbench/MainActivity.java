@@ -264,7 +264,7 @@ public final class MainActivity extends Activity {
 
     private void openPageFromWidget() {
         String page = getIntent().getStringExtra("widgetPage");
-        if ((!"plans".equals(page) && !"diet".equals(page)) || web == null || !trusted(Uri.parse(web.getUrl()))) return;
+        if ((!"plans".equals(page) && !"diet".equals(page) && !"consultations".equals(page) && !"assets".equals(page)) || web == null || !trusted(Uri.parse(web.getUrl()))) return;
         web.evaluateJavascript("window.__qiyeOpenWidget ? window.__qiyeOpenWidget(" + JSONObject.quote(page) + ") : (window.__qiyeWidgetPending = " + JSONObject.quote(page) + ")", null);
         getIntent().removeExtra("widgetPage");
     }
