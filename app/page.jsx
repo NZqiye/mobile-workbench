@@ -13,6 +13,7 @@ import MediaPoster from "./components/media-poster";
 import AppUpdatePanel from "./components/app-update-panel";
 import WatchEpisodeList from "./components/watch-episode-list";
 import WhaleCompanion from "./components/whale-companion";
+import MobileNavigation from "./components/mobile-navigation";
 import { bundledAssetUrl } from "../lib/bundled-assets";
 import NativeNotificationPanel from "./components/native-notification-panel";
 import { nativeReminderTasks } from "../lib/native-reminders";
@@ -32,6 +33,7 @@ import "./components/mobile-surface.css";
 import "./components/visual-alignment.css";
 import useAppMotion from "./components/use-app-motion";
 import "./components/app-motion.css";
+import "./components/workbench-polish.css";
 
 const storagePrefix = "qiyeworkbench:";
 
@@ -1248,7 +1250,7 @@ function PetCompanionCard({ supplies, action, onUse, onRest }) {
         <div>
           <span>宠物陪伴</span>
           <strong>鲸鱼娘</strong>
-          <span className="pet-happiness" role="status">幸福值 {supplies.happiness || 0}</span>
+          <span key={supplies.happiness || 0} className={`pet-happiness ${supplies.happiness ? "pet-happiness-updated" : ""}`} role="status">幸福值 {supplies.happiness || 0}</span>
         </div>
         <small>{action.text}</small>
       </div>
@@ -3528,13 +3530,14 @@ function DailyArrangement({ view = "habits", habits, done, tasks, anniversaries,
 
 function NoteForm({ onSave, editing, onCancel }) {
   const item = editing?.kind === "note" ? editing.item : null;
+  const [status, setStatus] = useState("");
 
   function submit(event) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const title = String(data.get("title") || "").trim();
     if (!title) return;
-    onSave({
+    try { onSave({
       id: item?.id || crypto.randomUUID(),
       date: String(data.get("date") || getItemDate(item)),
       type: String(data.get("type") || "life"),
@@ -3543,33 +3546,35 @@ function NoteForm({ onSave, editing, onCancel }) {
       mood: String(data.get("mood") || ""),
       tags: splitTags(data.get("tags")),
       time: item?.time || nowText(),
-    });
+    }); } catch { setStatus("保存失败，内容已保留，请重试。"); return; }
     event.currentTarget.reset();
+    setStatus("已保存到想法笔记");
     onCancel?.();
   }
 
   return (
-    <section className="panel">
+    <section className="panel note-editor" id="note-editor">
       <div className="panel-head">
         <h2>{item ? "编辑记录" : "快速记录"}</h2>
         {item && <button className="chip-button" type="button" onClick={onCancel}>取消编辑</button>}
       </div>
       <form className="stack-form" onSubmit={submit}>
-        <input name="title" defaultValue={item?.title || ""} placeholder="这条记录的标题" required />
+        <label className="note-field"><span>标题</span><input name="title" defaultValue={item?.title || ""} placeholder="这条记录的标题" required /></label>
         <div className="inline-fields">
-          <input name="date" type="date" defaultValue={getItemDate(item)} />
-          <WorkbenchSelect name="type" defaultValue={item?.type || "life"}>{noteTypes.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</WorkbenchSelect>
+          <label className="note-field"><span>日期</span><input name="date" type="date" defaultValue={getItemDate(item)} /></label>
+          <label className="note-field"><span>类型</span><WorkbenchSelect name="type" defaultValue={item?.type || "life"}>{noteTypes.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</WorkbenchSelect></label>
         </div>
-        <input name="mood" defaultValue={item?.mood || ""} placeholder="心情，可选" />
-        <input name="tags" defaultValue={(item?.tags || []).join(",")} placeholder="标签，用逗号分隔" />
-        <textarea name="content" rows="5" defaultValue={item?.content || ""} placeholder="写下生活、饮食、复盘、灵感或树洞内容" />
+        <label className="note-field"><span>心情 · 选填</span><input name="mood" defaultValue={item?.mood || ""} placeholder="此刻的心情" /></label>
+        <label className="note-field"><span>标签 · 选填</span><input name="tags" defaultValue={(item?.tags || []).join(",")} placeholder="用逗号分隔" /></label>
+        <label className="note-field"><span>内容 · 选填</span><textarea name="content" rows="5" defaultValue={item?.content || ""} placeholder="写下生活、饮食、复盘、灵感或树洞内容" /></label>
         <button type="submit">{item ? "保存修改" : "保存记录"}</button>
+        <p className={`note-save-status ${status.startsWith("已保存") ? "saved" : ""}`} role="status">{status}</p>
       </form>
     </section>
   );
 }
 
-function NoteList({ notes, onDelete, onEdit }) {
+function NoteList({ notes, onDelete, onEdit, onNew }) {
   const [query, setQuery] = useState("");
   const [type, setType] = useState("all");
   const filteredNotes = notes.filter((note) =>
@@ -3578,10 +3583,10 @@ function NoteList({ notes, onDelete, onEdit }) {
   );
 
   return (
-    <section className="panel">
-      <div className="panel-head"><h2>记录列表</h2><span className="tag">{filteredNotes.length}/{notes.length} 条</span></div>
+    <section className="panel notes-list-panel">
+      <div className="panel-head"><div><h2>记录列表</h2><p>{filteredNotes.length}/{notes.length} 条</p></div><button type="button" className="chip-button note-new-button" onClick={onNew}>＋ 写一条</button></div>
       <div className="filter-panel">
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索标题、内容、标签" />
+        <input type="search" aria-label="搜索笔记" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索标题、内容、标签" />
         <WorkbenchSelect value={type} onChange={(event) => setType(event.target.value)}>
           <option value="all">全部类型</option>
           {noteTypes.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}
@@ -3591,14 +3596,16 @@ function NoteList({ notes, onDelete, onEdit }) {
         {notes.length === 0 && <p className="empty">还没有记录，先写一条。</p>}
         {notes.length > 0 && filteredNotes.length === 0 && <p className="empty">没有匹配的记录。</p>}
         {filteredNotes.map((note) => (
-          <article className="record" key={note.id}>
-            <div className="record-head"><strong>{note.title}</strong><span>{note.date}</span></div>
-            <p className="record-meta">{[noteTypeLabel(note.type), note.mood, ...(note.tags || [])].filter(Boolean).join(" · ")}</p>
-            {note.content && <p>{note.content}</p>}
-            <div className="record-actions">
+          <article className="record note-record" key={note.id}>
+            <details className="note-disclosure">
+              <summary><span className="record-head"><strong>{note.title}</strong><span>{note.date}</span></span>{note.content && <span className="note-preview">{note.content}</span>}<span className="note-expand-label"><span className="note-expand">展开记录</span><span className="note-collapse">收起记录</span><SelectChevron /></span></summary>
+              {note.content && <p className="note-full-content">{note.content}</p>}
+              <div className="record-actions">
               <button type="button" onClick={() => onEdit(note)}>编辑</button>
               <button type="button" onClick={() => onDelete(note.id)}>删除</button>
-            </div>
+              </div>
+            </details>
+            <div className="note-metadata"><span>{noteTypeLabel(note.type)}</span>{note.mood && <span>{note.mood}</span>}{(note.tags || []).slice(0, 2).map((tag, index) => <span key={index}>{tag}</span>)}{note.tags?.length > 2 && <details className="note-extra-tags"><summary><span className="note-tags-expand">+{note.tags.length - 2}</span><span className="note-tags-collapse">收起标签</span></summary><div>{note.tags.slice(2).map((tag, index) => <span key={index}>{tag}</span>)}</div></details>}</div>
           </article>
         ))}
       </div>
@@ -3796,6 +3803,14 @@ const assetIconCategories = [
   })),
 ];
 const assetCategoryOptions = assetIconCategories.filter((category) => category.id !== "common").map((category) => category.label);
+const assetIconNames = {
+  box: "收纳盒",
+  smartphone: "手机", "mobile-phone": "手机", phone: "电话", "phone-case": "手机壳", "phone-charger-cable": "充电线", laptop: "笔记本电脑", "desktop-computer": "台式电脑", "tablet-computer": "平板电脑", camera: "相机", headphones: "耳机", earbuds: "耳机", smartwatch: "智能手表", watch: "手表", keyboard: "键盘", "mechanical-keyboard": "机械键盘", "desktop-computer-mouse": "鼠标", "power-bank": "充电宝", "power-strip": "插排", router: "路由器", "hard-drive": "硬盘", house: "房屋", key: "钥匙", lamp: "台灯", sofa: "沙发", "office-chair": "办公椅", coffee: "咖啡", mug: "杯子", "water-bottle-1": "水瓶", backpack: "背包", wallet: "钱包", "credit-card": "银行卡", calculator: "计算器", book: "书籍", "notebook-223yak": "笔记本", bicycle: "自行车", car: "汽车", airplane: "飞机", "umbrella-kpw0ub": "雨伞", "medicine-capsule": "药品", "fitness-tracker": "运动手环", "camp-chair": "露营椅", "camping-tent": "帐篷", suitcase: "行李箱", "badminton-racket": "羽毛球拍", "medicine-bottle": "药瓶", dumbbell: "哑铃", "yoga-mat": "瑜伽垫", "game-controller": "游戏手柄", "puzzle-cube": "魔方", "air-fryer": "空气炸锅", "electric-kettle": "电水壶", "hair-dryer": "吹风机", "personal-scale": "体重秤",
+};
+function assetIconLabel(icon) {
+  const name = icon.replace("thiings:", "");
+  return assetIconNames[name] || name.replaceAll("-", " ");
+}
 
 function assetCategory(item) {
   if (assetCategoryOptions.includes(item?.category)) return item.category;
@@ -3827,6 +3842,10 @@ function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelet
   const [formIcon, setFormIcon] = useState("thiings:box");
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [iconTab, setIconTab] = useState("common");
+  const [iconQuery, setIconQuery] = useState("");
+  const matchingIcons = iconQuery.trim()
+    ? [...new Set(assetIconCategories.filter((category) => category.id !== "common").flatMap((category) => category.icons.filter((icon) => `${assetIconLabel(icon)} ${icon} ${category.label}`.toLowerCase().includes(iconQuery.trim().toLowerCase()))))]
+    : assetIconCategories.find((category) => category.id === iconTab)?.icons || [];
   const assetList = Array.isArray(items) ? items : [];
   const activeItems = assetList.filter((item) => item.status === "服役中");
   const visibleItems = assetList.filter((item) => (item.status || "服役中") === status);
@@ -3843,6 +3862,7 @@ function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelet
   }, 0);
 
   function resetForm() {
+    setIconQuery("");
     setFormName(""); setFormPrice(""); setFormDate(todayKey()); setFormCategory("数码科技"); setFormStatus(status); setFormSaleDate(""); setFormSalePrice(""); setFormRetirementDate(""); setFormNotes(""); setFormIcon("thiings:box"); setIconTab("common"); setShowIconPicker(false); setEditingId(null); setShowForm(false);
   }
 
@@ -3891,7 +3911,7 @@ function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelet
           </div>
           <div className="asset-name-row">
             <input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="物品名称" required />
-            <button type="button" className="asset-icon-btn" onClick={() => setShowIconPicker(!showIconPicker)}>
+            <button type="button" className="asset-icon-btn" aria-label="更换物品图标" aria-expanded={showIconPicker} onClick={() => setShowIconPicker(!showIconPicker)}>
               <span className="asset-icon-preview"><AssetIcon name={formIcon} size={34} /></span>
               <span className="asset-icon-edit">📷</span>
             </button>
@@ -3900,16 +3920,19 @@ function AssetBoard({ items = [], status = "服役中", onAdd, onUpdate, onDelet
             <div className="asset-icon-picker">
               <div className="asset-icon-picker-head">
                 <strong>选择图标</strong>
-                <button type="button" onClick={() => setShowIconPicker(false)}>×</button>
+                <button type="button" aria-label="关闭物品图标选择" onClick={() => setShowIconPicker(false)}>×</button>
               </div>
+              <label className="icon-search"><span>搜索物品图标</span><input type="search" value={iconQuery} onChange={(event) => setIconQuery(event.target.value)} placeholder="手机、电脑、露营、camera…" /></label>
               <div className="asset-icon-tabs">
                 {assetIconCategories.map((cat) => (
-                  <button type="button" key={cat.id} className={iconTab === cat.id ? "active" : ""} onClick={() => setIconTab(cat.id)}>{cat.label}</button>
+                  <button type="button" key={cat.id} aria-pressed={!iconQuery.trim() && iconTab === cat.id} className={!iconQuery.trim() && iconTab === cat.id ? "active" : ""} onClick={() => { setIconTab(cat.id); setIconQuery(""); }}>{cat.label}</button>
                 ))}
               </div>
+              <p className="icon-search-count">{iconQuery.trim() ? `找到 ${matchingIcons.length} 个图标` : "点击图标即可选用"} · 已选：{assetIconLabel(formIcon)}</p>
+              {!matchingIcons.length && <p className="icon-search-empty">没有找到图标，试试物品名或分类。</p>}
               <div className="asset-icon-grid">
-                {assetIconCategories.find((c) => c.id === iconTab)?.icons.map((icon) => (
-                  <button type="button" key={icon} aria-label={`选择 ${icon.replace("thiings:", "").replaceAll("-", " ")}`} aria-pressed={formIcon === icon} className={`asset-icon-cell ${formIcon === icon ? "selected" : ""}`} onClick={() => { setFormIcon(icon); setFormCategory(assetCategory({ icon })); setShowIconPicker(false); }}><AssetIcon name={icon} size={36} /></button>
+                {matchingIcons.map((icon) => (
+                  <button type="button" key={icon} title={assetIconLabel(icon)} aria-label={`选择 ${assetIconLabel(icon)}`} aria-pressed={formIcon === icon} className={`asset-icon-cell ${formIcon === icon ? "selected" : ""}`} onClick={() => { setFormIcon(icon); setFormCategory(assetCategory({ icon })); setShowIconPicker(false); }}><AssetIcon name={icon} size={36} /></button>
                 ))}
               </div>
             </div>
@@ -6091,6 +6114,7 @@ export default function Workbench() {
   const [plans, setPlans] = useState([]);
   const [notes, setNotes] = useState([]);
   const [quickNoteStatus, setQuickNoteStatus] = useState("");
+  const [noteEditStatus, setNoteEditStatus] = useState("");
   const [consultations, setConsultations] = useState([]);
   const [watchCheckins, setWatchCheckins] = useState([]);
   const [assetItems, setAssetItems] = useState([]);
@@ -7229,8 +7253,8 @@ export default function Workbench() {
     const next = existing
       ? mapItemsById(notes, note.id, () => note)
       : [note, ...notes];
-    setNotes(next);
     persist("notes", next);
+    setNotes(next);
     if (!existing) rewardPetOnce(`note:${note.id}`, "gift", 1, "笔记已保存，礼物盒 +1。");
   }
 
@@ -7268,6 +7292,7 @@ export default function Workbench() {
   }
 
   function editNote(item) {
+    setNoteEditStatus("");
     setEditing({ kind: "note", item });
     switchPage("notes");
   }
@@ -7821,7 +7846,7 @@ export default function Workbench() {
     { id: "settings", name: "数据设置", icon: "settings", badge: "备份", summary: session ? "云同步在线" : "本地模式" },
   ];
   const quickRecorder = <VoiceQuickRecord session={session} onPrepare={prepareQuickRecords} onSave={saveQuickRecords} onUndo={undoQuickRecords} onOpen={openQuickRecord} onSettings={() => switchPage("settings")} saved={quickSaved} onSaved={setQuickSaved} />;
-  const noteEditor = <NoteForm key={editing?.kind === "note" ? editing.item.id : "new"} editing={editing} onSave={(note) => { saveNote(note); setEditing(null); }} onCancel={() => setEditing(null)} />;
+  const noteEditor = <NoteForm key={editing?.kind === "note" ? editing.item.id : "new"} editing={editing} onSave={(note) => { saveNote(note); setNoteEditStatus(editing?.kind === "note" ? "修改已保存" : ""); setEditing(null); }} onCancel={() => setEditing(null)} />;
   const todayTasksPanel = <section className="panel today-task-panel">
     <div className="panel-head"><h2>今日任务</h2>{androidApp ? <button className="chip-button" type="button" onClick={() => { setArrangementView("tasks"); switchPage("plans"); }}>全部安排</button> : <span className="tag">{dateKey}</span>}</div>
     <div className="record-list">
@@ -7842,8 +7867,7 @@ export default function Workbench() {
         <button className="account-status-link" type="button" onClick={() => switchPage("settings")} aria-label="打开账号设置">{session ? syncStatus.includes("失败") ? "同步失败" : syncStatus.startsWith("正在") ? "同步中" : "已登录" : accountState === "checking" ? "检查登录" : "未登录"}</button>
       </div>
       <section className="app-body">
-        <button className="menu-backdrop" type="button" aria-label="关闭菜单" onClick={() => setMenuOpen(false)} />
-        <nav className="side-nav" aria-label="工作台导航" inert={androidApp && !menuOpen ? true : undefined}>
+        <nav className="side-nav" aria-label="工作台导航" inert={androidApp ? true : undefined}>
           <button className="profile-button" type="button" onClick={() => { setMenuOpen(false); setOverviewOpen(true); }} aria-label="打开技能总览">
             <span className="avatar-mark"><CultivationAvatar /></span>
             <strong>七夜online</strong>
@@ -8010,7 +8034,8 @@ export default function Workbench() {
           {activePage === 'notes' && (
             <>
               {editing?.kind === "note" && noteEditor}
-              <NoteList notes={notes} onDelete={deleteNote} onEdit={editNote} />
+              {noteEditStatus && <p className="note-save-status saved" role="status">{noteEditStatus}</p>}
+              <NoteList notes={notes} onDelete={deleteNote} onEdit={editNote} onNew={() => { setEditing(null); requestAnimationFrame(() => { const editor = document.getElementById("note-editor"); editor?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); editor?.querySelector('[name="title"]')?.focus({ preventScroll: true }); }); }} />
               {editing?.kind !== "note" && noteEditor}
             </>
           )}
@@ -8139,6 +8164,7 @@ export default function Workbench() {
         />
       </section>
       <nav className="bottom-nav" aria-label={androidApp ? "手机主要导航" : "主要导航，可左右滑动"} ref={bottomNavRef}>
+        {androidApp && <span className="bottom-nav-indicator" aria-hidden="true" style={{ "--nav-index": activePage === "today" ? 0 : activePage === "plans" ? 1 : activePage === "market" ? 3 : 4 }} />}
         {(androidApp ? [
           { id: "today", label: "首页", icon: "home" },
           { id: "plans", label: "安排", icon: "checklist" },
@@ -8164,13 +8190,16 @@ export default function Workbench() {
             key={item.id}
             onClick={() => item.id === "record" ? openMobileRecording() : item.id === "more" ? setMenuOpen(true) : switchPage(item.id)}
             aria-label={item.label}
-            aria-current={item.id === activePage ? "page" : undefined}
+            aria-current={item.id === activePage || (androidApp && item.id === "more" && !["today", "plans", "market"].includes(activePage)) ? "page" : undefined}
+            aria-haspopup={item.id === "more" ? "dialog" : undefined}
+            aria-expanded={item.id === "more" ? menuOpen : undefined}
           >
             <span>{item.icon === "microphone" ? <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8" /></svg> : <CrewNavIcon name={item.icon} />}</span>
             <small>{item.label}</small>
           </button>
         ))}
       </nav>
+      <MobileNavigation open={menuOpen} pages={pages} activePage={activePage} onClose={() => setMenuOpen(false)} onSelect={switchPage} renderIcon={(name) => <CrewNavIcon name={name} />} />
       <SkillOverview
         open={overviewOpen}
         skills={skillSummaries}

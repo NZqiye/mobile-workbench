@@ -22,15 +22,21 @@ function TravelIconPicker({ label, value, automaticImage, onChange }) {
   const selected = travelIcons.find((icon) => icon.id === value);
   const [group, setGroup] = useState(selected?.group || travelIconGroups[0].label);
   const [expanded, setExpanded] = useState(false);
+  const [query, setQuery] = useState("");
   const currentGroup = travelIconGroups.find((entry) => entry.label === group);
+  const matches = query.trim() ? travelIcons.filter((icon) => `${icon.label} ${icon.group}`.toLowerCase().includes(query.trim().toLowerCase())) : travelIcons.filter((icon) => icon.group === group);
   return <details className="travel-icon-picker" onToggle={(event) => setExpanded(event.currentTarget.open)}>
     <summary><img src={bundledAssetUrl(travelIconImage(value) || automaticImage)} width="40" height="40" alt="" /><span><strong>{label}</strong><small>{selected?.label || "自动匹配"}</small></span><span className="travel-icon-change">更换<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></span></summary>
     {expanded && <div className="travel-icon-options">
+      <label className="icon-search"><span>搜索{label}</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="西湖、长城、山水…" /></label>
+      <div className="icon-search-results">
       <button type="button" className="travel-icon-auto" aria-pressed={!selected} onClick={() => onChange("")}>使用自动匹配</button>
-      <div className="travel-icon-groups" role="group" aria-label={`${label}分类`}>{travelIconGroups.map((entry) => <button type="button" key={entry.label} aria-pressed={group === entry.label} onClick={() => setGroup(entry.label)}>{entry.label}</button>)}</div>
-      {currentGroup.note && <p className="travel-icon-hint">{currentGroup.note}</p>}
-      <div className="travel-icon-grid" role="group" aria-label={`${label}选择`}>{currentGroup.icons.map(([id, name]) => <button type="button" className="travel-icon-choice" key={id} aria-label={name} title={name} aria-pressed={value === id} onClick={() => onChange(id)}><img src={bundledAssetUrl(travelIconImage(id))} width="40" height="40" alt="" loading="lazy" /><span>{name}</span></button>)}</div>
-      <p className="travel-icon-hint">共 {travelIcons.length} 个图标 · 选择后随旅行一起保存</p>
+      <div className="travel-icon-groups" role="group" aria-label={`${label}分类`}>{travelIconGroups.map((entry) => <button type="button" key={entry.label} aria-pressed={!query.trim() && group === entry.label} onClick={() => { setGroup(entry.label); setQuery(""); }}>{entry.label}</button>)}</div>
+      {!query.trim() && currentGroup.note && <p className="travel-icon-hint">{currentGroup.note}</p>}
+      {!matches.length && <p className="icon-search-empty">没有找到图标，试试景点或城市名称。</p>}
+      <div className="travel-icon-grid" role="group" aria-label={`${label}选择`}>{matches.map(({ id, label: name }) => <button type="button" className="travel-icon-choice" key={id} aria-label={name} title={name} aria-pressed={value === id} onClick={() => onChange(id)}><img src={bundledAssetUrl(travelIconImage(id))} width="40" height="40" alt="" loading="lazy" /><span>{name}</span></button>)}</div>
+      </div>
+      <p className="travel-icon-hint">{query.trim() ? `找到 ${matches.length} 个图标` : `共 ${travelIcons.length} 个图标`} · 已选：{selected?.label || "自动匹配"}</p>
     </div>}
   </details>;
 }

@@ -1,0 +1,79 @@
+/* Focused refinements for navigation, capture and local icon libraries. */
+.mobile-navigation-dialog:not([open]) { display: none; }
+.mobile-navigation-dialog[open] {
+  position: fixed; inset: 0; display: flex; align-items: flex-end;
+  width: 100%; max-width: none; height: 100%; max-height: none;
+  margin: 0; padding: 0; border: 0; background: transparent; color: var(--ios-ink, var(--ink));
+}
+.mobile-navigation-dialog::backdrop { background: rgb(12 35 30 / .38); }
+.mobile-navigation-sheet {
+  box-sizing: border-box; width: 100%; max-width: 560px; max-height: min(85dvh, 680px); overflow-y: auto; overscroll-behavior: contain;
+  margin-inline: auto; padding: 10px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  border-radius: 24px 24px 0 0; background: var(--ios-panel, var(--panel));
+  box-shadow: 0 -8px 32px rgb(12 35 30 / .08); animation: navigation-enter 220ms cubic-bezier(.16,1,.3,1);
+}
+.mobile-navigation-handle { width: 36px; height: 4px; margin: 0 auto 18px; border-radius: 4px; background: var(--ios-separator, var(--line)); }
+.mobile-navigation-sheet header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.mobile-navigation-sheet h2 { margin: 0; font-size: 21px; line-height: 1.4; }
+.mobile-navigation-sheet p { margin: 4px 0 0; color: var(--ios-muted, var(--muted)); font-size: 13px; }
+.mobile-navigation-sheet header button { flex-shrink: 0; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; color: var(--ios-ink, var(--ink)); background: var(--ios-panel-muted, var(--panel-2)); font-size: 26px; }
+.mobile-navigation-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
+.mobile-navigation-grid button { position: relative; display: flex; align-items: center; flex-direction: column; gap: 8px; min-width: 0; min-height: 90px; padding: 12px 4px; border: 1px solid transparent; border-radius: 16px; color: var(--ios-ink, var(--ink)); background: transparent; font-size: 13px; }
+.mobile-navigation-grid button > :first-child { width: 40px; height: 40px; object-fit: contain; }
+.mobile-navigation-grid button[aria-current="page"] { color: var(--ios-blue, var(--theme-main)); border-color: var(--ios-blue-soft, var(--line)); background: var(--ios-blue-soft, var(--panel-2)); }
+.mobile-navigation-grid small { position: absolute; top: 5px; right: 5px; font-size: 10px; }
+.phone-shell.ios18-shell.visual-aligned.android-app-shell .bottom-nav { position: relative; }
+.bottom-nav-indicator { position: absolute; top: 5px; left: 8px; width: calc((100% - 16px) / 5); height: calc(100% - 10px); border-radius: 14px; background: var(--ios-blue-soft); transform: translateX(calc(var(--nav-index) * 100%)); transition: transform 220ms cubic-bezier(.16,1,.3,1); pointer-events: none; }
+.phone-shell.ios18-shell.visual-aligned.android-app-shell .bottom-nav-item { position: relative; z-index: 1; }
+.phone-shell.ios18-shell.visual-aligned.android-app-shell .bottom-nav-item.active { background: transparent !important; box-shadow: none !important; }
+.phone-shell.ios18-shell.visual-aligned.mobile-shell .side-nav { display: none !important; }
+.phone-shell.ios18-shell.visual-aligned .note-editor { scroll-margin-block: 16px; }
+.phone-shell.ios18-shell.visual-aligned .note-field { display: grid; gap: 8px; min-width: 0; color: var(--ios-ink); font-size: 13px; font-weight: 600; }
+.phone-shell.ios18-shell.visual-aligned .note-editor .inline-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.phone-shell.ios18-shell.visual-aligned .note-field :is(input,textarea,.ui-select-trigger) { box-sizing: border-box; width: 100%; min-width: 0; min-height: 48px; margin: 0; font-weight: 400; background: var(--ios-panel-muted) !important; }
+.phone-shell.ios18-shell.visual-aligned .note-editor button[type="submit"],
+.phone-shell.ios18-shell.visual-aligned .note-new-button { min-height: 48px; color: #fff !important; background: var(--ios-blue) !important; }
+.phone-shell.ios18-shell.visual-aligned .note-save-status { min-height: 20px; margin: 0; color: var(--ios-red, #b42332); font-size: 13px; }
+.phone-shell.ios18-shell.visual-aligned .note-save-status.saved { color: var(--ios-blue); animation: polish-confirm 300ms ease-out; }
+.phone-shell.ios18-shell.visual-aligned .notes-list-panel { gap: 20px; }
+.phone-shell.ios18-shell.visual-aligned .notes-list-panel .record-list { gap: 0; }
+.phone-shell.ios18-shell.visual-aligned .note-record { padding: 18px 0; border: 0; border-bottom: 1px solid var(--ios-separator); border-radius: 0; background: transparent !important; box-shadow: none !important; }
+.phone-shell.ios18-shell.visual-aligned .note-record:last-child { border-bottom: 0; padding-bottom: 0; }
+.note-disclosure > summary { display: grid; gap: 8px; list-style: none; cursor: pointer; }
+.note-disclosure > summary::-webkit-details-marker, .note-extra-tags > summary::-webkit-details-marker { display: none; }
+.phone-shell.ios18-shell.visual-aligned .note-disclosure .record-head { display: flex; justify-content: space-between; gap: 8px 16px; }
+.phone-shell.ios18-shell.visual-aligned .note-disclosure .record-head strong { flex: 1 1 180px; white-space: normal; overflow: visible; text-overflow: clip; }
+.phone-shell.ios18-shell.visual-aligned .note-preview { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ios-muted); font-size: 14px; line-height: 1.7; }
+.note-expand-label { display: inline-flex; align-items: center; gap: 4px; color: var(--ios-blue); font-size: 12px; }
+.note-expand-label svg { width: 14px; height: 14px; }
+.note-collapse, .note-disclosure[open] .note-expand, .note-disclosure[open] .note-preview, .note-tags-collapse, .note-extra-tags[open] .note-tags-expand { display: none; }
+.note-disclosure[open] .note-collapse, .note-extra-tags[open] .note-tags-collapse { display: inline; }
+.note-disclosure[open] .note-expand-label svg { transform: rotate(180deg); }
+.phone-shell.ios18-shell.visual-aligned .note-full-content { margin: 12px 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ios-ink) !important; font-size: 15px; line-height: 1.8; }
+.note-metadata { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin-top: 10px; }
+.note-metadata > span, .note-extra-tags span { max-width: 100%; overflow-wrap: anywhere; color: var(--ios-muted); font-size: 12px; }
+.note-metadata > span { padding: 3px 8px; border-radius: 6px; background: var(--ios-panel-muted); }
+.note-extra-tags { max-width: 100%; }
+.note-extra-tags summary { display: inline-flex; align-items: center; min-height: 44px; padding: 4px 8px; color: var(--ios-blue); cursor: pointer; list-style: none; }
+.note-extra-tags > div { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 8px; }
+.pet-happiness-updated { animation: happiness-confirm 350ms ease-out; }
+.phone-shell.ios18-shell.visual-aligned .icon-search { display: grid; flex-shrink: 0; gap: 8px; padding: 4px 0 12px; color: var(--ios-ink); font-size: 13px; font-weight: 600; }
+.phone-shell.ios18-shell.visual-aligned .icon-search input { box-sizing: border-box; width: 100%; min-height: 44px; margin: 0; font-size: 16px; font-weight: 400; background: var(--ios-panel-muted) !important; }
+.icon-search-results { min-height: 0; max-height: 320px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.phone-shell.ios18-shell.visual-aligned :is(.icon-search-empty,.icon-search-count) { margin: 8px 0; color: var(--ios-muted); font-size: 13px; line-height: 1.6; }
+.phone-shell.ios18-shell.visual-aligned .asset-icon-picker { max-height: none; overflow: visible; }
+.phone-shell.ios18-shell.visual-aligned .asset-icon-grid { max-height: 280px; overflow-y: auto; overscroll-behavior: contain; }
+.phone-shell.ios18-shell.visual-aligned .daybook-icon-library { display: flex; flex-direction: column; max-height: none; }
+.phone-shell.ios18-shell.visual-aligned :is(.asset-icon-cell,.travel-icon-choice,.daybook-icon-options button)[aria-pressed="true"] { border-color: var(--ios-blue) !important; background: var(--ios-blue-soft) !important; box-shadow: inset 0 0 0 1px var(--ios-blue); }
+.phone-shell.ios18-shell.visual-aligned :is(.asset-summary,.asset-summary-main,.asset-summary-stats) { border: 0; border-radius: 0; background: transparent !important; box-shadow: none !important; }
+.phone-shell.ios18-shell.visual-aligned .asset-summary { padding: 0 0 20px; margin-bottom: 0; border-bottom: 1px solid var(--ios-separator); }
+.phone-shell.ios18-shell.visual-aligned .asset-summary-main { padding: 0; }
+.phone-shell.ios18-shell.visual-aligned .asset-form { min-width: 0; grid-template-columns: minmax(0,1fr); padding: 20px 0; border: 0; border-block: 1px solid var(--ios-separator); border-radius: 0; background: transparent !important; box-shadow: none !important; }
+.phone-shell.ios18-shell.visual-aligned .asset-form > * { min-width: 0; }
+.phone-shell.ios18-shell.visual-aligned .asset-name-row { grid-template-columns: minmax(0,1fr) 44px; }
+.phone-shell.ios18-shell.visual-aligned .asset-icon-picker { box-sizing: border-box; width: 100%; }
+@keyframes navigation-enter { from { opacity: .65; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes happiness-confirm { 50% { transform: scale(1.06); } }
+@keyframes polish-confirm { from { opacity: .4; } to { opacity: 1; } }
+@media (max-width: 599px) { .phone-shell.ios18-shell.visual-aligned .note-editor .inline-fields { grid-template-columns: minmax(0,1fr); } }
+@media (prefers-reduced-motion: reduce) { .mobile-navigation-sheet, .pet-happiness-updated, .note-save-status.saved { animation: none !important; } .bottom-nav-indicator { transition: none; } }

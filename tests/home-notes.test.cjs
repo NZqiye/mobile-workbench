@@ -55,3 +55,18 @@ test("missing air time is hidden and Sci-Fi tags are filtered without changing s
   assert.deepEqual(Array.from(context.visibleMediaTags(tags)), ["动画", "动作冒险"]);
   assert.equal(tags.length, 5);
 });
+
+test("a failed note save leaves the visible collection and reward inventory unchanged", () => {
+  const states = [], rewards = [];
+  const context = vm.createContext({
+    notes: [{ id: "old", title: "previous note" }],
+    persist: () => { throw new Error("Storage full"); },
+    setNotes: value => states.push(value),
+    rewardPetOnce: (...args) => rewards.push(args),
+  });
+  vm.runInContext(functionSource("saveNote"), context);
+  assert.throws(() => context.saveNote({ id: "new", title: "keep my draft" }), /Storage full/);
+  assert.equal(states.length, 0);
+  assert.equal(rewards.length, 0);
+  assert.equal(context.notes[0].id, "old");
+});

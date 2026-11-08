@@ -75,15 +75,15 @@ const source = readFileSync(path.join(__dirname, '../app/components/voice-quick-
 const component = source.slice(source.indexOf('export default function') + 'export default '.length, source.indexOf('\n  return ('));
 const flush = () => new Promise(resolve => setImmediate(resolve));
 
-async function voiceHarness({ service = 'ready', nativeError, native = true } = {}) {
+async function voiceHarness({ service = 'ready', nativeError, native = true, holdRecords = false, holdTranscription = false, draft = '' } = {}) {
   const slots = [], effects = [], sent = [], statuses = [], saved = [], timers = [];
-  let cursor = 0, mounted = false, audioResolve, audioReject, onStarted, settings = 0, canceled = 0;
+  let cursor = 0, mounted = false, audioResolve, audioReject, onStarted, settings = 0, canceled = 0, releaseResponse;
   const context = vm.createContext({
     useId: () => 'voice',
     useState(initial) { const index = cursor++; if (!(index in slots)) slots[index] = initial; return [slots[index], value => { slots[index] = typeof value === 'function' ? value(slots[index]) : value; }]; },
     useRef(initial) { const index = cursor++; return slots[index] ?? (slots[index] = { current: initial }); },
     useEffect(callback) { if (!mounted) effects.push(callback); },
-    localStorage: { getItem: () => '', setItem() {}, removeItem() {} },
+    localStorage: { getItem: () => draft, setItem() {}, removeItem() {} },
     navigator: { mediaDevices: { getUserMedia() { throw new Error('Web microphone should not be used for native recordings'); } } },
     window: { addEventListener() {}, removeEventListener() {}, QiyeNative: native ? {
       recordAudio(callback) { onStarted = callback; return new Promise((resolve, reject) => { audioResolve = resolve; audioReject = reject; if (nativeError) reject(nativeError); }); },
@@ -96,15 +96,16 @@ async function voiceHarness({ service = 'ready', nativeError, native = true } = 
     fetch: async (url, options = {}) => {
       sent.push({ url, options });
       if (url === '/api/voice/transcribe' && !options.method) return { status: service === 'locked' ? 401 : 200, ok: true, json: async () => ({ configured: service === 'ready' }) };
-      if (url === '/api/voice/transcribe') return { status: 200, ok: true, json: async () => ({ text: '喝了300毫升水' }) };
+      if (url === '/api/voice/transcribe') return { status: 200, ok: true, json: async () => { if (holdTranscription) await new Promise(resolve => { releaseResponse = resolve; }); return { text: '喝了300毫升水' }; } };
+      if (holdRecords) return { status: 200, ok: true, json: async () => { await new Promise(resolve => { releaseResponse = resolve; }); return { records: [{ kind: 'water', value: { amount: 300 } }], issues: [] }; } };
       return { status: 200, ok: true, json: async () => ({ records: [{ kind: 'water', value: { amount: 300 } }], issues: [] }) };
     },
   });
-  const renderFn = vm.runInContext(`(${component}\nreturn {phase, status, native, micDenied, seconds, startRecording, stopRecording, cancelRecording};\n})`, context);
+  const renderFn = vm.runInContext(`(${component}\nreturn {phase, status, text, native, micDenied, seconds, startRecording, stopRecording, cancelRecording, cancelProcessing};\n})`, context);
   const props = { onSettings: () => settings++, onPrepare: records => ({ records, issues: [] }), onSave: result => { saved.push(result); return {}; }, onSaved() {} };
   const render = () => { cursor = 0; const result = renderFn(props); statuses.push(result.status); return result; };
   render(); mounted = true; effects.forEach(effect => effect()); await flush();
-  return { render, sent, saved, timers, settings: () => settings, canceled: () => canceled, started: () => onStarted() };
+  return { render, sent, saved, timers, settings: () => settings, canceled: () => canceled, started: () => onStarted(), releaseResponse: () => releaseResponse() };
 }
 
 test('the real voice component uses native audio, transcribes m4a and writes the result once', async () => {
@@ -154,4 +155,37 @@ test('canceling a native recording keeps the draft and never transcribes or save
   assert.match(h.render().status, /已取消/);
   assert.equal(h.saved.length, 0);
   assert.equal(h.sent.length, 1);
+});
+
+test('canceling classification ignores a late response and retains recognized text', async () => {
+  const h = await voiceHarness({ holdRecords: true, draft: '原有草稿' });
+  const recording = h.render().startRecording();
+  h.started();
+  h.render().stopRecording();
+  await flush();
+  assert.equal(h.render().phase, 'extracting');
+  h.render().cancelProcessing();
+  h.releaseResponse();
+  await recording;
+  assert.equal(h.saved.length, 0);
+  assert.equal(h.render().phase, 'idle');
+  assert.match(h.render().text, /原有草稿/);
+  assert.match(h.render().text, /300/);
+  assert.match(h.render().status, /已取消处理/);
+});
+
+test('canceling transcription ignores late audio text and does not start classification', async () => {
+  const h = await voiceHarness({ holdTranscription: true, draft: '原有草稿' });
+  const recording = h.render().startRecording();
+  h.started();
+  h.render().stopRecording();
+  await flush();
+  assert.equal(h.render().phase, 'transcribing');
+  h.render().cancelProcessing();
+  h.releaseResponse();
+  await recording;
+  assert.equal(h.saved.length, 0);
+  assert.equal(h.render().text, '原有草稿');
+  assert.equal(h.render().phase, 'idle');
+  assert.ok(!h.sent.some(request => request.url === '/api/voice/records'));
 });

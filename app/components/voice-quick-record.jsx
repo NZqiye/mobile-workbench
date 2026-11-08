@@ -109,7 +109,7 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
       result = { records: local.records.map((record) => ({ kind: record.value.type === "water" ? "water" : "exercise", action: "add", value: record.value })), issues: local.issues };
       fallbackMessage = "自动归类服务未启用，本次仅识别饮水和运动；请确认是否只保存这些内容。";
     }
-    if (!activeRef.current) return;
+    if (!activeRef.current || signal?.aborted) return;
     const prepared = onPrepare(result.records);
     const issues = [...result.issues, ...prepared.issues];
     if (fallbackMessage) issues.unshift(fallbackMessage);
@@ -135,7 +135,7 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
       const data = await response.json();
       if (response.status === 401) setService("locked");
       if (!response.ok) throw new Error(data.error || "识别失败，请重试");
-      if (!activeRef.current) return;
+      if (!activeRef.current || controller.signal.aborted) return;
       const combined = [text.trim(), data.text].filter(Boolean).join("\n");
       setText(combined);
       await processText(combined, recordedAt, controller.signal);
@@ -268,13 +268,19 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
     finally { busyRef.current = false; requestRef.current = null; if (activeRef.current) setPhase("idle"); }
   }
 
+  function cancelProcessing() {
+    requestRef.current?.abort();
+    if (nativeRecordingRef.current) window.QiyeNative?.cancelRecording();
+    setStatus("已取消处理，未保存任何内容。输入已保留。");
+  }
+
   return (
-    <section className={`panel quick-record-panel ${styles.root}`} aria-label="语音快速记录">
+    <section className={`panel quick-record-panel ${styles.root}`} aria-label="语音快速记录" aria-busy={busy || service === "checking"}>
       <div className={styles.header}>
         <h2>快速记录</h2>
         <button className={styles.recordButton} type="button" aria-pressed={phase === "recording"} disabled={phase !== "recording" && (busy || service === "checking")} onClick={phase === "recording" ? stopRecording : startRecording}>
           <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8" /></svg>
-          {phase === "recording" ? `停止并保存 · ${seconds}s` : phase === "transcribing" ? "转写中…" : phase === "extracting" ? "保存中…" : phase === "permission" ? "等待麦克风…" : service === "locked" ? "登录后录音" : service === "unavailable" ? "重试语音连接" : native ? "手机录音" : "开始录音"}
+          {phase === "recording" ? `停止并保存 · ${seconds}s` : phase === "transcribing" ? "转写中…" : phase === "extracting" ? "归类中…" : phase === "permission" ? "等待麦克风…" : service === "locked" ? "登录后录音" : service === "unavailable" ? "重试语音连接" : native ? "手机录音" : "开始录音"}
         </button>
       </div>
         <form onSubmit={submit}>
@@ -283,12 +289,13 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
           <div className={styles.actions}>
             {phase === "recording" && <button className={styles.textButton} type="button" onClick={cancelRecording}>取消录音</button>}
             {micDenied && native && <button className={styles.textButton} type="button" onClick={() => window.QiyeNative.openPermissions()}>开启麦克风权限</button>}
-            <button className={styles.saveButton} type="submit" disabled={busy || service === "checking" || !text.trim()}>{phase === "extracting" ? "正在保存…" : "保存到各栏目"}</button>
+            <button className={styles.saveButton} type="submit" disabled={busy || service === "checking" || !text.trim()}>{phase === "extracting" ? "正在归类…" : "保存到各栏目"}</button>
+            {["transcribing", "extracting"].includes(phase) && <button className={styles.textButton} type="button" onClick={cancelProcessing}>取消处理</button>}
             {service === "locked" && <button className={styles.textButton} type="button" onClick={onSettings}>去设置登录</button>}
             {service === "unavailable" && <button className={styles.textButton} type="button" disabled={busy} onClick={() => checkService()}>重试连接</button>}
           </div>
         </form>
-        <p id={`${inputId}-status`} className={styles.status} role="status">{status}</p>
+        <p id={`${inputId}-status`} className={`${styles.status} ${status.startsWith("已写入") ? styles.saved : ""}`} role="status">{(["transcribing", "extracting", "permission"].includes(phase) || service === "checking") && <span className={styles.loadingDots} aria-hidden="true"><i /><i /><i /></span>}{status}</p>
         <details className={styles.disclosure}>
           <summary>支持的栏目与录入说明</summary>
           <p>可写入饮水、饮食、运动、体重、任务、习惯、观影、资产、订阅、旅行、纪念日、星光目标、生活记录、基金及指数追踪。更新已有内容时请说清完整名称；缺少字段或存在同名记录时会提示补充。</p>
