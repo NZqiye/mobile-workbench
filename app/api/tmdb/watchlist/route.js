@@ -1,5 +1,5 @@
 import { fetchTmdb, loadTmdbDetails, mapTmdbResult, tmdbToken } from "../../../../lib/tmdb";
-import { isAuthorized, parseMediaInput, readJson, unauthorizedResponse } from "../../../../lib/access-auth";
+import { isAuthorized, isSameOrigin, parseMediaInput, readJson, unauthorizedResponse } from "../../../../lib/access-auth";
 
 const tmdbAccountId = process.env.TMDB_ACCOUNT_ID;
 const tmdbSessionId = process.env.TMDB_SESSION_ID;
@@ -106,6 +106,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
+    if (!isSameOrigin(request)) return Response.json({ error: "来源不受信任" }, { status: 403 });
     if (!isAuthorized(request)) return unauthorizedResponse();
     if (!tmdbToken || !tmdbSessionId) {
       return Response.json({ error: "缺少 TMDB_ACCESS_TOKEN 或 TMDB_SESSION_ID" }, { status: 500 });
@@ -143,6 +144,7 @@ export async function POST(request) {
 
 export async function DELETE(request) {
   try {
+    if (!isSameOrigin(request)) return Response.json({ error: "来源不受信任" }, { status: 403 });
     if (!isAuthorized(request)) return unauthorizedResponse();
     if (!tmdbToken || !tmdbSessionId) {
       return Response.json({ error: "\u7f3a\u5c11 TMDB_ACCESS_TOKEN \u6216 TMDB_SESSION_ID" }, { status: 500 });
@@ -180,6 +182,7 @@ export async function DELETE(request) {
 
 export async function PUT(request) {
   try {
+    if (!isSameOrigin(request)) return Response.json({ error: "来源不受信任" }, { status: 403 });
     if (!isAuthorized(request)) return unauthorizedResponse();
     if (!tmdbToken || !tmdbSessionId) {
       return Response.json({ error: "\u7f3a\u5c11 TMDB_ACCESS_TOKEN \u6216 TMDB_SESSION_ID" }, { status: 500 });

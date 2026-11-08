@@ -1,4 +1,13 @@
-.env*.local
+.env
+.env.*
+!.env*.example
+.vercel/
+*.pem
+*.key
+*.jks
+*.keystore
+qiyeworkbench-*.md
+qiyeworkbench-*.json
 node_modules/
 .next/
 .playwright-cli/

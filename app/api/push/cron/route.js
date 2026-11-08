@@ -1,12 +1,16 @@
 import webpush from "web-push";
-import { pushConfig } from "../../../../lib/push-server";
+import { timingSafeEqual } from "node:crypto";
+import { pushConfig, validSubscription } from "../../../../lib/push-server";
 
 const cronState = globalThis.__workbenchPushCronState || { running: false };
 globalThis.__workbenchPushCronState = cronState;
 
 function authorized(request) {
   const secret = process.env.CRON_SECRET;
-  return secret && request.headers.get("authorization") === `Bearer ${secret}`;
+  if (!secret) return false;
+  const provided = Buffer.from(request.headers.get("authorization") || "");
+  const expected = Buffer.from(`Bearer ${secret}`);
+  return provided.length === expected.length && timingSafeEqual(provided, expected);
 }
 
 export async function GET(request) {
@@ -19,13 +23,13 @@ export async function GET(request) {
     const now = Date.now();
     const { data: rows, error: rowError } = await config.supabase.from("workbench_records")
       .select("id,title,note").eq("page", "app_state").like("title", "%:plans");
-    if (rowError) return Response.json({ error: rowError.message }, { status: 500 });
+    if (rowError) return Response.json({ error: "提醒记录读取失败" }, { status: 500 });
     const { data: subscriptions, error: subError } = await config.supabase.from("push_subscriptions").select("endpoint,subscription,user_id");
-    if (subError) return Response.json({ error: subError.message }, { status: 500 });
+    if (subError) return Response.json({ error: "推送订阅读取失败" }, { status: 500 });
     let sent = 0;
     for (const row of rows || []) {
       const userId = String(row.title || "").slice(0, -":plans".length);
-      const targets = (subscriptions || []).filter((item) => item.user_id === userId);
+      const targets = (subscriptions || []).filter((item) => item.user_id === userId && validSubscription(item.subscription));
       let plans;
       try { plans = JSON.parse(row.note || "[]"); } catch { continue; }
       let changed = false;

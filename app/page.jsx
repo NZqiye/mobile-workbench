@@ -8143,7 +8143,7 @@ export default function Workbench() {
                     <input type="file" aria-label="导入 Markdown" aria-describedby="backup-description" accept=".md,.markdown,.json,text/markdown,text/plain,application/json" onChange={importBackup} />
                   </label>
                 </div>
-                <p className="backup-description" id="backup-description">导出的 Markdown 保留完整记录，可用于恢复；也兼容旧版 JSON 备份。</p>
+                <p className="backup-description" id="backup-description">导出的 Markdown 包含全部私人记录，请勿公开分享；可用于恢复，也兼容旧版 JSON 备份。</p>
               </section>
               <PonyThemePanel value={ponyTheme} onChange={changePonyTheme} />
             </>

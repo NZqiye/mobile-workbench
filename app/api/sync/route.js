@@ -1,5 +1,5 @@
 import { isAuthorized, isSameOrigin, readJson, unauthorizedResponse } from "../../../lib/access-auth";
-import { nowText, syncBodyLimit, syncConfig } from "../../../lib/sync-server";
+import { nowText, syncBodyLimit, syncConfig, validSyncName } from "../../../lib/sync-server";
 
 function unconfigured() {
   return Response.json({ error: "云同步尚未配置服务端密钥" }, { status: 503 });
@@ -16,12 +16,12 @@ export async function GET(request) {
     .eq("page", config.page)
     .like("title", `${config.userId}:%`)
     .order("created_at", { ascending: false });
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) return Response.json({ error: "云端记录读取失败，请稍后重试" }, { status: 500 });
 
   const latest = new Map();
   for (const row of data || []) {
     const name = String(row.title).slice(config.userId.length + 1);
-    if (name && !latest.has(name)) latest.set(name, row.note);
+    if (validSyncName(name) && !latest.has(name)) latest.set(name, row.note);
   }
   const items = {};
   for (const [name, note] of latest) {
@@ -44,11 +44,11 @@ export async function POST(request) {
   try {
     body = await readJson(request, syncBodyLimit);
   } catch (error) {
-    return Response.json({ error: error.message || "请求格式无效" }, { status: 400 });
+    return Response.json({ error: error.message === "请求体过大" ? error.message : "请求格式无效" }, { status: error.message === "请求体过大" ? 413 : 400 });
   }
 
   const name = body?.name;
-  if (typeof name !== "string" || !name || name.length > 64) {
+  if (!validSyncName(name)) {
     return Response.json({ error: "数据项名称无效" }, { status: 400 });
   }
 
@@ -57,7 +57,7 @@ export async function POST(request) {
     .from("workbench_records")
     .insert({ page: config.page, title, meta: nowText(), note: JSON.stringify(body?.value ?? null) })
     .select("id");
-  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (error) return Response.json({ error: "云端记录保存失败，请稍后重试" }, { status: 500 });
 
   const newId = data?.[0]?.id;
   if (newId) {
@@ -67,7 +67,7 @@ export async function POST(request) {
       .eq("page", config.page)
       .eq("title", title)
       .neq("id", newId);
-    if (deleteError) return Response.json({ error: deleteError.message }, { status: 500 });
+    if (deleteError) return Response.json({ error: "云端记录整理失败，请稍后重试同步" }, { status: 500 });
   }
   return Response.json({ ok: true });
 }

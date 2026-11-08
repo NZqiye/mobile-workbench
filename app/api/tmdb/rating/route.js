@@ -1,8 +1,9 @@
 import { fetchTmdb, tmdbToken } from "../../../../lib/tmdb";
-import { isAuthorized, parseMediaInput, readJson, unauthorizedResponse } from "../../../../lib/access-auth";
+import { isAuthorized, isSameOrigin, parseMediaInput, readJson, unauthorizedResponse } from "../../../../lib/access-auth";
 
 export async function POST(request) {
   try {
+    if (!isSameOrigin(request)) return Response.json({ error: "来源不受信任" }, { status: 403 });
     if (!isAuthorized(request)) return unauthorizedResponse();
     if (!tmdbToken || !process.env.TMDB_SESSION_ID) {
       return Response.json({ error: "缺少 TMDB_ACCESS_TOKEN 或 TMDB_SESSION_ID" }, { status: 500 });

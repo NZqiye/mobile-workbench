@@ -4,6 +4,7 @@ import { createSession, hasSessionSecret, isAuthorized, isSameOrigin, readJson, 
 const attempts = new Map();
 const attemptWindowMs = 10 * 60 * 1000;
 const maxAttempts = 10;
+const maxTrackedIps = 1000;
 
 function pruneAttempts(now) {
   for (const [ip, record] of attempts) if (now - record.startedAt >= attemptWindowMs) attempts.delete(ip);
@@ -25,12 +26,12 @@ export async function POST(request) {
   pruneAttempts(now);
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   const recent = attempts.get(ip);
-  if (recent && now - recent.startedAt < attemptWindowMs && recent.count >= maxAttempts) return Response.json({ error: "尝试次数过多，请 10 分钟后再试" }, { status: 429 });
+  if ((recent && recent.count >= maxAttempts) || (!recent && attempts.size >= maxTrackedIps)) return Response.json({ error: "尝试次数过多，请 10 分钟后再试" }, { status: 429, headers: { "Retry-After": String(Math.ceil((recent ? attemptWindowMs - (now - recent.startedAt) : attemptWindowMs) / 1000)) } });
   const record = recent && now - recent.startedAt < attemptWindowMs ? recent : { startedAt: now, count: 0 };
   record.count += 1;
   attempts.set(ip, record);
   let body;
-  try { body = await readJson(request, 4096); } catch (error) { return Response.json({ error: error.message || "请求格式无效" }, { status: 400 }); }
+  try { body = await readJson(request, 4096); } catch (error) { return Response.json({ error: error.message === "请求体过大" ? error.message : "请求格式无效" }, { status: error.message === "请求体过大" ? 413 : 400 }); }
   const legacy = typeof body?.code === "string" && body?.username === undefined && body?.password === undefined;
   const password = legacy ? body.code : body?.password;
   const username = legacy ? accountUser().name : body?.username;
