@@ -20,6 +20,5 @@ export default function AnniversaryIconPicker({ value, onChange }) {
       </div>
     </fieldset>)}
     </div>
-    <a href="https://www.thiings.co/things" target="_blank" rel="noreferrer">图标来自 Thiings</a>
   </div>;
 }
