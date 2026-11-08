@@ -1,7 +1,7 @@
 {
-  "version": "1.1.5",
-  "versionCode": 7,
-  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.5/qiyeonline-1.1.5.apk",
-  "sha256": "59d804ff1868559313edcfef8a235c37c9a0f7dec69be4ef8a0d889003452285",
-  "notes": "新增系统相机拍摄食物、AI估算热量与今日计划/喝水进度桌面小部件，修复文字可读性。请直接覆盖安装，保留数据。"
+  "version": "1.1.6",
+  "versionCode": 8,
+  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.6/qiyeonline-1.1.6.apk",
+  "sha256": "26b2930c273de5d877c0327ecb6fd67b94455ac9449bd4bbd1e01d1fecdf959d",
+  "notes": "新增影视今日更新、资产记录桌面小部件，保留今日计划和喝水进度。请直接覆盖安装，保留数据。"
 }
