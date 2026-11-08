@@ -1,7 +1,4 @@
 {
-  "redirects": [
-    { "source": "/_next/image", "destination": "/_not-found", "permanent": false }
-  ],
   "crons": [
     { "path": "/api/push/cron", "schedule": "0 2 * * *" },
     { "path": "/api/push/cron", "schedule": "0 7 * * *" }
