@@ -6564,7 +6564,7 @@ export default function Workbench() {
 
   useEffect(() => {
     if (!storageLoaded || !androidApp || !window.QiyeNative?.syncWidgets) return;
-    window.QiyeNative.syncWidgets(widgetSnapshot(plans, dietRecords, waterTarget, widgetDate, consultations, assetItems));
+    window.QiyeNative.syncWidgets(widgetSnapshot(plans, dietRecords, waterTarget, widgetDate, consultations, assetItems, assetIconImageMap));
   }, [androidApp, storageLoaded, nativeConnection, plans, dietRecords, waterTarget, widgetDate, consultations, assetItems]);
 
   useEffect(() => {

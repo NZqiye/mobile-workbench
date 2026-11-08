@@ -19,7 +19,7 @@ fs.copyFileSync(path.join(root, 'public', 'icons', 'icon-512.png'), path.join(re
 fs.cpSync(path.join(root, 'android', 'res'), path.join(build, 'res'), { recursive: true });
 fs.copyFileSync(path.join(root, 'android', 'AndroidManifest.xml'), path.join(build, 'AndroidManifest.xml'));
 fs.copyFileSync(path.join(root, 'android', 'src', 'cc', 'qiyeonline', 'workbench', 'MainActivity.java'), path.join(build, 'MainActivity.java'));
-const sources = ['MainActivity.java', 'BundledAssets.java', 'BundledAssetPolicy.java', 'AppUpdater.java', 'UpdateFileProvider.java', 'FoodPhotoProvider.java', 'WorkbenchWidgets.java', 'UpdateSecurity.java', 'NativeReminders.java', 'ReminderReceiver.java', 'ReminderPolicy.java'];
+const sources = ['MainActivity.java', 'BundledAssets.java', 'BundledAssetPolicy.java', 'AppUpdater.java', 'UpdateFileProvider.java', 'FoodPhotoProvider.java', 'WorkbenchWidgets.java', 'WidgetWatchService.java', 'WidgetAssetConfigActivity.java', 'WidgetPolicy.java', 'WidgetImages.java', 'UpdateSecurity.java', 'NativeReminders.java', 'ReminderReceiver.java', 'ReminderPolicy.java'];
 for (const name of sources.slice(1)) fs.copyFileSync(path.join(root, 'android', 'src', 'cc', 'qiyeonline', 'workbench', name), path.join(build, name));
 const windows = process.platform === 'win32';
 const javaTool = name => process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, 'bin', name + (windows ? '.exe' : '')) : name;

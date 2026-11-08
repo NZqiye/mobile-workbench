@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="14dp" android:background="@drawable/widget_card">
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="影视今日更新" android:textColor="#075E57" android:textSize="16sp" android:textStyle="bold" />
-    <TextView android:id="@+id/widget_content" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="8dp" android:text="打开 App 同步最新排期" android:textColor="#17212E" android:textSize="14sp" android:maxLines="5" android:ellipsize="end" android:lineSpacingExtra="3dp" />
-    <TextView android:id="@+id/widget_footer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="点击查看追剧日历" android:textColor="#354357" android:textSize="12sp" android:maxLines="2" android:ellipsize="end" />
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="16dp" android:background="@drawable/widget_watch_card">
+    <TextView android:id="@+id/widget_heading" android:layout_width="match_parent" android:layout_height="48dp" android:gravity="center_vertical" android:text="追剧日历" android:textColor="#232A3B" android:textSize="21sp" android:textStyle="bold" />
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <ListView android:id="@+id/widget_list" android:layout_width="match_parent" android:layout_height="match_parent" android:divider="@null" android:scrollbars="vertical" android:clipToPadding="false" android:paddingBottom="2dp" />
+        <TextView android:id="@+id/widget_content" android:layout_width="match_parent" android:layout_height="match_parent" android:gravity="center_vertical" android:text="打开 App 同步最新排期" android:textColor="#5B6174" android:textSize="14sp" android:maxLines="3" />
+    </FrameLayout>
+    <TextView android:id="@+id/widget_footer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="未来两周排期" android:textColor="#5B6174" android:textSize="12sp" android:maxLines="1" android:ellipsize="end" />
 </LinearLayout>

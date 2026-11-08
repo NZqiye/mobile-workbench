@@ -12,7 +12,7 @@ test('water progress excludes old days and meals, retains target and sends no fu
   const {widgetSnapshot}=await import('../lib/native-widgets.js');
   const data=widgetSnapshot([{title:'x'.repeat(100),content:'private note'}],[{type:'water',date:'2026-11-08',amount:500},{type:'water',date:'2026-11-08',amount:250},{type:'water',date:'2026-11-07',amount:1000},{type:'meal',date:'2026-11-08',amount:800}],2500,'2026-11-08');
   assert.equal(data.waterMl,750);assert.equal(data.targetMl,2500);assert.equal(data.tasks[0].length,40);
-  assert.equal(JSON.stringify(data).includes('private note'),false);assert.deepEqual(Object.keys(data).sort(),['assetCount','assetTotal','date','pendingCount','recentAssets','targetMl','tasks','watchDays','waterMl']);
+  assert.equal(JSON.stringify(data).includes('private note'),false);assert.deepEqual(Object.keys(data).sort(),['assetCount','assetDetails','assetTotal','completedCount','date','pendingCount','recentAssets','targetMl','tasks','watchDays','waterMl']);
 });
 
 test('film widget groups same-day episodes, deduplicates and excludes stopped or finished shows', async () => {
@@ -67,4 +67,63 @@ test('asset widget matches in-use purchase totals and newest items, without expo
   assert.equal(JSON.stringify(data).includes('private'),false);
   const empty=widgetSnapshot([],[],2000,'2026-11-08',[],[]);
   assert.equal(empty.assetCount,0);assert.equal(empty.assetTotal,0);assert.deepEqual(empty.recentAssets,[]);
+});
+
+test('poster list retains all visible shows, season groups and only trusted thumbnail URLs', async () => {
+  const {widgetSnapshot,widgetPosterUrl}=await import('../lib/native-widgets.js');
+  const items=Array.from({length:8},(_,i)=>({id:'show'+i,title:'剧'+i,season:2,nextAirDate:'2026-11-08',updateEpisodes:'3,4',posterUrl:'https://image.tmdb.org/t/p/original/a.jpg',review:'private review'}));
+  const data=widgetSnapshot([],[],2000,'2026-11-08',items);
+  assert.equal(data.watchDays[0].shows.length,8);
+  assert.equal(data.watchDays[0].shows[0].episodes,'3/4');
+  assert.equal(data.watchDays[0].shows[0].poster,'https://image.tmdb.org/t/p/w185/a.jpg');
+  assert.equal(data.watchDays[0].shows[0].season,'2');
+  assert.equal(data.watchDays[0].shows[0].id,'show0:2');
+  for(const url of ['http://image.tmdb.org/a','https://image.tmdb.org.evil.test/a','https://user@image.tmdb.org/a','https://image.tmdb.org:444/a','http://127.0.0.1/a','https://private.invalid/a','data:image/png;base64,a'])assert.equal(widgetPosterUrl(url),'');
+  assert.equal(widgetPosterUrl('https://lain.bgm.tv/pic/cover/c/a.jpg'),'https://lain.bgm.tv/pic/cover/c/a.jpg');
+  assert.equal(JSON.stringify(data).includes('private review'),false);
+});
+
+test('individual asset choices preserve identity, date and bundled icon without exporting full records', async () => {
+  const {widgetSnapshot}=await import('../lib/native-widgets.js');
+  const data=widgetSnapshot([],[],2000,'2026-11-08',[],[
+    {id:'mat',name:'瑜伽垫',price:74,purchaseDate:'2026-10-31',status:'服役中',icon:'thiings:yoga-mat',notes:'private warranty'},
+    {id:'old',name:'电脑',price:10,purchaseDate:'2026-01-01',status:'服役中',icon:'legacy'},
+    {id:'sold',name:'已出售',price:800,status:'已出售'},
+  ],{legacy:'/assets-icons/thiings/digital/laptop.webp'});
+  assert.equal(data.assetDetails.length,2);
+  assert.deepEqual(Object.keys(data.assetDetails[0]).sort(),['icon','id','name','price','purchaseDate']);
+  assert.equal(data.assetDetails[0].id,'mat');assert.equal(data.assetDetails[0].price,74);
+  assert.equal(data.assetDetails[0].icon,'/assets-icons/thiings/sport/yoga-mat.webp');
+  assert.equal(data.assetDetails[1].icon,'/assets-icons/thiings/digital/laptop.webp');
+  assert.equal(JSON.stringify(data).includes('private warranty'),false);
+});
+
+test('real Java widget policy calculates inclusive days and daily costs and rejects unsafe poster origins', () => {
+  const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),cp=require('node:child_process');
+  const folder=fs.mkdtempSync(path.join(os.tmpdir(),'qiye-widget-policy-'));
+  const javaRoot='C:/Program Files/ojdkbuild/java-17-openjdk-17.0.3.0.6-1/bin';
+  const source=`package cc.qiyeonline.workbench;
+public final class WidgetPolicyCheck {
+  static void check(boolean value) { if(!value)throw new AssertionError(); }
+  public static void main(String[] args) {
+    check(WidgetPolicy.days("2026-10-31","2026-11-08")==9);
+    check(WidgetPolicy.days("2026-11-08","2026-11-08")==1);
+    check(WidgetPolicy.days("2026-11-10","2026-11-08")==0);
+    check(WidgetPolicy.days("bad","2026-11-08")==-1);
+    check(Math.abs(WidgetPolicy.daily(74,9)-8.2222222222)<0.00001);
+    check(Math.abs(WidgetPolicy.drop(74,9)-0.8222222222)<0.00001);
+    check(WidgetPolicy.daily(74,0)==0 && WidgetPolicy.drop(74,-1)==0);
+    check(WidgetPolicy.remaining("2027-01-01","2026-12-31")==1);
+    check(WidgetPolicy.remaining("2026-11-08","2026-11-08")==0);
+    check(WidgetPolicy.remaining("2026-11-07","2026-11-08")==-1);
+    check(!WidgetPolicy.posterUrl("https://image.tmdb.org/t/p/w185/a.jpg").isEmpty());
+    check(!WidgetPolicy.posterUrl("https://lain.bgm.tv/pic/a.jpg").isEmpty());
+    for(String url:new String[]{"http://image.tmdb.org/a","https://image.tmdb.org.evil.test/a","https://user@image.tmdb.org/a","https://image.tmdb.org:444/a","http://127.0.0.1/a","https://private.invalid/a"})check(WidgetPolicy.posterUrl(url).isEmpty());
+  }
+}`;
+  try {
+    fs.writeFileSync(path.join(folder,'WidgetPolicyCheck.java'),source);
+    cp.execFileSync(path.join(javaRoot,'javac.exe'),['-encoding','UTF-8','-d',folder,'android/src/cc/qiyeonline/workbench/WidgetPolicy.java',path.join(folder,'WidgetPolicyCheck.java')]);
+    cp.execFileSync(path.join(javaRoot,'java.exe'),['-cp',folder,'cc.qiyeonline.workbench.WidgetPolicyCheck']);
+  }finally{assert.ok(path.resolve(folder).startsWith(path.join(path.resolve(os.tmpdir()),'qiye-widget-policy-')));fs.rmSync(folder,{recursive:true,force:true});}
 });

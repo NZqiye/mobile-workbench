@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="16dp" android:background="@drawable/widget_card">
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="喝水进度" android:textColor="#075E57" android:textSize="16sp" android:textStyle="bold" />
-    <TextView android:id="@+id/widget_content" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center_vertical" android:text="0 / 8 杯" android:textColor="#17212E" android:textSize="24sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-    <TextView android:id="@+id/widget_footer" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="点击打卡" android:textColor="#354357" android:textSize="12sp" android:maxLines="2" />
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="16dp" android:background="@drawable/widget_water_card">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="喝水进度" android:textColor="#1D4F60" android:textSize="16sp" android:textStyle="bold" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:gravity="center_vertical">
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+            <TextView android:id="@+id/widget_amount" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="0" android:textColor="#164D61" android:textSize="36sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" android:includeFontPadding="false" />
+            <TextView android:id="@+id/widget_goal" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="/ 8 杯" android:textColor="#376473" android:textSize="13sp" android:maxLines="1" />
+        </LinearLayout>
+        <ImageView android:id="@+id/widget_icon" android:layout_width="48dp" android:layout_height="64dp" android:scaleType="fitCenter" android:contentDescription="水瓶" />
+    </LinearLayout>
+    <ProgressBar android:id="@+id/widget_progress" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="6dp" android:progressDrawable="@drawable/widget_water_progress" android:indeterminate="false" />
+    <TextView android:id="@+id/widget_footer" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="点击打卡" android:textColor="#376473" android:textSize="12sp" android:maxLines="1" android:ellipsize="end" />
 </LinearLayout>
