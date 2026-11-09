@@ -142,12 +142,13 @@ public class WorkbenchWidgets extends AppWidgetProvider {
             }
         } else if (type == Water.class) {
             int water = fresh ? data.optInt("waterMl") : 0, target = data.optInt("targetMl", 2000);
-            String cups = water % 250 == 0 ? String.valueOf(water / 250) : String.format(java.util.Locale.ROOT, "%.1f", water / 250.0);
-            views.setTextViewText(R.id.widget_amount, cups);
-            views.setTextViewText(R.id.widget_goal, "/ " + (int)Math.ceil(target / 250.0) + " 杯");
-            views.setTextViewText(R.id.widget_footer, water >= target ? "今日目标达成" : "已喝 " + water + " ml");
+            int percent = Math.min(100, Math.round(water * 100f / target));
+            views.setTextViewText(R.id.widget_amount, String.valueOf(water));
+            views.setTextViewText(R.id.widget_goal, "/ " + target + " ml");
+            views.setTextViewText(R.id.widget_footer, percent + "% · " + (water >= target ? "今日目标达成" : "还差 " + (target - water) + " ml"));
             views.setProgressBar(R.id.widget_progress, target, Math.min(water, target), false);
-            android.graphics.Bitmap icon = WidgetImages.icon(context, "/assets-icons/thiings/food/water-bottle-1.webp"); if (icon != null) views.setImageViewBitmap(R.id.widget_icon, icon);
+            views.setImageViewBitmap(R.id.widget_icon, WidgetImages.waterGauge(water, target));
+            views.setContentDescription(R.id.widget_icon, "已喝 " + water + " ml，目标 " + target + " ml，" + percent + "%");
         } else if (type == Watch.class) {
             JSONArray upcoming = upcoming(data, date);
             views.setTextViewText(R.id.widget_content, upcoming.length() == 0 ? fresh ? "暂无已知排期\n打开追剧日历添加或刷新" : "打开 App 同步最新排期" : "");

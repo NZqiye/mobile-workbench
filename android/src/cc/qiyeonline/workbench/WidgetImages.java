@@ -22,6 +22,27 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 final class WidgetImages {
+    static Bitmap waterGauge(int amount, int target) {
+        Bitmap bitmap = Bitmap.createBitmap(120, 160, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        android.graphics.Path cup = new android.graphics.Path();
+        cup.moveTo(18, 12); cup.lineTo(102, 12); cup.lineTo(94, 142);
+        cup.quadTo(94, 150, 86, 150); cup.lineTo(34, 150);
+        cup.quadTo(26, 150, 26, 142); cup.close();
+        canvas.save(); canvas.clipPath(cup);
+        paint.setColor(0xFFF1F8FA); canvas.drawRect(0, 0, 120, 160, paint);
+        float ratio = Math.max(0, Math.min(1, amount / (float)Math.max(1, target)));
+        float top = 150 - 138 * ratio;
+        paint.setColor(0xFF81C5D5); canvas.drawRect(0, top, 120, 160, paint);
+        paint.setColor(0xFF21677B); paint.setStrokeWidth(2);
+        if (amount > 0) canvas.drawLine(18, top, 102, top, paint);
+        for (int i = 1; i < 4; i++) canvas.drawLine(77, 12 + i * 34.5f, 90, 12 + i * 34.5f, paint);
+        canvas.restore(); paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(4);
+        canvas.drawPath(cup, paint);
+        return bitmap;
+    }
+
     private static final ExecutorService worker = Executors.newSingleThreadExecutor();
     private static final AtomicBoolean running = new AtomicBoolean();
     private static final AtomicBoolean pending = new AtomicBoolean();

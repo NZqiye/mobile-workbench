@@ -185,11 +185,11 @@ const pageDescriptions = {
 const defaultPetSupplies = { bone: 0, water: 0, toy: 0, stick: 0, gift: 0, cat: 0, happiness: 0 };
 const petSupplyItems = [
   { id: "bone", label: "零食包", icon: "🍪", action: "鲸鱼娘拆开零食包，开心地吃起来。" },
-  { id: "water", label: "泡泡水", icon: "🫧", action: "鲸鱼娘吹起了泡泡，一起放松一下。" },
-  { id: "toy", label: "魔方", iconImage: "/assets-icons/thiings/leisure/puzzle-cube.webp", action: "鲸鱼娘抱着魔方，认真地转起来。" },
-  { id: "stick", label: "舞会票", icon: "🎟️", action: "鲸鱼娘收下舞会票，跳起了摇摆舞。" },
+  { id: "water", label: "伸个懒腰", iconName: "stretch", action: "鲸鱼娘伸了个懒腰，陪你放松一下肩膀。" },
+  { id: "toy", label: "一起加油", iconName: "spark", action: "鲸鱼娘开心地跃起来，为你的努力加油。" },
+  { id: "stick", label: "打个招呼", iconName: "wave", action: "鲸鱼娘挥挥手，和你打个招呼。" },
   { id: "gift", label: "礼物盒", icon: "🎁", action: "鲸鱼娘拆开礼物盒，看看里面的惊喜。" },
-  { id: "cat", label: "猫咪券", icon: "🐈", action: "鲸鱼娘抱着猫咪，轻轻地摸摸它。" },
+  { id: "cat", label: "一起吃饭", iconName: "food", action: "鲸鱼娘坐下来吃饭，陪你好好吃一餐。" },
 ];
 const ponyThemes = [
   { id: "rmb", name: "赤焰", note: "红金烈焰", primary: "#8f1d2c", accent: "#f0c56a" },
@@ -342,6 +342,8 @@ const foodCalories = [
 
 function WorkbenchIcon({ name, className = "ui-icon" }) {
   const icons = {
+    stretch: (<><circle cx="12" cy="4" r="2" /><path d="M12 7v8M5 6l7 3 7-3M12 15l-4 6m4-6 4 6" /></>),
+    wave: (<><path d="M8 12V6a1.5 1.5 0 0 1 3 0v5-7a1.5 1.5 0 0 1 3 0v7-5a1.5 1.5 0 0 1 3 0v6-3a1.5 1.5 0 0 1 3 0v6c0 4-2.5 7-6 7h-1c-2 0-3.5-1-5-3l-4-5a1.5 1.5 0 0 1 2-2l2 2" /></>),
     home: (
       <>
         <path d="M3.5 10.8 12 4l8.5 6.8" />
@@ -1264,7 +1266,7 @@ function PetCompanionCard({ supplies, action, onUse, onRest }) {
       <div className="pet-supplies">
         {petSupplyItems.map((item) => (
           <button type="button" key={item.id} onClick={() => onUse(item.id)} disabled={!supplies[item.id]} title={item.action}>
-            <span aria-hidden="true">{item.iconImage ? <img src={bundledAssetUrl(item.iconImage)} alt="" width="20" height="20" /> : item.icon}</span>
+            <span aria-hidden="true">{item.iconName ? <WorkbenchIcon name={item.iconName} /> : item.icon}</span>
             <strong>{supplies[item.id] || 0}</strong>
             <small>{item.label}</small>
           </button>
@@ -1420,7 +1422,8 @@ function WeatherCard({ compact = false, clock = "--:--", phoneApp = false }) {
 
   async function loadWeather(force = false) {
     const cache = readStorage("weatherCache", null);
-    if (!force && cache && Date.now() - cache.savedAt < 30 * 60 * 1000) {
+    if (cache) setWeather(cache);
+    if (!force && cache?.forecast?.some((day) => day.date === dateKey) && Date.now() - cache.savedAt < 30 * 60 * 1000) {
       setWeather(cache);
       setStatus(`天气缓存 · ${nowText(new Date(cache.savedAt))}`);
       return;
@@ -1428,7 +1431,9 @@ function WeatherCard({ compact = false, clock = "--:--", phoneApp = false }) {
 
     try {
       const response = await fetch("https://api.open-meteo.com/v1/forecast?latitude=31.4912&longitude=120.3119&current=temperature_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FShanghai&forecast_days=5");
+      if (!response.ok) throw new Error("天气暂时不可用");
       const data = await response.json();
+      if (!data.daily?.time?.length) throw new Error("天气预报暂缺");
       const forecast = (data.daily?.time || []).map((date, index) => ({
         date,
         code: data.daily?.weather_code?.[index],
@@ -1457,7 +1462,7 @@ function WeatherCard({ compact = false, clock = "--:--", phoneApp = false }) {
 
   useEffect(() => {
     loadWeather();
-  }, []);
+  }, [dateKey]);
 
   const forecast = <div className="weather-forecast">
     {(weather?.forecast || []).slice(0, 5).map((day) => (
@@ -1491,12 +1496,7 @@ function WeatherCard({ compact = false, clock = "--:--", phoneApp = false }) {
         </b>
       </div>
       {phoneApp ? <details className="app-weather-details"><summary>未来 5 天天气<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg></summary>{forecast}</details> : forecast}
-      {compact && weather && (
-        <div className="weather-outfit-tip">
-          <span>{outfitAdvice(weather).title}</span>
-          <small>{outfitAdvice(weather).items.slice(0, 2).join(" · ")}</small>
-        </div>
-      )}
+      <TomorrowWeatherAdvice weather={weather} dateKey={dateKey} />
     </section>
   );
 }
@@ -1505,10 +1505,13 @@ function weatherIcon(code) {
   return <WeatherMotionIcon code={code} />;
 }
 
-function outfitAdvice(day) {
-  const max = Number(day?.max ?? 0);
-  const min = Number(day?.min ?? 0);
-  const rain = Number(day?.rain ?? 0);
+function outfitAdvice(day, period = "今日") {
+  if (day?.max == null || day?.min == null || !Number.isFinite(Number(day.max)) || !Number.isFinite(Number(day.min))) {
+    return { title: "穿衣建议待更新", items: [], note: "温度预报暂缺，请刷新天气。" };
+  }
+  const max = Number(day.max);
+  const min = Number(day.min);
+  const rain = day.rain == null ? null : Number(day.rain);
   const label = weatherLabel(day?.code);
   const items = [];
   let title = "轻便通勤";
@@ -1531,13 +1534,50 @@ function outfitAdvice(day) {
   }
 
   if (min <= 18 && max - min >= 7) items.push("早晚加一件外套");
+  if (min <= 10 && max >= 20) items.push("早晨偏冷，外套选保暖款");
   if (rain >= 45 || label.includes("雨")) items.push("带伞，鞋子选防滑");
+  if (label === "降雪") items.push("穿防滑防水鞋，注意保暖");
 
   return {
     title,
     items,
-    note: `无锡今日 ${label}，${min ?? "--"}° / ${max ?? "--"}°，降水概率 ${rain || 0}%。`,
+    note: `无锡${period} ${label}，${min}° / ${max}°${rain == null ? "，降水概率暂缺" : `，降水概率 ${rain}%`}。`,
   };
+}
+
+function tomorrowWeatherAdvice(weather, dateKey) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return null;
+  const date = new Date(`${dateKey}T12:00:00`);
+  date.setDate(date.getDate() + 1);
+  const tomorrowKey = toDateKey(date);
+  const tomorrow = weather?.forecast?.find((day) => day.date === tomorrowKey);
+  const outfit = outfitAdvice(tomorrow, "明天");
+  if (!outfit.items.length) return null;
+  const today = weather.forecast.find((day) => day.date === dateKey);
+  const alerts = [];
+  const drops = ["min", "max"].map((field) => today?.[field] == null ? 0 : Number(today[field]) - Number(tomorrow[field]));
+  const drop = Math.max(...drops);
+  if (drop >= 4) alerts.push(`明天降温约 ${Math.round(drop)}°，比今天多备一件外套`);
+  const label = weatherLabel(tomorrow.code);
+  if (Number(tomorrow.rain) >= 45 || label.includes("雨")) alerts.push("出门带伞，雨天穿防滑鞋");
+  if (label === "雷雨") alerts.push("留意雷雨，减少露天停留");
+  if (label === "降雪") alerts.push("留意雨雪路滑，穿防滑防水鞋");
+  if (label === "有雾") alerts.push("早晨可能有雾，通勤留足时间");
+  return { date: tomorrowKey, day: tomorrow, outfit, alerts };
+}
+
+function TomorrowWeatherAdvice({ weather, dateKey }) {
+  const advice = tomorrowWeatherAdvice(weather, dateKey);
+  return (
+    <div className="tomorrow-weather-advice">
+      <div className="tomorrow-advice-heading"><WorkbenchIcon name="wear" /><strong>明日穿衣与出行</strong>{advice && <small>{advice.date.slice(5).replace("-", "/")}</small>}</div>
+      {advice ? <>
+        <p className="tomorrow-weather-summary">{weatherLabel(advice.day.code)} · {advice.day.min}° / {advice.day.max}° · {advice.day.rain == null ? "降水概率暂缺" : `降水 ${advice.day.rain}%`}</p>
+        <p className="tomorrow-outfit">{advice.outfit.items.filter((item) => !/带伞|防滑防水鞋/.test(item)).join(" · ")}</p>
+        {advice.alerts.length > 0 && <ul>{advice.alerts.map((alert) => <li key={alert}>{alert}</li>)}</ul>}
+      </> : <p>明日预报尚未更新，点刷新获取穿衣与出行建议。</p>}
+    </div>
+  );
 }
 
 function ClothingAssistant() {
@@ -1546,7 +1586,8 @@ function ClothingAssistant() {
 
   async function loadWearWeather(force = false) {
     const cache = readStorage("wearWeatherCache", null);
-    if (!force && cache && Date.now() - cache.savedAt < 30 * 60 * 1000) {
+    if (cache) setWeather(cache);
+    if (!force && cache?.forecast?.some((day) => day.date === todayKey()) && Date.now() - cache.savedAt < 30 * 60 * 1000) {
       setWeather(cache);
       setStatus(`天气缓存 · ${nowText(new Date(cache.savedAt))}`);
       return;
@@ -1554,7 +1595,9 @@ function ClothingAssistant() {
 
     try {
       const response = await fetch("https://api.open-meteo.com/v1/forecast?latitude=31.4912&longitude=120.3119&current=temperature_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FShanghai&forecast_days=5");
+      if (!response.ok) throw new Error("天气暂时不可用");
       const data = await response.json();
+      if (!data.daily?.time?.length) throw new Error("天气预报暂缺");
       const forecast = (data.daily?.time || []).map((date, index) => ({
         date,
         code: data.daily?.weather_code?.[index],
@@ -1581,7 +1624,7 @@ function ClothingAssistant() {
     loadWearWeather();
   }, []);
 
-  const today = weather?.forecast?.[0];
+  const today = weather?.forecast?.find((day) => day.date === todayKey());
   const advice = outfitAdvice(today);
 
   return (
@@ -1644,6 +1687,7 @@ function ClothingAssistant() {
           {advice.items.map((item) => <span key={item}>{item}</span>)}
         </div>
       </section>
+      <TomorrowWeatherAdvice weather={weather} dateKey={todayKey()} />
     </section>
   );
 }
@@ -5168,6 +5212,16 @@ function ConsultationList({ consultations, onDelete, onEdit }) {
   );
 }
 
+function WaterCupIcon({ cups = 1 }) {
+  return <svg className="water-cups-icon" viewBox="0 0 60 42" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
+    {Array.from({ length: cups }, (_, index) => <g key={index} transform={`translate(${(60 - (cups * 16 + (cups - 1) * 3)) / 2 + index * 19}, 0)`}>
+      <path d="M1 5h14l-2 30H3z" />
+      <path d="M2 17h12l-1 18H3z" fill="currentColor" fillOpacity=".18" stroke="none" />
+      <path d="M2 17h12" />
+    </g>)}
+  </svg>;
+}
+
 function DietTracker({ view = "water", records, waterTarget, onAddWater, onAddMeal, onDelete, onSaveTarget }) {
   const [meal, setMeal] = useState("早餐");
   const [foodInput, setFoodInput] = useState("");
@@ -5181,8 +5235,6 @@ function DietTracker({ view = "water", records, waterTarget, onAddWater, onAddMe
   const percent = Math.min(100, Math.round((waterTotal / target) * 100));
   const remaining = Math.max(0, target - waterTotal);
   const targetCups = Math.ceil(target / cupSize);
-  const finishedCups = waterRecords.reduce((sum, item) => sum + Number(item.cups || Number(item.amount || 0) / cupSize), 0);
-  const remainingCups = Math.max(0, targetCups - finishedCups);
   const estimate = estimateMealCalories(foodInput);
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date();
@@ -5236,25 +5288,25 @@ function DietTracker({ view = "water", records, waterTarget, onAddWater, onAddMe
           <button type="submit">保存目标</button>
         </form>
         <div className="water-summary">
-          <div className="water-ring" style={{ "--water-percent": `${percent}%` }}>
-            <strong>{percent}%</strong>
-            <span>{finishedCups} / {targetCups} 杯</span>
+          <div className="water-gauge" role="progressbar" aria-label={`今日饮水 ${waterTotal} 毫升，目标 ${target} 毫升`} aria-valuemin={0} aria-valuemax={target} aria-valuenow={Math.min(waterTotal, target)} aria-valuetext={`${waterTotal} / ${target} ml`}>
+            <div className="water-gauge-cup" style={{ "--water-level": `${percent}%` }} aria-hidden="true"><div className="water-gauge-fill" /><div className="water-gauge-ticks" /><strong>{percent}%</strong></div>
+            <span>{waterTotal} ml</span>
           </div>
           <div className="water-copy">
-            <p>已喝 <strong>{finishedCups}</strong> / {targetCups} 杯</p>
-            <p>还需喝 <strong>{remainingCups}</strong> 杯</p>
-            <small>一杯 {cupSize} ml · 已喝 {waterTotal} ml，还需 {remaining} ml</small>
+            <p>已喝 <strong>{waterTotal}</strong> ml</p>
+            <p>目标 {target} ml · {percent}%</p>
+            <small>{remaining === 0 ? "今日目标已达成" : `还差 ${remaining} ml`} · 一杯 {cupSize} ml</small>
           </div>
         </div>
         <div className="water-actions">
           {[1, 2, 3].map((cups) => (
-            <button type="button" key={cups} onClick={() => onAddWater(cups)}>
-              <span>{cups === 1 ? "🥛" : cups === 2 ? "🍶" : "💧"}</span>
-              <strong>{cups}杯</strong>
+            <button type="button" key={cups} onClick={() => onAddWater(cups)} aria-label={`记录 ${cups} 杯水，${cups * cupSize} 毫升`}>
+              <WaterCupIcon cups={cups} />
+              <strong>{cups} 杯</strong><small>{cups * cupSize} ml</small>
             </button>
           ))}
           <button type="button" onClick={addCustomCups}>
-            <span>✏️</span>
+            <WorkbenchIcon name="note" />
             <strong>自定义</strong>
           </button>
         </div>
@@ -6664,7 +6716,7 @@ export default function Workbench() {
 
   function rewardWatchedMovie(id) {
     if (readStorage("petRewardHistory", {})[`watch:${id}`]) return;
-    rewardPetOnce(`watch-checkin:${id}:movie`, "stick", 1, "看完一部电影，舞会票 +1。");
+    rewardPetOnce(`watch-checkin:${id}:movie`, "stick", 1, "看完一部电影，招呼互动 +1。");
   }
 
   async function loadTmdbRecommendations({ refreshAnime = false, animeOnly = false } = {}) {
@@ -6935,7 +6987,7 @@ export default function Workbench() {
       time: clock.slice(0, 5),
     }, ...dietRecords];
     saveDietRecords(next);
-    changePetSupply("water", cupCount, `饮水已记录，泡泡水 +${cupCount}。`, "reward");
+    changePetSupply("water", cupCount, `饮水已记录，伸展互动 +${cupCount}。`, "reward");
   }
 
   function saveWaterTarget(value) {
@@ -6952,7 +7004,7 @@ export default function Workbench() {
       ...item,
     }, ...dietRecords];
     saveDietRecords(next);
-    changePetSupply("cat", 1, "饮食已记录，猫咪券 +1。", "reward");
+    changePetSupply("cat", 1, "饮食已记录，吃饭互动 +1。", "reward");
   }
 
   function deleteDietRecord(id) {
@@ -7105,7 +7157,7 @@ export default function Workbench() {
     const next = { ...done, [id]: !done[id] };
     setDone(next);
     persist(`done:${todayKey()}`, next);
-    if (completed) rewardPetOnce(`habit:${todayKey()}:${id}`, "toy", 1, "打卡完成，魔方 +1。");
+    if (completed) rewardPetOnce(`habit:${todayKey()}:${id}`, "toy", 1, "打卡完成，加油互动 +1。");
   }
 
   function deleteHabit(id) {
@@ -7233,7 +7285,7 @@ export default function Workbench() {
     const next = plans.map((plan) => plan.id === id ? { ...plan, status: plan.status === "已完成" ? "未完成" : "已完成" } : plan);
     setPlans(next);
     persist("plans", next);
-    if (completed) rewardPetOnce(`task:${id}`, "toy", 1, "完成一个任务，魔方 +1。");
+    if (completed) rewardPetOnce(`task:${id}`, "toy", 1, "完成一个任务，加油互动 +1。");
   }
 
   function deletePlan(id) {
@@ -7302,7 +7354,7 @@ export default function Workbench() {
     persist("consultations", next);
     if (nextItem.status === "看过的剧" && oldItem?.status !== "看过的剧") {
       if (tmdbMediaType(nextItem) === "movie") rewardWatchedMovie(item.id);
-      else rewardPetOnce(`watch:${item.id}`, "stick", 1, "看完一部内容，舞会票 +1。");
+      else rewardPetOnce(`watch:${item.id}`, "stick", 1, "看完一部内容，招呼互动 +1。");
     }
   }
 
@@ -7372,7 +7424,7 @@ export default function Workbench() {
       persist("watchCheckins", nextWatchCheckins);
       const previousEpisodes = new Set((item.seasonProgress?.[seasonKey] || []).map(Number));
       normalizedEpisodes.filter((episodeNumber) => !previousEpisodes.has(episodeNumber)).forEach((episodeNumber) => {
-        rewardPetOnce(`watch-checkin:${id}:${seasonKey}:${episodeNumber}`, "stick", 1, "看完一集电视剧，舞会票 +1。");
+        rewardPetOnce(`watch-checkin:${id}:${seasonKey}:${episodeNumber}`, "stick", 1, "看完一集电视剧，招呼互动 +1。");
       });
       if (allSeasonsComplete && item.status !== "看过的剧" && item.tmdbId) {
         fetch("/api/tmdb/watchlist", {
@@ -7435,7 +7487,7 @@ export default function Workbench() {
     }
     checkedEpisodes.forEach((checkedEpisode) => {
       if (isMovie) rewardWatchedMovie(id);
-      else rewardPetOnce(`watch-checkin:${id}:${item.season || 1}:${checkedEpisode}`, "stick", 1, "看完一集电视剧，舞会票 +1。");
+      else rewardPetOnce(`watch-checkin:${id}:${item.season || 1}:${checkedEpisode}`, "stick", 1, "看完一集电视剧，招呼互动 +1。");
     });
   }
 

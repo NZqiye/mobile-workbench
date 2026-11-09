@@ -6,11 +6,11 @@ import { bundledAssetUrl } from "../../lib/bundled-assets";
 const animationByAction = {
   idle: "idle",
   bone: "snack",
-  water: "bubbles",
-  toy: "cube",
-  stick: "dance",
+  water: "stretch",
+  toy: "happy",
+  stick: "wave",
   gift: "gift",
-  cat: "cat",
+  cat: "meal",
   reward: "happy",
 };
 

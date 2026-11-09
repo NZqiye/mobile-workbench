@@ -77,3 +77,24 @@
 @keyframes polish-confirm { from { opacity: .4; } to { opacity: 1; } }
 @media (max-width: 599px) { .phone-shell.ios18-shell.visual-aligned .note-editor .inline-fields { grid-template-columns: minmax(0,1fr); } }
 @media (prefers-reduced-motion: reduce) { .mobile-navigation-sheet, .pet-happiness-updated, .note-save-status.saved { animation: none !important; } .bottom-nav-indicator { transition: none; } }
+
+.water-gauge { display: grid; justify-items: center; gap: 10px; color: var(--ios-blue, var(--theme-main)); font-variant-numeric: tabular-nums; }
+.water-gauge-cup { position: relative; display: grid; place-items: center; width: 90px; height: 112px; overflow: hidden; border: 3px solid currentColor; border-radius: 5px 5px 20px 20px; background: var(--ios-panel-muted, var(--panel-2)); }
+.water-gauge-fill { position: absolute; inset: 0; clip-path: inset(calc(100% - var(--water-level)) 0 0); background: color-mix(in srgb, var(--ios-blue, var(--theme-main)) 28%, var(--ios-panel, #fff)); transition: clip-path 240ms ease-out; }
+.water-gauge-ticks { position: absolute; inset: 0; background: linear-gradient(currentColor, currentColor) right 8px top 25% / 12px 1px no-repeat, linear-gradient(currentColor, currentColor) right 8px top 50% / 16px 1px no-repeat, linear-gradient(currentColor, currentColor) right 8px top 75% / 12px 1px no-repeat; opacity: .5; }
+.water-gauge-cup strong { position: relative; margin-right: 14px; color: var(--ios-ink, var(--ink)); font-size: 22px; }
+.water-gauge > span { font-size: 14px; font-weight: 600; }
+.water-actions .water-cups-icon { width: 60px; height: 42px; color: var(--ios-blue, var(--theme-main)); }
+.water-actions > button > .ui-icon { width: 32px; height: 42px; color: var(--ios-blue, var(--theme-main)); }
+.water-actions button small { color: var(--ios-muted, var(--muted)); font-size: 12px; font-weight: 500; }
+.pet-supplies .ui-icon { width: 20px; height: 20px; }
+.tomorrow-weather-advice { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--ios-separator, var(--line)); color: var(--ios-ink, var(--ink)); }
+.tomorrow-advice-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.tomorrow-advice-heading .ui-icon { width: 20px; height: 20px; color: var(--ios-blue, var(--theme-main)); }
+.tomorrow-advice-heading strong { font-size: 14px; }
+.tomorrow-advice-heading small { margin-left: auto; color: var(--ios-muted, var(--muted)); font-size: 12px; }
+.tomorrow-weather-advice p { margin: 8px 0 0; font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+.tomorrow-weather-advice .tomorrow-weather-summary { color: var(--ios-muted, var(--muted)); font-variant-numeric: tabular-nums; }
+.tomorrow-weather-advice ul { margin: 10px 0 0; padding-left: 18px; color: var(--ios-blue, var(--theme-main)); font-size: 13px; line-height: 1.65; }
+@media (max-width: 360px) { .water-card .water-summary { grid-template-columns: 100px minmax(0, 1fr); gap: 12px; } }
+@media (prefers-reduced-motion: reduce) { .water-gauge-fill { transition: none; } }
