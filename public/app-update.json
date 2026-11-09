@@ -1,7 +1,7 @@
 {
-  "version": "1.1.7",
-  "versionCode": 9,
-  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.7/qiyeonline-1.1.7.apk",
-  "sha256": "d355191be09a3e3275955831924ec3032c9f78adbb1e840a0d05f780d2abc244",
-  "notes": "优化四款桌面小部件：影视海报/倒计时/滚动，资产选物品/陪伴天数/日均成本，计划和喝水独立样式。请直接覆盖安装，保留数据。"
+  "version": "1.1.8",
+  "versionCode": 10,
+  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.8/qiyeonline-1.1.8.apk",
+  "sha256": "7d19a4d76e7c1d9af83d89891d87ceae3d4c0354bc179b102ec379ceb93689bc",
+  "notes": "喝水卡片与桌面小部件增加水位和毫升显示，鲸鱼娘换成日常互动，天气增加明日穿衣、降温与带伞建议。"
 }
