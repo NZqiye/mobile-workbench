@@ -2,7 +2,7 @@
 
 import { upcomingSubscriptions } from "../lib/subscriptions";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { thiingsIconByKey, thiingsIconCategories } from "../lib/thiings-icons";
 import TravelBoard from "./components/travel-board";
 import WorkbenchSelect, { SelectChevron } from "./components/workbench-select";
@@ -184,12 +184,12 @@ const pageDescriptions = {
 };
 const defaultPetSupplies = { bone: 0, water: 0, toy: 0, stick: 0, gift: 0, cat: 0, happiness: 0 };
 const petSupplyItems = [
-  { id: "bone", label: "零食包", icon: "🍪", action: "鲸鱼娘拆开零食包，开心地吃起来。" },
-  { id: "water", label: "伸个懒腰", iconName: "stretch", action: "鲸鱼娘伸了个懒腰，陪你放松一下肩膀。" },
-  { id: "toy", label: "一起加油", iconName: "spark", action: "鲸鱼娘开心地跃起来，为你的努力加油。" },
-  { id: "stick", label: "打个招呼", iconName: "wave", action: "鲸鱼娘挥挥手，和你打个招呼。" },
-  { id: "gift", label: "礼物盒", icon: "🎁", action: "鲸鱼娘拆开礼物盒，看看里面的惊喜。" },
-  { id: "cat", label: "一起吃饭", iconName: "food", action: "鲸鱼娘坐下来吃饭，陪你好好吃一餐。" },
+  { id: "bone", label: "吃零食", preview: "snack", action: "鲸鱼娘拆开零食包，开心地吃起来。" },
+  { id: "water", label: "伸懒腰", preview: "stretch", action: "鲸鱼娘伸了个懒腰，陪你放松一下肩膀。" },
+  { id: "toy", label: "开心跃动", preview: "happy", action: "鲸鱼娘开心地跃起来，为你的努力加油。" },
+  { id: "stick", label: "挥挥手", preview: "wave", action: "鲸鱼娘挥挥手，和你打个招呼。" },
+  { id: "gift", label: "拆礼物", preview: "gift", action: "鲸鱼娘拆开礼物盒，看看里面的惊喜。" },
+  { id: "cat", label: "吃早餐", preview: "meal", action: "鲸鱼娘坐下来吃饭，陪你好好吃一餐。" },
 ];
 const ponyThemes = [
   { id: "rmb", name: "赤焰", note: "红金烈焰", primary: "#8f1d2c", accent: "#f0c56a" },
@@ -342,8 +342,6 @@ const foodCalories = [
 
 function WorkbenchIcon({ name, className = "ui-icon" }) {
   const icons = {
-    stretch: (<><circle cx="12" cy="4" r="2" /><path d="M12 7v8M5 6l7 3 7-3M12 15l-4 6m4-6 4 6" /></>),
-    wave: (<><path d="M8 12V6a1.5 1.5 0 0 1 3 0v5-7a1.5 1.5 0 0 1 3 0v7-5a1.5 1.5 0 0 1 3 0v6-3a1.5 1.5 0 0 1 3 0v6c0 4-2.5 7-6 7h-1c-2 0-3.5-1-5-3l-4-5a1.5 1.5 0 0 1 2-2l2 2" /></>),
     home: (
       <>
         <path d="M3.5 10.8 12 4l8.5 6.8" />
@@ -1254,7 +1252,6 @@ function PetCompanionCard({ supplies, action, onUse, onRest }) {
     <section className={`dashboard-tile dashboard-tile-primary pet-card pet-action-${action.type}`} aria-label="宠物陪伴">
       <div className="pet-card-head">
         <div>
-          <span>宠物陪伴</span>
           <strong>鲸鱼娘</strong>
           <span key={supplies.happiness || 0} className={`pet-happiness ${supplies.happiness ? "pet-happiness-updated" : ""}`} role="status">幸福值 {supplies.happiness || 0}</span>
         </div>
@@ -1263,11 +1260,10 @@ function PetCompanionCard({ supplies, action, onUse, onRest }) {
       <div className="pet-stage" aria-hidden="true">
         <WhaleCompanion action={action} onRest={onRest} />
       </div>
-      <div className="pet-supplies">
+      <div className="pet-supplies" aria-label="鲸鱼娘互动">
         {petSupplyItems.map((item) => (
-          <button type="button" key={item.id} onClick={() => onUse(item.id)} disabled={!supplies[item.id]} title={item.action}>
-            <span aria-hidden="true">{item.iconName ? <WorkbenchIcon name={item.iconName} /> : item.icon}</span>
-            <strong>{supplies[item.id] || 0}</strong>
+          <button type="button" key={item.id} onClick={() => onUse(item.id)} disabled={!supplies[item.id]} title={item.action} aria-label={`${item.label}，剩余 ${supplies[item.id] || 0} 次`} aria-pressed={action.type === item.id}>
+            <span className="pet-action-preview" aria-hidden="true"><img src={bundledAssetUrl(`/codex-pets/whale-girl/preview-${item.preview}.webp`)} alt="" width="64" height="64" /><span className="pet-action-count">{supplies[item.id] || 0}<span className="pet-action-count-unit">次</span></span></span>
             <small>{item.label}</small>
           </button>
         ))}
@@ -5212,14 +5208,31 @@ function ConsultationList({ consultations, onDelete, onEdit }) {
   );
 }
 
-function WaterCupIcon({ cups = 1 }) {
-  return <svg className="water-cups-icon" viewBox="0 0 60 42" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden="true">
-    {Array.from({ length: cups }, (_, index) => <g key={index} transform={`translate(${(60 - (cups * 16 + (cups - 1) * 3)) / 2 + index * 19}, 0)`}>
-      <path d="M1 5h14l-2 30H3z" />
-      <path d="M2 17h12l-1 18H3z" fill="currentColor" fillOpacity=".18" stroke="none" />
-      <path d="M2 17h12" />
-    </g>)}
+function WaterGlass({ percent = 65 }) {
+  const id = useId().replace(/:/g, "");
+  const level = 138 - Math.max(0, Math.min(100, percent)) * 1.06;
+  return <svg className="water-glass" viewBox="0 0 120 160" fill="none" aria-hidden="true">
+    <defs>
+      <linearGradient id={`${id}-glass`} x1="15" y1="80" x2="105" y2="80" gradientUnits="userSpaceOnUse"><stop stopColor="#fff" stopOpacity=".75" /><stop offset=".2" stopColor="#fff" stopOpacity=".12" /><stop offset=".72" stopColor="#fff" stopOpacity=".26" /><stop offset="1" stopColor="#c5d4df" stopOpacity=".55" /></linearGradient>
+      <linearGradient id={`${id}-water`} x1="60" y1="30" x2="60" y2="145" gradientUnits="userSpaceOnUse"><stop stopColor="currentColor" stopOpacity=".35" /><stop offset="1" stopColor="currentColor" stopOpacity=".7" /></linearGradient>
+      <linearGradient id={`${id}-edge`} x1="14" y1="20" x2="105" y2="145" gradientUnits="userSpaceOnUse"><stop stopColor="#fff" /><stop offset=".4" stopColor="#b6c8d3" stopOpacity=".7" /><stop offset="1" stopColor="#fff" stopOpacity=".9" /></linearGradient>
+      <clipPath id={`${id}-inside`}><path d="M19 25Q60 36 101 25L91 132Q90 143 60 144Q30 143 29 132Z" /></clipPath>
+    </defs>
+    <ellipse cx="60" cy="151" rx="35" ry="4" fill="#203344" opacity=".06" />
+    <path d="M15 22Q60 9 105 22L94 133Q93 148 60 149Q27 148 26 133Z" fill={`url(#${id}-glass)`} stroke={`url(#${id}-edge)`} strokeWidth="1.8" />
+    <g clipPath={`url(#${id}-inside)`}>
+      {percent > 0 && <g className="water-glass-liquid" style={{ transform: `translateY(${level}px)` }}><rect x="14" y="0" width="92" height="150" fill={`url(#${id}-water)`} /><ellipse cx="60" cy="0" rx="47" ry="6" fill="currentColor" opacity=".34" /><path d="M19 0Q60-9 101 0" stroke="#fff" strokeOpacity=".65" strokeWidth="1.5" /></g>}
+      <path d="M31 43L37 119" stroke="#fff" strokeWidth="4" strokeLinecap="round" opacity=".65" />
+      <path d="M39 45L42 87" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" opacity=".5" />
+      <path d="M80 57h9M78 87h9M75 117h9" stroke="currentColor" strokeOpacity=".25" strokeWidth="1.5" strokeLinecap="round" />
+    </g>
+    <ellipse cx="60" cy="22" rx="45" ry="8" fill="#fff" fillOpacity=".15" stroke={`url(#${id}-edge)`} strokeWidth="2" />
+    <path d="M31 136Q60 145 89 136" stroke="#fff" strokeOpacity=".7" strokeWidth="2" strokeLinecap="round" />
   </svg>;
+}
+
+function WaterCupIcon({ cups = 1 }) {
+  return <span className="water-cups-icon" aria-hidden="true">{Array.from({ length: cups }, (_, index) => <WaterGlass key={index} />)}</span>;
 }
 
 function DietTracker({ view = "water", records, waterTarget, onAddWater, onAddMeal, onDelete, onSaveTarget }) {
@@ -5280,36 +5293,36 @@ function DietTracker({ view = "water", records, waterTarget, onAddWater, onAddMe
           <h2>喝水打卡</h2>
           <span className="tag">目标 {targetCups} 杯</span>
         </div>
-        <form className="water-target-form" onSubmit={saveTarget}>
-          <label>
-            <span>每日目标</span>
-            <input name="target" type="number" min={cupSize} step={cupSize} defaultValue={target} />
-          </label>
-          <button type="submit">保存目标</button>
-        </form>
         <div className="water-summary">
           <div className="water-gauge" role="progressbar" aria-label={`今日饮水 ${waterTotal} 毫升，目标 ${target} 毫升`} aria-valuemin={0} aria-valuemax={target} aria-valuenow={Math.min(waterTotal, target)} aria-valuetext={`${waterTotal} / ${target} ml`}>
-            <div className="water-gauge-cup" style={{ "--water-level": `${percent}%` }} aria-hidden="true"><div className="water-gauge-fill" /><div className="water-gauge-ticks" /><strong>{percent}%</strong></div>
-            <span>{waterTotal} ml</span>
+            <div className="water-gauge-cup" style={{ "--water-level": `${percent}%` }} aria-hidden="true"><WaterGlass percent={percent} /></div>
           </div>
           <div className="water-copy">
-            <p>已喝 <strong>{waterTotal}</strong> ml</p>
-            <p>目标 {target} ml · {percent}%</p>
-            <small>{remaining === 0 ? "今日目标已达成" : `还差 ${remaining} ml`} · 一杯 {cupSize} ml</small>
+            <p className="water-amount"><strong>{waterTotal.toLocaleString()}</strong><span>ml</span></p>
+            <p className="water-target-copy">目标 {target.toLocaleString()} ml <span>· {percent}%</span></p>
+            <small className={`water-completion ${remaining === 0 ? "is-complete" : ""}`}>{remaining === 0 ? <><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m3.5 8 3 3 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>今日目标已达成</> : `还差 ${remaining.toLocaleString()} ml`}</small>
           </div>
         </div>
         <div className="water-actions">
           {[1, 2, 3].map((cups) => (
             <button type="button" key={cups} onClick={() => onAddWater(cups)} aria-label={`记录 ${cups} 杯水，${cups * cupSize} 毫升`}>
               <WaterCupIcon cups={cups} />
-              <strong>{cups} 杯</strong><small>{cups * cupSize} ml</small>
+              <strong>{cups} 杯</strong><small>+{cups * cupSize} ml</small>
             </button>
           ))}
-          <button type="button" onClick={addCustomCups}>
-            <WorkbenchIcon name="note" />
-            <strong>自定义</strong>
+          <button className="water-custom-action" type="button" onClick={addCustomCups}>
+            <svg className="water-custom-icon" viewBox="0 0 40 48" fill="none" aria-hidden="true"><path d="M20 14v20M10 24h20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+            <strong>自定义</strong><small>按杯数</small>
           </button>
         </div>
+        <form className="water-target-form" onSubmit={saveTarget}>
+          <label>
+            <span>每日目标</span>
+            <input name="target" type="number" min={cupSize} step={cupSize} defaultValue={target} />
+            <small>ml</small>
+          </label>
+          <button type="submit">保存</button>
+        </form>
         <div className="diet-log-list">
           {waterRecords.length === 0 && <p className="empty">还没有喝水记录。</p>}
           {waterRecords.slice(0, 3).map((item) => (

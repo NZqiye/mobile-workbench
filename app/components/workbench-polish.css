@@ -78,16 +78,76 @@
 @media (max-width: 599px) { .phone-shell.ios18-shell.visual-aligned .note-editor .inline-fields { grid-template-columns: minmax(0,1fr); } }
 @media (prefers-reduced-motion: reduce) { .mobile-navigation-sheet, .pet-happiness-updated, .note-save-status.saved { animation: none !important; } .bottom-nav-indicator { transition: none; } }
 
-.water-gauge { display: grid; justify-items: center; gap: 10px; color: var(--ios-blue, var(--theme-main)); font-variant-numeric: tabular-nums; }
-.water-gauge-cup { position: relative; display: grid; place-items: center; width: 90px; height: 112px; overflow: hidden; border: 3px solid currentColor; border-radius: 5px 5px 20px 20px; background: var(--ios-panel-muted, var(--panel-2)); }
-.water-gauge-fill { position: absolute; inset: 0; clip-path: inset(calc(100% - var(--water-level)) 0 0); background: color-mix(in srgb, var(--ios-blue, var(--theme-main)) 28%, var(--ios-panel, #fff)); transition: clip-path 240ms ease-out; }
-.water-gauge-ticks { position: absolute; inset: 0; background: linear-gradient(currentColor, currentColor) right 8px top 25% / 12px 1px no-repeat, linear-gradient(currentColor, currentColor) right 8px top 50% / 16px 1px no-repeat, linear-gradient(currentColor, currentColor) right 8px top 75% / 12px 1px no-repeat; opacity: .5; }
-.water-gauge-cup strong { position: relative; margin-right: 14px; color: var(--ios-ink, var(--ink)); font-size: 22px; }
-.water-gauge > span { font-size: 14px; font-weight: 600; }
-.water-actions .water-cups-icon { width: 60px; height: 42px; color: var(--ios-blue, var(--theme-main)); }
-.water-actions > button > .ui-icon { width: 32px; height: 42px; color: var(--ios-blue, var(--theme-main)); }
-.water-actions button small { color: var(--ios-muted, var(--muted)); font-size: 12px; font-weight: 500; }
-.pet-supplies .ui-icon { width: 20px; height: 20px; }
+.phone-shell.ios18-shell.visual-aligned :is(.water-card, .pet-card) {
+  --care-surface: #fff;
+  --care-soft: #f4f6f8;
+  --care-border: #e7ecf0;
+  --care-ink: #213246;
+  --care-muted: #586879;
+  background: var(--care-surface) !important;
+  color: var(--care-ink);
+}
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw :is(.water-card, .pet-card) {
+  --care-surface: #24272d;
+  --care-soft: #2d3139;
+  --care-border: #404651;
+  --care-ink: #f1f4f8;
+  --care-muted: #bec8d3;
+}
+.phone-shell.ios18-shell.visual-aligned .water-card { gap: 20px; }
+.phone-shell.ios18-shell.visual-aligned .water-summary { grid-template-columns: 112px minmax(0, 1fr); gap: 20px; padding: 4px 0 12px; justify-items: stretch; text-align: left; }
+.water-gauge { display: grid; place-items: center; color: var(--ios-blue, var(--theme-main)); }
+.water-gauge-cup { width: 112px; height: 152px; }
+.water-glass { display: block; width: 100%; height: 100%; overflow: visible; }
+.water-glass-liquid { transition: transform 420ms cubic-bezier(.22,1,.36,1); }
+.phone-shell.ios18-shell.visual-aligned .water-copy { min-width: 0; gap: 8px; }
+.phone-shell.ios18-shell.visual-aligned .water-copy .water-amount { display: flex; align-items: baseline; gap: 6px; line-height: 1.1; }
+.phone-shell.ios18-shell.visual-aligned .water-amount strong { color: var(--care-ink) !important; font-size: clamp(30px, 8vw, 38px); font-weight: 600; letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+.phone-shell.ios18-shell.visual-aligned .water-amount > span { color: var(--care-muted); font-size: 14px; font-weight: 400; }
+.phone-shell.ios18-shell.visual-aligned .water-copy .water-target-copy { color: var(--care-muted) !important; font-size: 13px; line-height: 1.6; }
+.water-target-copy > span { white-space: nowrap; }
+.phone-shell.ios18-shell.visual-aligned .water-copy .water-completion { display: flex; align-items: center; gap: 5px; color: var(--care-muted) !important; font-size: 12px; line-height: 1.6; }
+.phone-shell.ios18-shell.visual-aligned .water-copy .is-complete { color: var(--ios-blue) !important; }
+.water-completion svg { flex-shrink: 0; width: 16px; height: 16px; }
+.phone-shell.ios18-shell.visual-aligned .water-actions { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.phone-shell.ios18-shell.visual-aligned .water-actions > button { display: grid; align-content: center; justify-items: center; min-width: 0; min-height: 112px; padding: 12px 4px; gap: 4px; border: 1px solid var(--care-border) !important; border-radius: 16px; background: var(--care-soft) !important; color: var(--care-ink) !important; box-shadow: none !important; font-weight: 500; transition: background-color 160ms ease-out, border-color 160ms ease-out, transform 160ms ease-out; }
+.phone-shell.ios18-shell.visual-aligned .water-actions > button:hover { border-color: color-mix(in srgb, var(--ios-blue) 35%, var(--care-border)) !important; background: color-mix(in srgb, var(--care-soft) 85%, var(--ios-blue-soft)) !important; }
+.phone-shell.ios18-shell.visual-aligned .water-actions .water-cups-icon { display: flex; align-items: center; justify-content: center; width: 100%; height: 48px; color: var(--ios-blue); }
+.water-cups-icon .water-glass { flex: 0 0 26px; width: 26px; height: 44px; }
+.water-cups-icon .water-glass + .water-glass { margin-left: -10px; }
+.phone-shell.ios18-shell.visual-aligned .water-actions strong { font-size: 14px; line-height: 1.5; font-weight: 600; }
+.phone-shell.ios18-shell.visual-aligned .water-actions small { color: var(--care-muted); font-size: 11px; font-weight: 400; line-height: 1.5; white-space: nowrap; }
+.water-custom-icon { width: 40px; height: 48px; color: var(--care-muted); }
+.phone-shell.ios18-shell.visual-aligned .water-actions > .water-custom-action { border-style: dashed !important; background: transparent !important; }
+.phone-shell.ios18-shell.visual-aligned .water-target-form { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 12px 0; border-top: 1px solid var(--care-border); border-bottom: 1px solid var(--care-border); border-radius: 0; background: transparent !important; box-shadow: none; }
+.phone-shell.ios18-shell.visual-aligned .water-target-form label { display: flex; align-items: center; gap: 6px; }
+.phone-shell.ios18-shell.visual-aligned .water-target-form span { color: var(--care-muted) !important; font-size: 12px; font-weight: 400; white-space: nowrap; }
+.phone-shell.ios18-shell.visual-aligned .water-target-form input { width: 76px; min-width: 0; height: 34px; padding: 0 6px; border: 1px solid var(--care-border); border-radius: 8px; color: var(--care-ink) !important; background: var(--care-soft) !important; font-size: 14px; }
+.phone-shell.ios18-shell.visual-aligned .water-target-form small { color: var(--care-muted); font-size: 11px; }
+.phone-shell.ios18-shell.visual-aligned .water-target-form button { min-height: 34px; padding: 0 12px; border: 0; border-radius: 8px; background: var(--care-soft) !important; color: var(--care-ink) !important; box-shadow: none !important; font-size: 12px; font-weight: 500; }
+.phone-shell.ios18-shell.visual-aligned.pony-theme-bw .water-card .water-target-form > button { color: var(--care-ink) !important; }
+.phone-shell.ios18-shell.visual-aligned .water-card .diet-log-row { background: transparent !important; }
+.phone-shell.ios18-shell.visual-aligned .pet-card { gap: 12px; }
+.phone-shell.ios18-shell.visual-aligned .pet-card-head { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.phone-shell.ios18-shell.visual-aligned .pet-card-head > div { display: flex; align-items: center; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+.phone-shell.ios18-shell.visual-aligned .pet-card-head strong { color: var(--care-ink) !important; font-size: 18px; font-weight: 600; line-height: 1.5; }
+.phone-shell.ios18-shell.visual-aligned .pet-card-head .pet-happiness { margin: 0; padding: 4px 8px; border-radius: 8px; color: var(--care-muted); background: var(--care-soft); font-size: 12px; font-weight: 400; line-height: 1.5; }
+.phone-shell.ios18-shell.visual-aligned .pet-card-head > small { max-width: none; min-height: 36px; color: var(--care-muted) !important; text-align: left; font-size: 12px; line-height: 1.5; }
+.phone-shell.ios18-shell.visual-aligned .pet-stage { min-height: 160px; }
+.phone-shell.ios18-shell.visual-aligned .whale-pet-stage { height: 160px; filter: drop-shadow(0 5px 5px rgb(25 38 55 / .1)); }
+.phone-shell.ios18-shell.visual-aligned .whale-pet-media { width: 340px; height: 191.25px; }
+.phone-shell.ios18-shell.visual-aligned .pet-supplies { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding-top: 12px; border-top: 1px solid var(--care-border); }
+.phone-shell.ios18-shell.visual-aligned .pet-supplies > button { position: relative; display: grid; justify-items: center; align-content: center; gap: 4px; min-width: 0; min-height: 96px; padding: 8px 2px; border: 0; border-radius: 12px; background: transparent; box-shadow: none; color: var(--care-ink); font-weight: 400; transition: background-color 160ms ease-out, transform 160ms ease-out; }
+.phone-shell.ios18-shell.visual-aligned .pet-supplies > button:hover:not(:disabled), .phone-shell.ios18-shell.visual-aligned .pet-supplies > button[aria-pressed="true"] { background: var(--care-soft); }
+.phone-shell.ios18-shell.visual-aligned .pet-supplies > button:active:not(:disabled) { transform: scale(.97); }
+.phone-shell.ios18-shell.visual-aligned .pet-supplies .pet-action-preview { position: relative; display: block; width: 64px; height: 64px; }
+.phone-shell.ios18-shell.visual-aligned .pet-supplies .pet-action-preview > img { width: 64px; height: 64px; object-fit: contain; }
+.phone-shell.ios18-shell.visual-aligned .pet-supplies .pet-action-count { position: absolute; display: block; top: 0; right: -4px; min-width: 22px; min-height: 0; padding: 2px 4px; border: 1px solid var(--care-border); border-radius: 6px; background: var(--care-surface); color: var(--care-muted); font-size: 10px; font-weight: 500; line-height: 1.2; text-align: center; font-variant-numeric: tabular-nums; }
+.phone-shell.ios18-shell.visual-aligned .pet-action-count-unit { display: none; }
+.phone-shell.ios18-shell.visual-aligned .pet-supplies button > small { color: var(--care-ink); font-size: 12px; font-weight: 500; line-height: 1.5; }
+.phone-shell.ios18-shell.visual-aligned .pet-supplies button:disabled { opacity: 1; }
+.phone-shell.ios18-shell.visual-aligned .pet-supplies button:disabled img { filter: grayscale(.65); opacity: .4; }
+.phone-shell.ios18-shell.visual-aligned .pet-supplies button:disabled > small { color: var(--care-muted); }
 .tomorrow-weather-advice { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--ios-separator, var(--line)); color: var(--ios-ink, var(--ink)); }
 .tomorrow-advice-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .tomorrow-advice-heading .ui-icon { width: 20px; height: 20px; color: var(--ios-blue, var(--theme-main)); }
@@ -96,5 +156,12 @@
 .tomorrow-weather-advice p { margin: 8px 0 0; font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
 .tomorrow-weather-advice .tomorrow-weather-summary { color: var(--ios-muted, var(--muted)); font-variant-numeric: tabular-nums; }
 .tomorrow-weather-advice ul { margin: 10px 0 0; padding-left: 18px; color: var(--ios-blue, var(--theme-main)); font-size: 13px; line-height: 1.65; }
-@media (max-width: 360px) { .water-card .water-summary { grid-template-columns: 100px minmax(0, 1fr); gap: 12px; } }
-@media (prefers-reduced-motion: reduce) { .water-gauge-fill { transition: none; } }
+@media (max-width: 360px) {
+  .phone-shell.ios18-shell.visual-aligned .water-summary { grid-template-columns: 96px minmax(0, 1fr); gap: 12px; }
+  .water-gauge-cup { width: 96px; height: 136px; }
+  .phone-shell.ios18-shell.visual-aligned .water-actions { gap: 6px; }
+  .phone-shell.ios18-shell.visual-aligned .water-actions > button { min-height: 104px; border-radius: 12px; }
+  .phone-shell.ios18-shell.visual-aligned .water-actions small { font-size: 10px; }
+  .water-cups-icon .water-glass { flex-basis: 22px; width: 22px; }
+}
+@media (prefers-reduced-motion: reduce) { .water-glass-liquid, .pet-supplies > button { transition: none; } }
