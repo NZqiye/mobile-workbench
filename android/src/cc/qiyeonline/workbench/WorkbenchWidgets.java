@@ -123,8 +123,10 @@ public class WorkbenchWidgets extends AppWidgetProvider {
         JSONObject data = read(context); String date = today(); boolean fresh = date.equals(data.optString("date"));
         int layout = type == Plans.class ? R.layout.widget_plans : type == Water.class ? R.layout.widget_water : type == Watch.class ? R.layout.widget_watch : R.layout.widget_assets;
         int height = manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 280);
+        int width = manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 140);
         if (type == Assets.class && height < 250) layout = R.layout.widget_assets_compact;
-        if (type == Water.class && height < 145) layout = R.layout.widget_water_compact;
+        float fontScale = context.getResources().getConfiguration().fontScale;
+        if (type == Water.class && (height < 185 * fontScale || width < 200 * fontScale)) layout = R.layout.widget_water_compact;
         if (type == Plans.class && height < 140) layout = R.layout.widget_plans_compact;
         RemoteViews views = new RemoteViews(context.getPackageName(), layout);
         if (type == Plans.class) {
@@ -145,10 +147,12 @@ public class WorkbenchWidgets extends AppWidgetProvider {
             int percent = Math.min(100, Math.round(water * 100f / target));
             views.setTextViewText(R.id.widget_amount, String.valueOf(water));
             views.setTextViewText(R.id.widget_goal, "/ " + target + " ml");
-            views.setTextViewText(R.id.widget_footer, percent + "% · " + (water >= target ? "今日目标达成" : "还差 " + (target - water) + " ml"));
+            views.setTextViewText(R.id.widget_percent, percent + "%");
+            views.setTextViewText(R.id.widget_footer, water >= target ? "今日目标达成" : "还差 " + (target - water) + " ml");
             views.setProgressBar(R.id.widget_progress, target, Math.min(water, target), false);
             views.setImageViewBitmap(R.id.widget_icon, WidgetImages.waterGauge(water, target));
             views.setContentDescription(R.id.widget_icon, "已喝 " + water + " ml，目标 " + target + " ml，" + percent + "%");
+            views.setContentDescription(R.id.widget_root, "喝水进度：已喝 " + water + " ml，目标 " + target + " ml，完成 " + percent + "%，" + (water >= target ? "今日目标达成" : "还差 " + (target - water) + " ml"));
         } else if (type == Watch.class) {
             JSONArray upcoming = upcoming(data, date);
             views.setTextViewText(R.id.widget_content, upcoming.length() == 0 ? fresh ? "暂无已知排期\n打开追剧日历添加或刷新" : "打开 App 同步最新排期" : "");

@@ -4,8 +4,10 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -23,23 +25,53 @@ import org.json.JSONObject;
 
 final class WidgetImages {
     static Bitmap waterGauge(int amount, int target) {
-        Bitmap bitmap = Bitmap.createBitmap(120, 160, Bitmap.Config.ARGB_8888);
+        Bitmap bitmap = Bitmap.createBitmap(360, 480, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
+        canvas.scale(3, 3);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         android.graphics.Path cup = new android.graphics.Path();
-        cup.moveTo(18, 12); cup.lineTo(102, 12); cup.lineTo(94, 142);
-        cup.quadTo(94, 150, 86, 150); cup.lineTo(34, 150);
-        cup.quadTo(26, 150, 26, 142); cup.close();
+        cup.moveTo(22, 22); cup.lineTo(98, 22); cup.lineTo(92, 137);
+        cup.quadTo(91, 146, 81, 147); cup.lineTo(39, 147);
+        cup.quadTo(29, 146, 28, 137); cup.close();
+        paint.setColor(0x10274F65); canvas.drawOval(new RectF(28, 147, 92, 155), paint);
         canvas.save(); canvas.clipPath(cup);
-        paint.setColor(0xFFF1F8FA); canvas.drawRect(0, 0, 120, 160, paint);
-        float ratio = Math.max(0, Math.min(1, amount / (float)Math.max(1, target)));
-        float top = 150 - 138 * ratio;
-        paint.setColor(0xFF81C5D5); canvas.drawRect(0, top, 120, 160, paint);
-        paint.setColor(0xFF21677B); paint.setStrokeWidth(2);
-        if (amount > 0) canvas.drawLine(18, top, 102, top, paint);
-        for (int i = 1; i < 4; i++) canvas.drawLine(77, 12 + i * 34.5f, 90, 12 + i * 34.5f, paint);
-        canvas.restore(); paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(4);
+        paint.setAlpha(255);
+        paint.setShader(new LinearGradient(22, 0, 98, 0,
+            new int[] { 0xB8FFFFFF, 0x35FFFFFF, 0x70B5D4E3, 0xA0FFFFFF },
+            new float[] { 0, 0.28f, 0.82f, 1 }, Shader.TileMode.CLAMP));
         canvas.drawPath(cup, paint);
+        float ratio = Math.max(0, Math.min(1, amount / (float)Math.max(1, target)));
+        float top = 139 - 106 * ratio;
+        if (ratio > 0) {
+            paint.setAlpha(255);
+            paint.setShader(new LinearGradient(24, 0, 96, 0,
+                new int[] { 0xE874BEDD, 0xD6B9E7F1, 0xEA55A6D0 },
+                new float[] { 0, 0.42f, 1 }, Shader.TileMode.CLAMP));
+            canvas.drawRect(22, top, 98, 143, paint);
+            paint.setShader(null); paint.setColor(0xCCB9EAF6);
+            float inset = (top - 22) * 0.052f;
+            canvas.drawOval(new RectF(22 + inset, top - 3, 98 - inset, top + 3), paint);
+            paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(0.8f); paint.setColor(0xAA438AAF);
+            canvas.drawOval(new RectF(22 + inset, top - 3, 98 - inset, top + 3), paint);
+            paint.setStyle(Paint.Style.FILL);
+        }
+        paint.setAlpha(255); paint.setShader(new LinearGradient(0, 138, 0, 148,
+            new int[] { 0x10FFFFFF, 0xE6E7F5FA, 0xB595BED1 }, null, Shader.TileMode.CLAMP));
+        canvas.drawRect(26, 139, 94, 149, paint);
+        paint.setShader(null); paint.setStrokeCap(Paint.Cap.ROUND);
+        paint.setColor(0xCFFFFFFF); paint.setStrokeWidth(2.6f); canvas.drawLine(29, 34, 34, 128, paint);
+        paint.setColor(0x88FFFFFF); paint.setStrokeWidth(1); canvas.drawLine(91, 37, 87, 126, paint);
+        paint.setColor(0x9050778E); paint.setStrokeWidth(1);
+        for (int i = 1; i < 4; i++) {
+            float y = 139 - 106 * i / 4f, right = 92 - (y - 22) * 0.052f;
+            canvas.drawLine(right - 8, y, right, y, paint);
+        }
+        canvas.restore(); paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(1.3f); paint.setColor(0xAD7199B0);
+        canvas.drawPath(cup, paint);
+        paint.setStyle(Paint.Style.FILL); paint.setColor(0xC7EEF8FC); canvas.drawOval(new RectF(22, 17, 98, 27), paint);
+        paint.setStyle(Paint.Style.STROKE); paint.setColor(0xBE7199B0); paint.setStrokeWidth(1.3f);
+        canvas.drawOval(new RectF(22, 17, 98, 27), paint);
+        paint.setColor(0xE6FFFFFF); paint.setStrokeWidth(0.9f); canvas.drawOval(new RectF(25, 19, 95, 25), paint);
         return bitmap;
     }
 

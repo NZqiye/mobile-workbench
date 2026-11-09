@@ -1,7 +1,7 @@
 {
-  "version": "1.1.8",
-  "versionCode": 10,
-  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.8/qiyeonline-1.1.8.apk",
-  "sha256": "7d19a4d76e7c1d9af83d89891d87ceae3d4c0354bc179b102ec379ceb93689bc",
-  "notes": "喝水卡片与桌面小部件增加水位和毫升显示，鲸鱼娘换成日常互动，天气增加明日穿衣、降温与带伞建议。"
+  "version": "1.1.9",
+  "versionCode": 11,
+  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.9/qiyeonline-1.1.9.apk",
+  "sha256": "0db8477f44628493e396f62e5a2e5a602f6caa90d0681d49963ca91a3963d16f",
+  "notes": "修复安卓桌面喝水小组件显示不全，分开显示实际毫升、目标、百分比与剩余量，适配窄尺寸与大字号；重绘玻璃杯和动态水位。请覆盖安装后打开App同步，不要先卸载。"
 }
