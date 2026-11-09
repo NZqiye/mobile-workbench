@@ -148,14 +148,27 @@
 .phone-shell.ios18-shell.visual-aligned .pet-supplies button:disabled { opacity: 1; }
 .phone-shell.ios18-shell.visual-aligned .pet-supplies button:disabled img { filter: grayscale(.65); opacity: .4; }
 .phone-shell.ios18-shell.visual-aligned .pet-supplies button:disabled > small { color: var(--care-muted); }
-.tomorrow-weather-advice { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--ios-separator, var(--line)); color: var(--ios-ink, var(--ink)); }
-.tomorrow-advice-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-.tomorrow-advice-heading .ui-icon { width: 20px; height: 20px; color: var(--ios-blue, var(--theme-main)); }
-.tomorrow-advice-heading strong { font-size: 14px; }
-.tomorrow-advice-heading small { margin-left: auto; color: var(--ios-muted, var(--muted)); font-size: 12px; }
-.tomorrow-weather-advice p { margin: 8px 0 0; font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
-.tomorrow-weather-advice .tomorrow-weather-summary { color: var(--ios-muted, var(--muted)); font-variant-numeric: tabular-nums; }
-.tomorrow-weather-advice ul { margin: 10px 0 0; padding-left: 18px; color: var(--ios-blue, var(--theme-main)); font-size: 13px; line-height: 1.65; }
+.phone-shell.ios18-shell.visual-aligned .tomorrow-weather-advice { min-width: 0; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--ios-separator, var(--line)); color: var(--ios-ink, var(--ink)); }
+.tomorrow-advice-heading { display: flex; align-items: center; gap: 8px; }
+.tomorrow-advice-heading .ui-icon { flex-shrink: 0; width: 18px; height: 18px; color: var(--ios-blue, var(--theme-main)); }
+.phone-shell.ios18-shell.visual-aligned .tomorrow-advice-heading strong { color: var(--ios-ink); font-size: 14px; font-weight: 600; line-height: 1.5; }
+.tomorrow-advice-heading time { margin-left: auto; color: var(--ios-muted, var(--muted)); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tomorrow-weather-overview { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 16px 0; }
+.phone-shell.ios18-shell.visual-aligned .tomorrow-temperature { display: flex; align-items: baseline; gap: 8px; margin: 0; color: var(--ios-muted); font-size: 24px; line-height: 1.25; font-weight: 400; font-variant-numeric: tabular-nums; }
+.phone-shell.ios18-shell.visual-aligned .tomorrow-temperature strong { color: var(--ios-ink); font-size: 28px; font-weight: 600; }
+.phone-shell.ios18-shell.visual-aligned .tomorrow-temperature-divider { font-size: 18px; opacity: .5; }
+.phone-shell.ios18-shell.visual-aligned .tomorrow-weather-summary { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 4px 0 0; color: var(--ios-muted); font-size: 12px; line-height: 1.5; }
+.tomorrow-weather-overview > .weather-motion-icon { flex-shrink: 0; width: 40px; height: 40px; filter: none; }
+.tomorrow-weather-overview > .weather-motion-icon * { animation: none; }
+.tomorrow-outfit { display: grid; gap: 8px; margin: 0; padding: 16px 0 0; border-top: 1px solid var(--ios-separator, var(--line)); }
+.tomorrow-outfit > div { display: grid; grid-template-columns: 32px minmax(0, 1fr); align-items: baseline; gap: 12px; }
+.phone-shell.ios18-shell.visual-aligned .tomorrow-outfit dt { color: var(--ios-muted); font-size: 12px; line-height: 1.6; font-weight: 400; }
+.phone-shell.ios18-shell.visual-aligned .tomorrow-outfit dd { margin: 0; color: var(--ios-ink); font-size: 14px; font-weight: 500; line-height: 1.6; overflow-wrap: anywhere; }
+.tomorrow-reminders { display: grid; gap: 4px; margin-top: 16px; padding: 12px; border-radius: 12px; background: color-mix(in srgb, var(--ios-blue) 5%, var(--ios-panel)); }
+.phone-shell.ios18-shell.visual-aligned .tomorrow-reminders > span { color: var(--ios-blue); font-size: 12px; font-weight: 500; line-height: 1.5; }
+.tomorrow-reminders ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.phone-shell.ios18-shell.visual-aligned .tomorrow-reminders li { color: var(--ios-ink); font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+.phone-shell.ios18-shell.visual-aligned .tomorrow-weather-empty { margin: 12px 0 0; color: var(--ios-muted); font-size: 13px; line-height: 1.65; }
 @media (max-width: 360px) {
   .phone-shell.ios18-shell.visual-aligned .water-summary { grid-template-columns: 96px minmax(0, 1fr); gap: 12px; }
   .water-gauge-cup { width: 96px; height: 136px; }

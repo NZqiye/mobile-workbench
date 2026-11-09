@@ -1,4 +1,4 @@
-const CACHE_NAME = "qiyeworkbench-v23";
+const CACHE_NAME = "qiyeworkbench-v24";
 const APP_SHELL = ["/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png", "/avatar-cultivation.webp"];
 
 self.addEventListener("install", (event) => {

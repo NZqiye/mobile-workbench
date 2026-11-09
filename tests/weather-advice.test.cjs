@@ -41,3 +41,11 @@ test('missing temperatures do not turn into a made-up winter forecast; warmer da
   assert.equal(advice.alerts.length, 0);
   assert.match(advice.outfit.items.join(' '), /短袖/);
 });
+
+test('outfit row labels match the recommended clothes across temperature ranges', () => {
+  for (const [max, labels] of [[34, ['上装', '下装', '防晒']], [28, ['上装', '下装', '鞋履']], [23, ['内搭', '外套', '下装']], [13.5, ['内搭', '外套', '下装']], [7, ['内搭', '外套', '搭配']]]) {
+    const advice = context.outfitAdvice(day('2026-11-10', 6.5, max), '明天');
+    assert.deepEqual(Array.from(advice.labels), labels);
+    assert.equal(advice.items.slice(0, 3).length, labels.length);
+  }
+});

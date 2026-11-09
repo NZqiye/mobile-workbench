@@ -1537,6 +1537,7 @@ function outfitAdvice(day, period = "今日") {
   return {
     title,
     items,
+    labels: max >= 32 ? ["上装", "下装", "防晒"] : max >= 26 ? ["上装", "下装", "鞋履"] : ["内搭", "外套", max >= 12 ? "下装" : "搭配"],
     note: `无锡${period} ${label}，${min}° / ${max}°${rain == null ? "，降水概率暂缺" : `，降水概率 ${rain}%`}。`,
   };
 }
@@ -1564,15 +1565,19 @@ function tomorrowWeatherAdvice(weather, dateKey) {
 
 function TomorrowWeatherAdvice({ weather, dateKey }) {
   const advice = tomorrowWeatherAdvice(weather, dateKey);
+  const reminders = advice ? [...advice.outfit.items.slice(3).filter((item) => !/带伞|防滑防水鞋/.test(item)), ...advice.alerts] : [];
   return (
-    <div className="tomorrow-weather-advice">
-      <div className="tomorrow-advice-heading"><WorkbenchIcon name="wear" /><strong>明日穿衣与出行</strong>{advice && <small>{advice.date.slice(5).replace("-", "/")}</small>}</div>
+    <section className="tomorrow-weather-advice" aria-label="明日穿衣与出行">
+      <div className="tomorrow-advice-heading"><WorkbenchIcon name="wear" /><strong>明日穿衣与出行</strong>{advice && <time dateTime={advice.date}>{advice.date.slice(5).replace("-", "/")}</time>}</div>
       {advice ? <>
-        <p className="tomorrow-weather-summary">{weatherLabel(advice.day.code)} · {advice.day.min}° / {advice.day.max}° · {advice.day.rain == null ? "降水概率暂缺" : `降水 ${advice.day.rain}%`}</p>
-        <p className="tomorrow-outfit">{advice.outfit.items.filter((item) => !/带伞|防滑防水鞋/.test(item)).join(" · ")}</p>
-        {advice.alerts.length > 0 && <ul>{advice.alerts.map((alert) => <li key={alert}>{alert}</li>)}</ul>}
-      </> : <p>明日预报尚未更新，点刷新获取穿衣与出行建议。</p>}
-    </div>
+        <div className="tomorrow-weather-overview">
+          <div><p className="tomorrow-temperature" aria-label={`最低 ${advice.day.min} 度，最高 ${advice.day.max} 度`}><span>{advice.day.min}°</span><span className="tomorrow-temperature-divider">/</span><strong>{advice.day.max}°</strong></p><p className="tomorrow-weather-summary">{weatherLabel(advice.day.code)}<span>·</span>{advice.day.rain == null ? "降水概率暂缺" : `降水概率 ${advice.day.rain}%`}</p></div>
+          <WeatherMotionIcon code={advice.day.code} />
+        </div>
+        <dl className="tomorrow-outfit">{advice.outfit.items.slice(0, 3).map((item, index) => <div key={item}><dt>{advice.outfit.labels[index]}</dt><dd>{item.replace("/", " / ")}</dd></div>)}</dl>
+        {reminders.length > 0 && <div className="tomorrow-reminders"><span>出门提醒</span><ul>{reminders.map((reminder) => <li key={reminder}>{reminder}</li>)}</ul></div>}
+      </> : <p className="tomorrow-weather-empty">明日预报尚未更新，点刷新获取穿衣与出行建议。</p>}
+    </section>
   );
 }
 
