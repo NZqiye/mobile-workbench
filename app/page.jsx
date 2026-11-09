@@ -5215,24 +5215,35 @@ function ConsultationList({ consultations, onDelete, onEdit }) {
 
 function WaterGlass({ percent = 65 }) {
   const id = useId().replace(/:/g, "");
-  const level = 138 - Math.max(0, Math.min(100, percent)) * 1.06;
+  const level = 139 - Math.max(0, Math.min(100, percent)) * 1.06;
   return <svg className="water-glass" viewBox="0 0 120 160" fill="none" aria-hidden="true">
     <defs>
-      <linearGradient id={`${id}-glass`} x1="15" y1="80" x2="105" y2="80" gradientUnits="userSpaceOnUse"><stop stopColor="#fff" stopOpacity=".75" /><stop offset=".2" stopColor="#fff" stopOpacity=".12" /><stop offset=".72" stopColor="#fff" stopOpacity=".26" /><stop offset="1" stopColor="#c5d4df" stopOpacity=".55" /></linearGradient>
-      <linearGradient id={`${id}-water`} x1="60" y1="30" x2="60" y2="145" gradientUnits="userSpaceOnUse"><stop stopColor="currentColor" stopOpacity=".35" /><stop offset="1" stopColor="currentColor" stopOpacity=".7" /></linearGradient>
-      <linearGradient id={`${id}-edge`} x1="14" y1="20" x2="105" y2="145" gradientUnits="userSpaceOnUse"><stop stopColor="#fff" /><stop offset=".4" stopColor="#b6c8d3" stopOpacity=".7" /><stop offset="1" stopColor="#fff" stopOpacity=".9" /></linearGradient>
-      <clipPath id={`${id}-inside`}><path d="M19 25Q60 36 101 25L91 132Q90 143 60 144Q30 143 29 132Z" /></clipPath>
+      <linearGradient id={`${id}-glass`} x1="19" y1="80" x2="101" y2="80" gradientUnits="userSpaceOnUse"><stop stopColor="#8cabbc" stopOpacity=".4" /><stop offset=".08" stopColor="#fff" stopOpacity=".9" /><stop offset=".23" stopColor="#ddecf2" stopOpacity=".18" /><stop offset=".55" stopColor="#fff" stopOpacity=".04" /><stop offset=".83" stopColor="#b1ccd9" stopOpacity=".22" /><stop offset=".95" stopColor="#fff" stopOpacity=".75" /><stop offset="1" stopColor="#7898ac" stopOpacity=".45" /></linearGradient>
+      <linearGradient id={`${id}-water`} x1="23" y1="80" x2="97" y2="80" gradientUnits="userSpaceOnUse"><stop stopColor="#258ab8" stopOpacity=".85" /><stop offset=".16" stopColor="#70d7ed" stopOpacity=".7" /><stop offset=".48" stopColor="#53c5e5" stopOpacity=".8" /><stop offset=".8" stopColor="#2d9dcd" stopOpacity=".85" /><stop offset="1" stopColor="#247ba9" stopOpacity=".9" /></linearGradient>
+      <linearGradient id={`${id}-surface`} x1="60" y1="-6" x2="60" y2="6" gradientUnits="userSpaceOnUse"><stop stopColor="#d6f8ff" stopOpacity=".95" /><stop offset="1" stopColor="#56b7d8" stopOpacity=".9" /></linearGradient>
+      <linearGradient id={`${id}-base`} x1="60" y1="132" x2="60" y2="149" gradientUnits="userSpaceOnUse"><stop stopColor="#a9c7d5" stopOpacity=".2" /><stop offset=".5" stopColor="#fff" stopOpacity=".85" /><stop offset=".76" stopColor="#94b7c8" stopOpacity=".55" /><stop offset="1" stopColor="#fff" stopOpacity=".9" /></linearGradient>
+      <radialGradient id={`${id}-shadow`}><stop stopColor="#537587" stopOpacity=".22" /><stop offset="1" stopColor="#537587" stopOpacity="0" /></radialGradient>
+      <clipPath id={`${id}-inside`}><path d="M24 24Q60 34 96 24L91 132Q90 141 60 142Q30 141 29 132Z" /></clipPath>
     </defs>
-    <ellipse cx="60" cy="151" rx="35" ry="4" fill="#203344" opacity=".06" />
-    <path d="M15 22Q60 9 105 22L94 133Q93 148 60 149Q27 148 26 133Z" fill={`url(#${id}-glass)`} stroke={`url(#${id}-edge)`} strokeWidth="1.8" />
+    <ellipse cx="60" cy="151" rx="46" ry="7" fill={`url(#${id}-shadow)`} />
+    <path d="M19 22Q60 10 101 22L95 135Q94 148 60 149Q26 148 25 135Z" fill={`url(#${id}-glass)`} stroke="#9db7c5" strokeOpacity=".7" strokeWidth=".8" />
     <g clipPath={`url(#${id}-inside)`}>
-      {percent > 0 && <g className="water-glass-liquid" style={{ transform: `translateY(${level}px)` }}><rect x="14" y="0" width="92" height="150" fill={`url(#${id}-water)`} /><ellipse cx="60" cy="0" rx="47" ry="6" fill="currentColor" opacity=".34" /><path d="M19 0Q60-9 101 0" stroke="#fff" strokeOpacity=".65" strokeWidth="1.5" /></g>}
-      <path d="M31 43L37 119" stroke="#fff" strokeWidth="4" strokeLinecap="round" opacity=".65" />
-      <path d="M39 45L42 87" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" opacity=".5" />
-      <path d="M80 57h9M78 87h9M75 117h9" stroke="currentColor" strokeOpacity=".25" strokeWidth="1.5" strokeLinecap="round" />
+      {percent > 0 && <g className="water-glass-liquid" style={{ transform: `translateY(${level}px)` }}>
+        <path d="M17 0Q60 12 103 0V150H17Z" fill={`url(#${id}-water)`} />
+        <ellipse cx="60" cy="0" rx="43" ry="6" fill={`url(#${id}-surface)`} stroke="#d2f5fc" strokeOpacity=".8" strokeWidth=".8" />
+        <path d="M27-1Q56-8 86-2" stroke="#fff" strokeOpacity=".85" strokeWidth="1.2" strokeLinecap="round" />
+        <path d="M35 13Q38 59 38 102M85 12Q82 59 82 108" stroke="#c8f5ff" strokeOpacity=".24" strokeWidth="1.2" />
+      </g>}
+      <path d="M29 35L33 126" stroke="#fff" strokeWidth="5" strokeLinecap="round" opacity=".68" />
+      <path d="M36 38L39 89" stroke="#fff" strokeWidth="1.4" strokeLinecap="round" opacity=".65" />
+      <path d="M92 40L88 128" stroke="#fff" strokeWidth="2" strokeLinecap="round" opacity=".5" />
+      <path d="M78 51h8M78 73h5M77 95h8M77 117h5" stroke="#45718a" strokeOpacity=".45" strokeWidth="1" strokeLinecap="round" />
     </g>
-    <ellipse cx="60" cy="22" rx="45" ry="8" fill="#fff" fillOpacity=".15" stroke={`url(#${id}-edge)`} strokeWidth="2" />
-    <path d="M31 136Q60 145 89 136" stroke="#fff" strokeOpacity=".7" strokeWidth="2" strokeLinecap="round" />
+    <path d="M25 132Q60 148 95 132L94 138Q92 148 60 149Q28 148 26 138Z" fill={`url(#${id}-base)`} />
+    <path d="M29 137Q60 148 91 137" stroke="#fff" strokeOpacity=".8" strokeWidth="1.4" />
+    <ellipse cx="60" cy="22" rx="41" ry="8" fill="#f5fcff" fillOpacity=".12" stroke="#9db7c5" strokeOpacity=".8" strokeWidth="1" />
+    <ellipse cx="60" cy="21.5" rx="38" ry="5.5" stroke="#fff" strokeOpacity=".95" strokeWidth="1.4" />
+    <path d="M20 24Q60 39 100 24" stroke="#fff" strokeOpacity=".9" strokeWidth="1.4" />
   </svg>;
 }
 
