@@ -1432,6 +1432,8 @@ select:focus-visible {
 .subscription-form { gap: 12px; }
 .subscription-field { display: grid; gap: 5px; color: var(--muted); font-size: 12px; font-weight: 800; }
 .subscription-field input, .subscription-field select { width: 100%; }
+.subscription-phone-note { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.subscription-phone-preview { margin: 0; color: var(--theme-main); font-size: 13px; font-weight: 800; line-height: 1.6; }
 .subscription-list { display: grid; gap: 12px; }
 .subscription-group { display: grid; gap: 8px; }
 .subscription-group h3 { margin: 4px 0 0; color: color-mix(in srgb, #fff 88%, var(--theme-accent)); font-size: 13px; font-weight: 950; }

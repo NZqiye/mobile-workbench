@@ -22,7 +22,7 @@ test('cooling and rain reminders use forecast temperature differences and rain p
   const advice = context.tomorrowWeatherAdvice({ forecast: [day('2026-11-09', 15, 23), day('2026-11-10', 9, 16, 3, 70)] }, '2026-11-09');
   assert.match(advice.alerts.join(' '), /降温约 7°/);
   assert.match(advice.alerts.join(' '), /带伞/);
-  assert.match(advice.outfit.items.join(' '), /卫衣|毛衣/);
+  assert.match(advice.outfit.items.join(' '), /夹克|风衣/);
 });
 
 test('rain codes, snow and thunder provide reminders even when probability is missing or low', () => {
@@ -43,9 +43,10 @@ test('missing temperatures do not turn into a made-up winter forecast; warmer da
 });
 
 test('outfit row labels match the recommended clothes across temperature ranges', () => {
-  for (const [max, labels] of [[34, ['上装', '下装', '防晒']], [28, ['上装', '下装', '鞋履']], [23, ['内搭', '外套', '下装']], [13.5, ['内搭', '外套', '下装']], [7, ['内搭', '外套', '搭配']]]) {
+  for (const [max, labels] of [[34, ['上装', '下装', '防晒']], [28, ['上装', '下装', '鞋履']], [23, ['外套', '下装']], [13.5, ['外套', '下装']], [7, ['外套', '搭配']]]) {
     const advice = context.outfitAdvice(day('2026-11-10', 6.5, max), '明天');
     assert.deepEqual(Array.from(advice.labels), labels);
-    assert.equal(advice.items.slice(0, 3).length, labels.length);
+    assert.equal(advice.items.slice(0, labels.length).length, labels.length);
+    assert.doesNotMatch(advice.items.join(' '), /内搭|卫衣|毛衣|长袖 T 恤/);
   }
 });

@@ -1,5 +1,13 @@
 # Thiings icon sources
 
+## Phone fee icon, 2026-11-10
+
+- Catalog: https://www.thiings.co/api/catalog?v=30d742ae92b8 (13,000 items).
+- Entry: https://www.thiings.co/things/sim-card
+- Image: https://lftz25oez4aqbxpq.public.blob.vercel-storage.com/image-kkjefkjyioOSS5pimcohzw1ZSssTlI.png
+- Local file: `subscribe/sim-card.webp`, transparent 144 × 144 WebP, 3,210 bytes.
+- The current website describes individual downloads as free for personal use and offers a separate commercial license for the collection. This entry does not assert a CC0 license.
+
 Source: https://www.thiings.co/things
 
 Catalog checked: `3c206616ffb6`, 2026-10-31.

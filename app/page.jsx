@@ -1,6 +1,6 @@
 "use client";
 
-import { upcomingSubscriptions } from "../lib/subscriptions";
+import { upcomingSubscriptions, phoneFeeProjection } from "../lib/subscriptions";
 
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { thiingsIconByKey, thiingsIconCategories } from "../lib/thiings-icons";
@@ -1520,13 +1520,13 @@ function outfitAdvice(day, period = "今日") {
     items.push("短袖 T 恤", "薄款休闲裤", "透气运动鞋");
   } else if (max >= 20) {
     title = "薄外套搭配";
-    items.push("长袖 T 恤或衬衫", "轻薄夹克", "直筒休闲裤");
+    items.push("轻薄夹克", "直筒休闲裤");
   } else if (max >= 12) {
     title = "保暖层次";
-    items.push("卫衣或毛衣", "夹克或风衣", "牛仔裤/工装裤");
+    items.push("夹克或风衣", "牛仔裤/工装裤");
   } else {
     title = "冬季保暖";
-    items.push("保暖内搭", "羽绒服或厚外套", "长裤和围巾");
+    items.push("羽绒服或厚外套", "长裤和围巾");
   }
 
   if (min <= 18 && max - min >= 7) items.push("早晚加一件外套");
@@ -1537,7 +1537,7 @@ function outfitAdvice(day, period = "今日") {
   return {
     title,
     items,
-    labels: max >= 32 ? ["上装", "下装", "防晒"] : max >= 26 ? ["上装", "下装", "鞋履"] : ["内搭", "外套", max >= 12 ? "下装" : "搭配"],
+    labels: max >= 32 ? ["上装", "下装", "防晒"] : max >= 26 ? ["上装", "下装", "鞋履"] : ["外套", max >= 12 ? "下装" : "搭配"],
     note: `无锡${period} ${label}，${min}° / ${max}°${rain == null ? "，降水概率暂缺" : `，降水概率 ${rain}%`}。`,
   };
 }
@@ -1565,7 +1565,7 @@ function tomorrowWeatherAdvice(weather, dateKey) {
 
 function TomorrowWeatherAdvice({ weather, dateKey }) {
   const advice = tomorrowWeatherAdvice(weather, dateKey);
-  const reminders = advice ? [...advice.outfit.items.slice(3).filter((item) => !/带伞|防滑防水鞋/.test(item)), ...advice.alerts] : [];
+  const reminders = advice ? [...advice.outfit.items.slice(advice.outfit.labels.length).filter((item) => !/带伞|防滑防水鞋/.test(item)), ...advice.alerts] : [];
   return (
     <section className="tomorrow-weather-advice" aria-label="明日穿衣与出行">
       <div className="tomorrow-advice-heading"><WorkbenchIcon name="wear" /><strong>明日穿衣与出行</strong>{advice && <time dateTime={advice.date}>{advice.date.slice(5).replace("-", "/")}</time>}</div>
@@ -1574,7 +1574,7 @@ function TomorrowWeatherAdvice({ weather, dateKey }) {
           <div><p className="tomorrow-temperature" aria-label={`最低 ${advice.day.min} 度，最高 ${advice.day.max} 度`}><span>{advice.day.min}°</span><span className="tomorrow-temperature-divider">/</span><strong>{advice.day.max}°</strong></p><p className="tomorrow-weather-summary">{weatherLabel(advice.day.code)}<span>·</span>{advice.day.rain == null ? "降水概率暂缺" : `降水概率 ${advice.day.rain}%`}</p></div>
           <WeatherMotionIcon code={advice.day.code} />
         </div>
-        <dl className="tomorrow-outfit">{advice.outfit.items.slice(0, 3).map((item, index) => <div key={item}><dt>{advice.outfit.labels[index]}</dt><dd>{item.replace("/", " / ")}</dd></div>)}</dl>
+        <dl className="tomorrow-outfit">{advice.outfit.items.slice(0, advice.outfit.labels.length).map((item, index) => <div key={item}><dt>{advice.outfit.labels[index]}</dt><dd>{item.replace("/", " / ")}</dd></div>)}</dl>
         {reminders.length > 0 && <div className="tomorrow-reminders"><span>出门提醒</span><ul>{reminders.map((reminder) => <li key={reminder}>{reminder}</li>)}</ul></div>}
       </> : <p className="tomorrow-weather-empty">明日预报尚未更新，点刷新获取穿衣与出行建议。</p>}
     </section>
@@ -3745,6 +3745,7 @@ const subscriptionIconCategories = [{
   label: "订阅服务",
   icons: [
     "thiings-subscribe:credit-card",
+    "thiings-subscribe:sim-card",
     "thiings-subscribe:borg-ui",
     "thiings-subscribe:115-life",
     "thiings-subscribe:115-desktop",
@@ -5430,13 +5431,17 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
   const [purchaseDate, setPurchaseDate] = useState(todayKey());
   const [billingCycle, setBillingCycle] = useState("每月");
   const [endDate, setEndDate] = useState("");
+  const [balance, setBalance] = useState("");
+  const [billingDay, setBillingDay] = useState("1");
   const [usageNote, setUsageNote] = useState("");
   const [formIcon, setFormIcon] = useState("thiings-subscribe:credit-card");
   const [showIconPicker, setShowIconPicker] = useState(false);
   const records = Array.isArray(items) ? items : [];
   const subscriptionCount = records.filter((item) => item.purchaseType === "订阅会员").length;
   const permanentCount = records.filter((item) => item.purchaseType === "永久会员").length;
-  const totalAmount = records.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+  const totalAmount = records.filter((item) => item.purchaseType !== "手机话费").reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+  const isPhoneFee = purchaseType === "手机话费";
+  const draftProjection = isPhoneFee ? phoneFeeProjection({ price, balance: balance === "" ? NaN : balance, billingDay, purchaseDate }, todayKey()) : null;
 
   function resetForm() {
     setShowForm(false);
@@ -5447,6 +5452,8 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
     setPurchaseDate(todayKey());
     setBillingCycle("每月");
     setEndDate("");
+    setBalance("");
+    setBillingDay("1");
     setUsageNote("");
     setFormIcon("thiings-subscribe:credit-card");
     setShowIconPicker(false);
@@ -5460,6 +5467,8 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
     setPurchaseDate(item.purchaseDate || todayKey());
     setBillingCycle(item.billingCycle || "每月");
     setEndDate(item.endDate || "");
+    setBalance(item.balance == null ? "" : String(item.balance));
+    setBillingDay(String(item.billingDay || 1));
     setUsageNote(item.usageNote || "");
     setFormIcon(item.icon || "thiings-subscribe:credit-card");
     setShowIconPicker(false);
@@ -5477,6 +5486,7 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
       endDate: purchaseType === "订阅会员" ? endDate : "",
       usageNote: usageNote.trim(),
       icon: formIcon,
+      ...(isPhoneFee ? { balance: Number(balance), billingDay: Number(billingDay) } : {}),
     };
     if (editingId) onUpdate(editingId, values);
     else onAdd(values);
@@ -5500,20 +5510,23 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
     return String(b.purchaseDate || "").localeCompare(String(a.purchaseDate || ""));
   }
 
-  const subscriptionItems = records.filter((item) => item.purchaseType !== "永久会员").sort(sortSubscriptionRecords);
+  const subscriptionItems = records.filter((item) => item.purchaseType !== "永久会员" && item.purchaseType !== "手机话费").sort(sortSubscriptionRecords);
   const permanentItems = records.filter((item) => item.purchaseType === "永久会员").sort(sortPermanentRecords);
+  const phoneItems = records.filter((item) => item.purchaseType === "手机话费");
 
   function renderSubscriptionRow(item) {
+    const phone = item.purchaseType === "手机话费" ? phoneFeeProjection(item, todayKey()) : null;
     return (
       <div className="subscription-row" key={item.id}>
         <span className="subscription-icon"><AssetIcon name={item.icon || "thiings-subscribe:credit-card"} size={32} /></span>
         <div className="subscription-info">
           <strong>{item.title}</strong>
-          <small>{item.purchaseType}{item.billingCycle ? ` · ${item.billingCycle}` : ""} · 购买于 {item.purchaseDate}</small>
-          <span>{subscriptionStatus(item)}{item.endDate ? ` · ${item.endDate}` : ""}</span>
+          <small>{phone ? `预计余额 ¥${phone.estimatedBalance.toFixed(2)} · 每月 ${item.billingDay} 日扣费` : `${item.purchaseType}${item.billingCycle ? ` · ${item.billingCycle}` : ""} · 购买于 ${item.purchaseDate}`}</small>
+          <span>{phone ? `${phone.daysRemaining < 0 ? "已到充值时间" : phone.daysRemaining === 0 ? "今天需充值" : `距充值 ${phone.daysRemaining} 天`} · ${phone.rechargeDate} 扣费前充值` : item.purchaseType === "手机话费" ? "请补全话费余额与套餐信息" : `${subscriptionStatus(item)}${item.endDate ? ` · ${item.endDate}` : ""}`}</span>
+          {phone && <small>余额确认于 {item.purchaseDate} · 充值后请更新余额</small>}
           {item.usageNote && <small className="subscription-note">{item.usageNote}</small>}
         </div>
-        <div className="subscription-price">¥{Number(item.price || 0).toLocaleString()}</div>
+        <div className="subscription-price">¥{Number(item.price || 0).toLocaleString()}{item.purchaseType === "手机话费" && <small> / 月</small>}</div>
         <div className="subscription-actions">
           <button type="button" onClick={() => startEdit(item)}>编辑</button>
           <button type="button" onClick={() => { if (window.confirm(`确定删除${item.title}？`)) onDelete(item.id); }}>删除</button>
@@ -5531,16 +5544,17 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
         <div><span>累计记录</span><strong>{records.length}</strong><small>项</small></div>
       </div>
       <button className="asset-add-btn" type="button" onClick={() => { resetForm(); setShowForm(true); }}>+ 添加订阅记录</button>
+      <button className="asset-add-btn" type="button" onClick={() => { resetForm(); setPurchaseType("手机话费"); setTitle("手机话费"); setFormIcon("thiings-subscribe:sim-card"); setShowForm(true); }}>+ 添加话费计算</button>
       {showForm && (
         <form className="asset-form subscription-form" onSubmit={handleSubmit}>
           <div className="asset-form-head">
-            <h3>{editingId ? "编辑订阅" : "添加订阅"}</h3>
+            <h3>{isPhoneFee ? editingId ? "编辑话费" : "添加话费计算" : editingId ? "编辑订阅" : "添加订阅"}</h3>
             <button type="button" onClick={resetForm}>取消</button>
           </div>
           <label className="subscription-field">
             <span>标题</span>
             <div className="asset-name-row">
-              <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="例如：视频会员" required />
+              <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder={isPhoneFee ? "例如：主卡话费" : "例如：视频会员"} required />
               <button type="button" className="asset-icon-btn" onClick={() => setShowIconPicker(!showIconPicker)}>
                 <span className="asset-icon-preview"><AssetIcon name={formIcon} size={34} /></span>
                 <span className="asset-icon-edit">📷</span>
@@ -5561,22 +5575,31 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
             </div>
           )}
           <label className="subscription-field">
-            <span>价格</span>
-            <input value={price} onChange={(event) => setPrice(event.target.value)} type="number" min="0" step="0.01" inputMode="decimal" placeholder="请输入价格" required />
+            <span>{isPhoneFee ? "每月套餐费（元）" : "价格"}</span>
+            <input value={price} onChange={(event) => setPrice(event.target.value)} type="number" min={isPhoneFee ? "0.01" : "0"} step="0.01" inputMode="decimal" placeholder={isPhoneFee ? "例如：59" : "请输入价格"} required />
           </label>
           <div className="asset-form-row">
             <label className="subscription-field">
-              <span>购买类型</span>
-              <WorkbenchSelect value={purchaseType} onChange={(event) => setPurchaseType(event.target.value)}>
+              <span>{isPhoneFee ? "记录类型" : "购买类型"}</span>
+              <WorkbenchSelect value={purchaseType} onChange={(event) => { setPurchaseType(event.target.value); if (event.target.value === "手机话费") setFormIcon("thiings-subscribe:sim-card"); }}>
                 <option value="订阅会员">订阅会员</option>
                 <option value="永久会员">永久会员</option>
+                <option value="手机话费">手机话费</option>
               </WorkbenchSelect>
             </label>
             <label className="subscription-field">
-              <span>购买日期</span>
-              <input value={purchaseDate} onChange={(event) => setPurchaseDate(event.target.value)} type="date" required />
+              <span>{isPhoneFee ? "余额确认日期" : "购买日期"}</span>
+              <input value={purchaseDate} onChange={(event) => setPurchaseDate(event.target.value)} type="date" max={isPhoneFee ? todayKey() : undefined} required />
             </label>
           </div>
+          {isPhoneFee && <>
+            <div className="asset-form-row">
+              <label className="subscription-field"><span>话费余额（元）</span><input value={balance} onChange={(event) => setBalance(event.target.value)} type="number" min="0" step="0.01" inputMode="decimal" placeholder="运营商显示的可用余额" required /></label>
+              <label className="subscription-field"><span>每月扣费日</span><input value={billingDay} onChange={(event) => setBillingDay(event.target.value)} type="number" min="1" max="31" step="1" inputMode="numeric" required /></label>
+            </div>
+            <p className="subscription-phone-note">余额按确认日当天已结算后的数值填写，从下一次扣费开始计算；当月没有该日时按月末扣费。仅估算固定套餐费，不含额外消费，充值后请更新余额和日期。</p>
+            {draftProjection && <p className="subscription-phone-preview" role="status">预计在 {draftProjection.rechargeDate} 扣费前需要充值</p>}
+          </>}
           {purchaseType === "订阅会员" && (
             <div className="asset-form-row">
               <label className="subscription-field">
@@ -5594,14 +5617,15 @@ function SubscriptionBoard({ items = [], onAdd, onUpdate, onDelete }) {
             </div>
           )}
           <label className="subscription-field">
-            <span>订阅使用情况说明</span>
-            <textarea value={usageNote} onChange={(event) => setUsageNote(event.target.value)} rows={3} placeholder="例如：家人共用 / 已取消自动续费 / 主要看综艺" />
+            <span>{isPhoneFee ? "话费备注" : "订阅使用情况说明"}</span>
+            <textarea value={usageNote} onChange={(event) => setUsageNote(event.target.value)} rows={3} placeholder={isPhoneFee ? "例如：主卡 / 副卡 / 不含额外流量费" : "例如：家人共用 / 已取消自动续费 / 主要看综艺"} />
           </label>
-          <button type="submit" className="asset-submit">{editingId ? "保存修改" : "保存订阅"}</button>
+          <button type="submit" className="asset-submit">{editingId ? "保存修改" : isPhoneFee ? "保存话费" : "保存订阅"}</button>
         </form>
       )}
       <div className="subscription-list">
-        {records.length === 0 && <p className="empty">还没有订阅记录，添加后可以集中查看购买周期和结束日期。</p>}
+        {records.length === 0 && <p className="empty">还没有记录，可以添加订阅或话费计算。</p>}
+        {phoneItems.length > 0 && <section className="subscription-group"><h3>手机话费</h3>{phoneItems.map(renderSubscriptionRow)}</section>}
         {subscriptionItems.length > 0 && (
           <section className="subscription-group">
             <h3>订阅会员</h3>
@@ -8069,8 +8093,8 @@ export default function Workbench() {
               </section>
               {!androidApp && todayTasksPanel}
               <section className="panel today-subscriptions">
-                <div className="panel-head"><div><h2>订阅到期</h2><p>未来 30 天内到期</p></div><button className="chip-button" type="button" onClick={() => { setAssetSection("subscriptions"); switchPage("assets"); }}>管理订阅</button></div>
-                {expiringSubscriptions.length === 0 ? <p className="empty">未来 30 天暂无到期订阅。</p> : <div className="subscription-expiry-list">{expiringSubscriptions.map((item) => <button className="subscription-expiry-row" type="button" key={item.id} onClick={() => { setAssetSection("subscriptions"); switchPage("assets"); }}><AssetIcon name={item.icon || "thiings-subscribe:credit-card"} size={36} /><span><strong>{item.title}</strong><small>{item.endDate} 到期{item.billingCycle ? ` · ${item.billingCycle}` : ""}</small></span><b className={item.daysRemaining <= 7 ? "urgent" : ""}>{item.daysRemaining === 0 ? "今天到期" : `剩 ${item.daysRemaining} 天`}</b></button>)}</div>}
+                <div className="panel-head"><div><h2>订阅与话费提醒</h2><p>未来 30 天到期或需充值</p></div><button className="chip-button" type="button" onClick={() => { setAssetSection("subscriptions"); switchPage("assets"); }}>管理订阅</button></div>
+                {expiringSubscriptions.length === 0 ? <p className="empty">未来 30 天暂无到期订阅或需充值的话费。</p> : <div className="subscription-expiry-list">{expiringSubscriptions.map((item) => <button className="subscription-expiry-row" type="button" key={item.id} onClick={() => { setAssetSection("subscriptions"); switchPage("assets"); }}><AssetIcon name={item.icon || "thiings-subscribe:credit-card"} size={36} /><span><strong>{item.title}</strong><small>{item.endDate} {item.purchaseType === "手机话费" ? "扣费前充值" : "到期"}{item.billingCycle ? ` · ${item.billingCycle}` : ""}</small></span><b className={item.daysRemaining <= 7 ? "urgent" : ""}>{item.purchaseType === "手机话费" && item.daysRemaining <= 0 ? "需充值" : item.daysRemaining === 0 ? "今天到期" : `剩 ${item.daysRemaining} 天`}</b></button>)}</div>}
               </section>
               <section className="stats-grid">
                 <StatButton label={androidApp ? "运动记录" : "今日速看"} value={androidApp ? `${exerciseRecords.filter((item) => item.date === todayKey()).length} 条` : "看板"} onClick={() => switchPage(androidApp ? "exercise" : "today")} />

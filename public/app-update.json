@@ -1,7 +1,7 @@
 {
-  "version": "1.1.9",
-  "versionCode": 11,
-  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.9/qiyeonline-1.1.9.apk",
-  "sha256": "0db8477f44628493e396f62e5a2e5a602f6caa90d0681d49963ca91a3963d16f",
-  "notes": "修复安卓桌面喝水小组件显示不全，分开显示实际毫升、目标、百分比与剩余量，适配窄尺寸与大字号；重绘玻璃杯和动态水位。请覆盖安装后打开App同步，不要先卸载。"
+  "version": "1.1.10",
+  "versionCode": 12,
+  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.10/qiyeonline-1.1.10.apk",
+  "sha256": "208f29c1681e46b2ad3bdb89306620044bf7b2fab60e4c9843b04a590d8bdb27",
+  "notes": "新增手机话费计算：按余额、每月套餐费和扣费日估算充值日期，首页显示话费提醒；取消内搭建议，保留外套、下装与出行提醒；内置SIM卡图标。请直接覆盖安装后联网打开App，不要先卸载。"
 }
