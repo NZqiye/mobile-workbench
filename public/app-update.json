@@ -1,7 +1,7 @@
 {
-  "version": "1.1.12",
-  "versionCode": 14,
-  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.12/qiyeonline-1.1.12.apk",
-  "sha256": "501ab04483509be229c6f74781454fb915d156c7c4ac006fc550409a44f588c2",
-  "notes": "全部栏目统一毛玻璃卡片、导航和表单；纪念日桌面卡片焕新，自动轮换即将到来的日子，支持手动切换和固定展示。保留现有记录与分类提醒，请覆盖安装后打开 App 同步。"
+  "version": "1.1.13",
+  "versionCode": 15,
+  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.13/qiyeonline-1.1.13.apk",
+  "sha256": "6bf2675d04ca421f18cba43d0839f54b1814f88744402c7b0b3e95ac79e1bff6",
+  "notes": "沿用现有分类新增120个透明图标，支持中文搜索和离线显示。纪念日卡片默认4×2，可拉高至4×4显示更多日子，采用中文天数和针对性短句；全部消息统一提醒。统一栏目对齐与紧凑间距，调整影视搜索布局，保留全局毛玻璃。请覆盖安装后打开 App 同步。"
 }

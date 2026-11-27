@@ -62,7 +62,30 @@ test('anniversary card snapshot shares target dates but not original years or pr
   const snapshot = widgetSnapshot([], [], 2000, '2026-11-26', [], [], {}, [{ id: 'ann', title: '纪念日', date: '2000-11-27', note: 'private' }]);
   assert.equal(snapshot.anniversaryDetails[0].dates[0], '2026-11-27');
   assert.equal(snapshot.anniversaryDetails[0].annual, true);
+  assert.match(snapshot.anniversaryDetails[0].icon, /^\/assets-icons\/thiings\/.+\.webp$/);
+  assert.ok(snapshot.anniversaryDetails[0].hints.today);
   assert.equal(JSON.stringify(snapshot).includes('private'), false);
   assert.equal(JSON.stringify(snapshot).includes('2000'), true);
   assert.equal(JSON.stringify(snapshot.anniversaryDetails).includes('2000'), false);
+});
+
+test('anniversary hints match the occasion and proximity and travel with notifications', async () => {
+  const { anniversaryMessage } = await import('../lib/anniversary-messages.js');
+  const { nativeReminderSchedule } = await import('../lib/native-reminders.js');
+  assert.match(anniversaryMessage({ type: 'birthday' }, 0), /生日快乐/);
+  assert.match(anniversaryMessage({ title: '恋爱纪念日' }, 1), /浪漫|彼此/);
+  assert.match(anniversaryMessage({ title: '研究生考试' }, 1), /证件|休息/);
+  assert.match(anniversaryMessage({ icon: 'exam', title: '重要一天' }, 3), /专注/);
+  assert.match(anniversaryMessage({ title: '旅行出发' }, 1), /行李/);
+  assert.match(anniversaryMessage({ icon: 'travel' }, 0), /出发/);
+  assert.match(anniversaryMessage({ title: '入职周年' }, 0), /努力/);
+  assert.match(anniversaryMessage({ type: 'festival' }, 1), /节日/);
+  assert.match(anniversaryMessage({ title: '发薪日' }, 0), /核对到账/);
+  assert.match(anniversaryMessage({ icon: 'payday' }, 1), /账单/);
+  assert.match(anniversaryMessage({ icon: 'extra-valentines-day' }, 1), /浪漫|彼此/);
+  assert.notEqual(anniversaryMessage({ type: 'birthday' }, 1), anniversaryMessage({ type: 'birthday' }, 0));
+  assert.notEqual(anniversaryMessage({ icon: 'travel' }, 1), anniversaryMessage({ icon: 'travel' }, 100));
+  const schedule = nativeReminderSchedule({ anniversaries: [{ id: 'exam', title: '考试', type: 'countdown', date: '2026-11-28' }] }, Date.parse('2026-11-27T00:00:00+08:00'));
+  assert.match(schedule.find(item => item.id.endsWith(':1')).title, /明天.*2026-11-28.*\n.*证件/);
+  assert.match(schedule.find(item => item.id.endsWith(':0')).title, /今天.*\n.*稳住节奏/);
 });

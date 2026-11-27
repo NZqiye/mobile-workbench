@@ -218,3 +218,27 @@
 .phone-shell.ios18-shell .watch-history-toggle strong { font-size: 16px; }
 .phone-shell.ios18-shell .watch-history-toggle small { margin-left: 8px; color: var(--ios-muted); font-size: 13px; font-weight: 500; }
 .phone-shell.ios18-shell .watch-history-toggle > span { color: var(--ios-blue); font-size: 14px; }
+
+.phone-shell.ios18-shell.visual-aligned .tmdb-panel {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+.phone-shell.ios18-shell.visual-aligned .tmdb-panel-title { min-width: 0; }
+.phone-shell.ios18-shell.visual-aligned .tmdb-sync-button {
+  grid-column: 1;
+  width: fit-content;
+  min-height: 44px;
+  padding: 10px 14px;
+  white-space: nowrap;
+}
+.phone-shell.ios18-shell.visual-aligned .tmdb-search {
+  grid-column: 1;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+.phone-shell.ios18-shell.visual-aligned .tmdb-search :is(input, button) { min-height: 44px; }
+.phone-shell.ios18-shell.visual-aligned .tmdb-search .chip-button { padding-inline: 16px; white-space: nowrap; }
+.phone-shell.ios18-shell.visual-aligned .tmdb-results { grid-column: 1; }
+.phone-shell.ios18-shell.visual-aligned .tmdb-results:empty { display: none; }

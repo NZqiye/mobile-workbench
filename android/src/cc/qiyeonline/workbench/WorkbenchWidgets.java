@@ -46,7 +46,11 @@ public class WorkbenchWidgets extends AppWidgetProvider {
             JSONObject item = anniversaries.optJSONObject(i); if (item == null) continue;
             JSONArray dates = item.optJSONArray("dates"), safeDates = new JSONArray();
             if (dates != null) for (int j = 0; j < Math.min(3, dates.length()); j++) { String target = dates.getString(j); LocalDate.parse(target); safeDates.put(target); }
-            safeAnniversaries.put(new JSONObject().put("id", text(item, "id", 120)).put("title", text(item, "title", 80)).put("annual", item.optBoolean("annual", true)).put("calendarType", "lunar".equals(item.optString("calendarType")) ? "lunar" : "solar").put("dates", safeDates));
+            String icon = item.optString("icon", "");
+            if (!icon.matches("/assets-icons/thiings/[a-z0-9-]+/[a-z0-9-]+\\.webp")) icon = "/assets-icons/thiings/dates/heart.webp";
+            JSONObject hints = item.optJSONObject("hints"), safeHints = new JSONObject();
+            if (hints != null) for (String key : new String[] { "today", "tomorrow", "soon", "future", "past" }) safeHints.put(key, text(hints, key, 80));
+            safeAnniversaries.put(new JSONObject().put("id", text(item, "id", 120)).put("title", text(item, "title", 80)).put("icon", icon).put("hints", safeHints).put("annual", item.optBoolean("annual", true)).put("calendarType", "lunar".equals(item.optString("calendarType")) ? "lunar" : "solar").put("dates", safeDates));
         }
         snapshot.put("anniversaryDetails", safeAnniversaries);
         snapshot.put("pendingCount", count(source, "pendingCount", 999)).put("completedCount", count(source, "completedCount", 999));
@@ -235,6 +239,13 @@ public class WorkbenchWidgets extends AppWidgetProvider {
         return 0;
     }
 
+    static String anniversaryHint(JSONObject item, long days) {
+        JSONObject hints = item == null ? null : item.optJSONObject("hints");
+        String key = days < 0 ? "past" : days == 0 ? "today" : days == 1 ? "tomorrow" : days <= 7 ? "soon" : "future";
+        String hint = hints == null ? "" : hints.optString(key);
+        return hint.isEmpty() ? days == 0 ? "就是今天，记得留下一份纪念。" : days == 1 ? "重要的日子就在明天，别忘了期待。" : "把值得期待的日子，放在心上。" : hint;
+    }
+
     private static void renderAnniversary(Context context, RemoteViews views, JSONObject data, int id, String date) {
         android.content.SharedPreferences preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         String selection = preferences.getString("anniversary:" + id, "");
@@ -255,22 +266,47 @@ public class WorkbenchWidgets extends AppWidgetProvider {
         if (selected != null) target = anniversaryDate(selected, date);
         boolean available = selected != null && !target.isEmpty();
         long days = available ? WidgetPolicy.remaining(target, date) : 0;
-        views.setTextViewText(R.id.widget_title, selected == null ? "纪念日倒数" : selected.optString("title"));
-        views.setTextViewText(R.id.widget_date, available ? target.replace('-', '/') + (selection.isEmpty() && queue.length() > 1 ? " · " + (position + 1) + "/" + queue.length() : "") : selected == null ? selection.isEmpty() ? "暂无将到的日子" : "该纪念日已删除" : "打开 App 更新日期");
+        views.setTextViewText(R.id.widget_position, selection.isEmpty() && queue.length() > 1 ? (position + 1) + " / " + queue.length() : "");
         int height = AppWidgetManager.getInstance(context).getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140);
         float fontScale = context.getResources().getConfiguration().fontScale;
         if (height < 180) {
-            int padding = Math.round(12 * context.getResources().getDisplayMetrics().density);
+            int padding = Math.round(8 * context.getResources().getDisplayMetrics().density);
             views.setViewPadding(R.id.widget_root, padding, padding, padding, padding);
         }
-        if (height < 180 && fontScale > 1.5f) views.setTextViewTextSize(R.id.widget_date, android.util.TypedValue.COMPLEX_UNIT_SP, 16.5f / fontScale);
-        if (height < 180) views.setTextViewTextSize(R.id.widget_title, android.util.TypedValue.COMPLEX_UNIT_SP, Math.min(16, 24 / fontScale));
-        views.setTextViewText(R.id.widget_amount, available ? days == 0 ? "今天" : String.valueOf(Math.abs(days)) : "—");
-        int width = AppWidgetManager.getInstance(context).getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250);
-        float amountSize = available && Math.abs(days) > 9999 ? 34 : 44;
-        if (width < 300) amountSize = Math.min(amountSize, 60 / fontScale);
-        views.setTextViewTextSize(R.id.widget_amount, android.util.TypedValue.COMPLEX_UNIT_SP, amountSize);
-        views.setTextViewText(R.id.widget_footer, available ? days == 0 ? "就是今天" : days > 0 ? "还有 · 天" : "已过 · 天" : "点击右上角选择");
+        views.setTextViewTextSize(R.id.widget_heading, android.util.TypedValue.COMPLEX_UNIT_SP, Math.min(14, 20 / fontScale));
+        views.setTextViewTextSize(R.id.widget_footer, android.util.TypedValue.COMPLEX_UNIT_SP, Math.min(11, 12 / fontScale));
+        views.setTextViewTextSize(R.id.widget_position, android.util.TypedValue.COMPLEX_UNIT_SP, Math.min(11, 13 / fontScale));
+        views.setTextViewText(R.id.widget_footer, available ? anniversaryHint(selected, days) : "打开 App，记录值得期待的日子。");
+        int rowCount = Math.max(1, Math.min(5, (int) ((height - 90) / (50 * Math.min(fontScale, 1.4f)))));
+        int[] rows = { R.id.widget_upcoming_row_1, R.id.widget_upcoming_row_2, R.id.widget_upcoming_row_3, R.id.widget_upcoming_row_4, R.id.widget_upcoming_row_5 };
+        int[] icons = { R.id.widget_icon, R.id.widget_upcoming_icon_2, R.id.widget_upcoming_icon_3, R.id.widget_upcoming_icon_4, R.id.widget_upcoming_icon_5 };
+        int[] titles = { R.id.widget_title, R.id.widget_upcoming_title_2, R.id.widget_upcoming_title_3, R.id.widget_upcoming_title_4, R.id.widget_upcoming_title_5 };
+        int[] dates = { R.id.widget_date, R.id.widget_upcoming_date_2, R.id.widget_upcoming_date_3, R.id.widget_upcoming_date_4, R.id.widget_upcoming_date_5 };
+        int[] amounts = { R.id.widget_amount, R.id.widget_upcoming_days_2, R.id.widget_upcoming_days_3, R.id.widget_upcoming_days_4, R.id.widget_upcoming_days_5 };
+        for (int index = 0; index < rows.length; index++) {
+            JSONObject item = index == 0 ? selected : selection.isEmpty() && index < queue.length() ? queue.optJSONObject((position + index) % queue.length()) : null;
+            views.setViewVisibility(rows[index], index == 0 || index < rowCount && item != null ? View.VISIBLE : View.GONE);
+            views.setTextViewTextSize(titles[index], android.util.TypedValue.COMPLEX_UNIT_SP, Math.min(14, 19 / fontScale));
+            views.setTextViewTextSize(dates[index], android.util.TypedValue.COMPLEX_UNIT_SP, Math.min(10, 12 / fontScale));
+            views.setTextViewTextSize(amounts[index], android.util.TypedValue.COMPLEX_UNIT_SP, Math.min(20, 28 / fontScale));
+            if (item == null) {
+                if (index == 0) {
+                    views.setTextViewText(titles[index], "还没有临近日期");
+                    views.setTextViewText(dates[index], selection.isEmpty() ? "打开 App 同步" : "记录已删除");
+                    views.setTextViewText(amounts[index], "—");
+                }
+                continue;
+            }
+            String nextDate = anniversaryDate(item, date);
+            long remaining = WidgetPolicy.remaining(nextDate, date);
+            views.setTextViewText(titles[index], item.optString("title"));
+            views.setTextViewText(dates[index], nextDate.replace('-', '/'));
+            views.setTextViewText(amounts[index], remaining == 0 ? "今天" : remaining > 0 ? remaining + "天" : "已过" + Math.abs(remaining) + "天");
+            if (Math.abs(remaining) > 9999) views.setTextViewTextSize(amounts[index], android.util.TypedValue.COMPLEX_UNIT_SP, Math.min(15, 20 / fontScale));
+            android.graphics.Bitmap nextIcon = WidgetImages.icon(context, item.optString("icon", "/assets-icons/thiings/dates/heart.webp"));
+            if (nextIcon != null) views.setImageViewBitmap(icons[index], nextIcon);
+            views.setContentDescription(rows[index], item.optString("title") + (remaining == 0 ? "，就是今天" : remaining > 0 ? "，还有" + remaining + "天" : "，已过" + Math.abs(remaining) + "天"));
+        }
         views.setContentDescription(R.id.widget_root, available ? selected.optString("title") + (days == 0 ? "，就是今天" : days > 0 ? "，还有" + days + "天" : "，已过" + Math.abs(days) + "天") : "纪念日倒数，暂无可展示日期");
         Intent configure = new Intent(context, WidgetAnniversaryConfigActivity.class).setAction(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
         views.setOnClickPendingIntent(R.id.widget_settings, PendingIntent.getActivity(context, 3000 + id, configure, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));

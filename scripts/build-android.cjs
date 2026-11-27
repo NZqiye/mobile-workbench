@@ -60,7 +60,7 @@ fs.copyFileSync(builtApk, apk);
 const checksum = crypto.createHash('sha256').update(fs.readFileSync(apk)).digest('hex');
 fs.writeFileSync(path.join(output, 'SHA256SUMS.txt'), `${checksum}  ${path.basename(apk)}\n`);
 const versionCode = Number(fs.readFileSync(path.join(root, 'android', 'AndroidManifest.xml'), 'utf8').match(/android:versionCode="(\d+)"/)[1]);
-const updateManifest = JSON.stringify({ version, versionCode, url: `https://github.com/NZqiye/mobile-workbench/releases/download/android-v${version}/${path.basename(apk)}`, sha256: checksum, notes: '全部栏目统一毛玻璃卡片、导航和表单；纪念日桌面卡片焕新，自动轮换即将到来的日子，支持手动切换和固定展示。保留现有记录与分类提醒，请覆盖安装后打开 App 同步。' }, null, 2) + '\n';
+const updateManifest = JSON.stringify({ version, versionCode, url: `https://github.com/NZqiye/mobile-workbench/releases/download/android-v${version}/${path.basename(apk)}`, sha256: checksum, notes: '沿用现有分类新增120个透明图标，支持中文搜索和离线显示。纪念日卡片默认4×2，可拉高至4×4显示更多日子，采用中文天数和针对性短句；全部消息统一提醒。统一栏目对齐与紧凑间距，调整影视搜索布局，保留全局毛玻璃。请覆盖安装后打开 App 同步。' }, null, 2) + '\n';
 fs.writeFileSync(path.join(output, 'app-update.json'), updateManifest);
 fs.writeFileSync(path.join(root, 'public', 'app-update.json'), updateManifest);
 console.log(`APK: ${apk}\nSHA-256: ${checksum}`);

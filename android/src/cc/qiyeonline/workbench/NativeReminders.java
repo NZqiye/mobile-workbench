@@ -38,17 +38,11 @@ final class NativeReminders {
     }
     private static boolean allowed(Context context, String kind) {
         NotificationChannel channel = manager(context).getNotificationChannel(channelId(kind));
-        return prefs(context).getBoolean("category:" + kind, true) && channel != null && channel.getImportance() != NotificationManager.IMPORTANCE_NONE;
+        return channel != null && channel.getImportance() != NotificationManager.IMPORTANCE_NONE;
     }
     static void configure(Context context, JSONObject settings) {
         SharedPreferences.Editor edit = prefs(context).edit();
-        for (String kind : KINDS) if (settings.has(kind)) {
-            boolean value = settings.optBoolean(kind, true); edit.putBoolean("category:" + kind, value);
-            if (!value) {
-                JSONArray stored = tasks(context);
-                for (int i = 0; i < stored.length(); i++) { JSONObject item = stored.optJSONObject(i); if (item != null && kind.equals(item.optString("kind", "tasks"))) manager(context).cancel(item.optString("id"), 1); }
-            }
-        }
+        for (String kind : KINDS) edit.remove("category:" + kind);
         edit.apply(); refresh(context);
     }
     static boolean exact(Context context) { return Build.VERSION.SDK_INT < 31 || context.getSystemService(AlarmManager.class).canScheduleExactAlarms(); }
@@ -145,7 +139,7 @@ final class NativeReminders {
         boolean permitted = permitted(context);
         int pending = 0; long now = System.currentTimeMillis(), next = Long.MAX_VALUE;
         JSONObject categories = new JSONObject(), counts = new JSONObject(), channels = new JSONObject();
-        for (String kind : KINDS) { categories.put(kind, prefs(context).getBoolean("category:" + kind, true)); counts.put(kind, 0); channels.put(kind, manager(context).getNotificationChannel(channelId(kind)).getImportance() != NotificationManager.IMPORTANCE_NONE); }
+        for (String kind : KINDS) { categories.put(kind, true); counts.put(kind, 0); channels.put(kind, manager(context).getNotificationChannel(channelId(kind)).getImportance() != NotificationManager.IMPORTANCE_NONE); }
         JSONObject delivered = new JSONObject(prefs(context).getString("delivered", "{}"));
         JSONArray tasks = tasks(context);
         for (int i = 0; i < tasks.length(); i++) {

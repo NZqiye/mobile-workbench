@@ -8,7 +8,7 @@ export default function AnniversaryIconPicker({ value, onChange }) {
   const [query, setQuery] = useState("");
   const matches = anniversaryIcons.filter((icon) => `${icon.label} ${icon.group}`.toLowerCase().includes(query.trim().toLowerCase()));
   return <div className="daybook-icon-library">
-    <label className="icon-search"><span>搜索纪念日图标</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="生日、旅行、礼物…" /></label>
+    <label className="icon-search"><span>搜索纪念日图标</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="发薪日、节日、美食…" /></label>
     <div className="icon-search-results">
     {!matches.length && <p className="icon-search-empty">没有找到图标，试试其他名字。</p>}
     {anniversaryIconGroups.filter((group) => matches.some((icon) => icon.group === group)).map((group) => <fieldset key={group}>

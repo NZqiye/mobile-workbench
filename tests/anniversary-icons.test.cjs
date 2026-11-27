@@ -4,7 +4,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const context = vm.createContext({});
-vm.runInContext(fs.readFileSync(path.join(__dirname, "../lib/anniversary-icons.js"), "utf8").replaceAll("export const", "var").replaceAll("export function", "function"), context);
+vm.runInContext(fs.readFileSync(path.join(__dirname, "../lib/thiings-icon-additions.js"), "utf8").replaceAll("export const", "var"), context);
+vm.runInContext(fs.readFileSync(path.join(__dirname, "../lib/anniversary-icons.js"), "utf8").replace(/^import .*;$/gm, "").replaceAll("export const", "var").replaceAll("export function", "function"), context);
 
 test("date icon library covers requested occasions with unique IDs and decodable local assets", async () => {
   const sharp = require("sharp");
@@ -22,6 +23,10 @@ test("saved icon wins over category defaults and legacy or unknown icons still r
   assert.equal(context.anniversaryIcon({ type: "countdown", icon: "travel" }).id, "travel");
   assert.equal(context.anniversaryIcon({ type: "memory", icon: "missing" }).id, "wedding");
   assert.equal(context.anniversaryIcon({}).id, "wedding");
+  assert.equal(context.anniversaryIcon({ title: "每月发薪日", type: "countdown" }).id, "payday");
+  assert.equal(context.anniversaryIcon({ title: "发薪日", icon: "gift" }).id, "gift");
+  assert.equal(context.anniversaryIcon({ type: "festival", title: "圣诞节" }).id, "extra-christmas-tree");
+  assert.equal(context.anniversaryIconGroups.length, 7);
 });
 
 test("Chinese holiday titles get relevant defaults while explicit choices take priority", () => {

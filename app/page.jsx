@@ -3,7 +3,7 @@
 import { upcomingSubscriptions, phoneFeeProjection } from "../lib/subscriptions";
 
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { thiingsIconByKey, thiingsIconCategories } from "../lib/thiings-icons";
+import { thiingsIconByKey, thiingsIconCategories, thiingsIconLabels } from "../lib/thiings-icons";
 import TravelBoard from "./components/travel-board";
 import WorkbenchSelect, { SelectChevron } from "./components/workbench-select";
 import AnniversaryIconPicker from "./components/anniversary-icon-picker";
@@ -28,6 +28,7 @@ import { encodeMarkdownBackup, decodeMarkdownBackup } from "../lib/markdown-back
 import { planQuickRecordChanges, undoQuickRecordChanges } from "../lib/workbench-records";
 import { anniversaryIcon, anniversaryIcons } from "../lib/anniversary-icons";
 import { anniversaryProgress } from "../lib/anniversary-progress";
+import { anniversaryMessage } from "../lib/anniversary-messages";
 import { WeeklyChart, MealBreakdown } from "./components/statistics-charts";
 import StockPriceChart from "./components/stock-price-chart";
 import "./components/stock-lists.css";
@@ -3450,7 +3451,7 @@ function DailyArrangement({ view = "habits", habits, done, tasks, anniversaries,
         </div>
         {timeline && <div className="daybook-timeline"><div className="daybook-track" role="progressbar" aria-label={`${item.title}日期进度`} aria-valuenow={timeline.percent} aria-valuemin={0} aria-valuemax={100}><span style={{ transform: `scaleX(${timeline.percent / 100})` }} /></div>{featured && <div className="daybook-progress-copy"><span>已过 {timeline.elapsed}/{timeline.total} 天 · {timeline.percent}%</span><span>按自然日计算</span></div>}</div>}
         {featured && <div className="daybook-metrics"><div><strong>{timeline ? `${timeline.percent}%` : targetDate.slice(5).replace("-", ".")}</strong><span>{timeline ? "日期进度" : "目标日期"}</span></div><div><strong>{Math.floor(meta.nextDays / 7)} <small>周</small></strong><span>余 {meta.nextDays % 7} 天</span></div><div><strong>{meta.nextDays.toLocaleString()}</strong><span>剩余天数</span></div></div>}
-        <div className="daybook-entry-actions"><span>{featured ? ["memorial", "qingming"].includes(icon.id) ? "把思念，留给重要的人" : meta.nextDays === 0 ? "今天，记得好好珍惜" : "下一份期待，正在靠近" : ""}</span><button className="daybook-delete" type="button" aria-label={`删除${item.title}`} onClick={() => onDeleteAnniversary(item.id)}>删除</button></div>
+        <div className="daybook-entry-actions"><span>{featured ? ["memorial", "qingming"].includes(icon.id) ? "把思念，留给重要的人" : anniversaryMessage(item, meta.nextDays) : ""}</span><button className="daybook-delete" type="button" aria-label={`删除${item.title}`} onClick={() => onDeleteAnniversary(item.id)}>删除</button></div>
         {editingAnniversaryIcon === item.id && <div className="daybook-inline-picker"><div className="daybook-picker-head"><strong>选择日子图标</strong><button type="button" onClick={() => setEditingAnniversaryIcon(null)}>收起</button></div><AnniversaryIconPicker value={icon.id} onChange={(iconId) => { onUpdateAnniversaryIcon(item.id, iconId); setEditingAnniversaryIcon(null); }} /></div>}
       </article>
     );
@@ -3817,7 +3818,7 @@ const assetIconNames = {
 };
 function assetIconLabel(icon) {
   const name = icon.replace("thiings:", "");
-  return assetIconNames[name] || name.replaceAll("-", " ");
+  return thiingsIconLabels[name] || assetIconNames[name] || name.replaceAll("-", " ");
 }
 
 function assetCategory(item) {
@@ -8269,6 +8270,9 @@ export default function Workbench() {
                 <p className="backup-description" id="backup-description">导出的 Markdown 包含全部私人记录，请勿公开分享；可用于恢复，也兼容旧版 JSON 备份。</p>
               </section>
               <PonyThemePanel value={ponyTheme} onChange={changePonyTheme} />
+              <section className="panel" aria-label="应用信息">
+                <div className="panel-head"><h2>应用信息</h2><a className="chip-button" href="https://www.thiings.co/things" target="_blank" rel="noopener noreferrer">图标署名 · Thiings</a></div>
+              </section>
             </>
           )}
         </section>
