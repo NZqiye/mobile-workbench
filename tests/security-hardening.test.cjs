@@ -30,6 +30,14 @@ test('cross-site fetch metadata is rejected even when Origin and Referer are abs
   }
 });
 
+test('local preview accepts the actual loopback Host but never trusts a public Host override', () => {
+  const context = load(['lib/access-auth.js']);
+  const request = headers => new Request('http://localhost:3000/api/access', { headers });
+  assert.equal(context.isSameOrigin(request({ Host: '127.0.0.1:3000', Origin: 'http://127.0.0.1:3000' })), true);
+  assert.equal(context.isSameOrigin(request({ Host: 'evil.test:3000', Origin: 'http://evil.test:3000' })), false);
+  assert.equal(context.isSameOrigin(request({ Host: '127.0.0.1:4000', Origin: 'http://127.0.0.1:4000' })), false);
+});
+
 test('JSON input limits cancel a chunked upload without consuming the remaining body', async () => {
   const context = load(['lib/access-auth.js']);
   let reads = 0;

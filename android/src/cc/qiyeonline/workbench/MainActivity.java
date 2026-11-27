@@ -204,7 +204,8 @@ public final class MainActivity extends Activity {
                             data = new JSONObject(message.getData());
                             switch (data.optString("action")) {
                                 case "notification-state": replyNotifications(data.optString("id")); break;
-                                case "notification-sync": NativeReminders.sync(MainActivity.this, data.getJSONArray("tasks")); replyNotifications(data.optString("id")); break;
+                                case "notification-sync": NativeReminders.sync(MainActivity.this, data.getJSONArray("tasks"), data.optString("owner", "personal-workbench")); replyNotifications(data.optString("id")); break;
+                                case "notification-configure": NativeReminders.configure(MainActivity.this, data.getJSONObject("settings")); replyNotifications(data.optString("id")); break;
                                 case "widgets-sync": WorkbenchWidgets.sync(MainActivity.this, data.getJSONObject("snapshot")); break;
                                 case "notification-enable":
                                     if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -264,7 +265,7 @@ public final class MainActivity extends Activity {
 
     private void openPageFromWidget() {
         String page = getIntent().getStringExtra("widgetPage");
-        if ((!"plans".equals(page) && !"diet".equals(page) && !"consultations".equals(page) && !"assets".equals(page)) || web == null || !trusted(Uri.parse(web.getUrl()))) return;
+        if ((!"plans".equals(page) && !"diet".equals(page) && !"consultations".equals(page) && !"assets".equals(page) && !"anniversaries".equals(page) && !"subscriptions".equals(page)) || web == null || !trusted(Uri.parse(web.getUrl()))) return;
         web.evaluateJavascript("window.__qiyeOpenWidget ? window.__qiyeOpenWidget(" + JSONObject.quote(page) + ") : (window.__qiyeWidgetPending = " + JSONObject.quote(page) + ")", null);
         getIntent().removeExtra("widgetPage");
     }

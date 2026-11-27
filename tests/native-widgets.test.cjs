@@ -12,7 +12,7 @@ test('water progress excludes old days and meals, retains target and sends no fu
   const {widgetSnapshot}=await import('../lib/native-widgets.js');
   const data=widgetSnapshot([{title:'x'.repeat(100),content:'private note'}],[{type:'water',date:'2026-11-08',amount:500},{type:'water',date:'2026-11-08',amount:250},{type:'water',date:'2026-11-07',amount:1000},{type:'meal',date:'2026-11-08',amount:800}],2500,'2026-11-08');
   assert.equal(data.waterMl,750);assert.equal(data.targetMl,2500);assert.equal(data.tasks[0].length,40);
-  assert.equal(JSON.stringify(data).includes('private note'),false);assert.deepEqual(Object.keys(data).sort(),['assetCount','assetDetails','assetTotal','completedCount','date','pendingCount','recentAssets','targetMl','tasks','watchDays','waterMl']);
+  assert.equal(JSON.stringify(data).includes('private note'),false);assert.deepEqual(Object.keys(data).sort(),['anniversaryDetails','assetCount','assetDetails','assetTotal','completedCount','date','pendingCount','recentAssets','targetMl','tasks','watchDays','waterMl']);
 });
 
 test('film widget groups same-day episodes, deduplicates and excludes stopped or finished shows', async () => {

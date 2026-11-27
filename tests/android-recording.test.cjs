@@ -80,6 +80,7 @@ async function voiceHarness({ service = 'ready', nativeError, native = true, hol
   let cursor = 0, mounted = false, audioResolve, audioReject, onStarted, settings = 0, canceled = 0, releaseResponse;
   const context = vm.createContext({
     useId: () => 'voice',
+    accountStorageKey: name => `qiyeworkbench:${name}`,
     useState(initial) { const index = cursor++; if (!(index in slots)) slots[index] = initial; return [slots[index], value => { slots[index] = typeof value === 'function' ? value(slots[index]) : value; }]; },
     useRef(initial) { const index = cursor++; return slots[index] ?? (slots[index] = { current: initial }); },
     useEffect(callback) { if (!mounted) effects.push(callback); },

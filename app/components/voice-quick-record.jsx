@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { parseQuickRecords } from "../../lib/quick-records";
 import { describeQuickRecord } from "../../lib/workbench-records";
+import { accountStorageKey } from "../../lib/account-storage";
 import styles from "./voice-quick-record.module.css";
 
 export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, onOpen, onSettings, saved, onSaved }) {
@@ -34,14 +35,14 @@ export default function VoiceQuickRecord({ session, onPrepare, onSave, onUndo, o
   }, []);
 
   useEffect(() => {
-    setText(localStorage.getItem("qiyeworkbench:quickRecordDraft") || "");
+    setText(localStorage.getItem(accountStorageKey("quickRecordDraft")) || "");
     setDraftReady(true);
   }, []);
 
   useEffect(() => {
     if (!draftReady) return;
-    if (text) localStorage.setItem("qiyeworkbench:quickRecordDraft", text);
-    else localStorage.removeItem("qiyeworkbench:quickRecordDraft");
+    if (text) localStorage.setItem(accountStorageKey("quickRecordDraft"), text);
+    else localStorage.removeItem(accountStorageKey("quickRecordDraft"));
   }, [text, draftReady]);
 
   function releaseMicrophone() {

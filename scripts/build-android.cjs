@@ -19,7 +19,7 @@ fs.copyFileSync(path.join(root, 'public', 'icons', 'icon-512.png'), path.join(re
 fs.cpSync(path.join(root, 'android', 'res'), path.join(build, 'res'), { recursive: true });
 fs.copyFileSync(path.join(root, 'android', 'AndroidManifest.xml'), path.join(build, 'AndroidManifest.xml'));
 fs.copyFileSync(path.join(root, 'android', 'src', 'cc', 'qiyeonline', 'workbench', 'MainActivity.java'), path.join(build, 'MainActivity.java'));
-const sources = ['MainActivity.java', 'BundledAssets.java', 'BundledAssetPolicy.java', 'AppUpdater.java', 'UpdateFileProvider.java', 'FoodPhotoProvider.java', 'WorkbenchWidgets.java', 'WidgetWatchService.java', 'WidgetAssetConfigActivity.java', 'WidgetPolicy.java', 'WidgetImages.java', 'UpdateSecurity.java', 'NativeReminders.java', 'ReminderReceiver.java', 'ReminderPolicy.java'];
+const sources = ['MainActivity.java', 'BundledAssets.java', 'BundledAssetPolicy.java', 'AppUpdater.java', 'UpdateFileProvider.java', 'FoodPhotoProvider.java', 'WorkbenchWidgets.java', 'WidgetWatchService.java', 'WidgetAssetConfigActivity.java', 'WidgetAnniversaryConfigActivity.java', 'WidgetPolicy.java', 'WidgetImages.java', 'UpdateSecurity.java', 'NativeReminders.java', 'ReminderReceiver.java', 'ReminderPolicy.java'];
 for (const name of sources.slice(1)) fs.copyFileSync(path.join(root, 'android', 'src', 'cc', 'qiyeonline', 'workbench', name), path.join(build, name));
 const windows = process.platform === 'win32';
 const javaTool = name => process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, 'bin', name + (windows ? '.exe' : '')) : name;
@@ -60,7 +60,7 @@ fs.copyFileSync(builtApk, apk);
 const checksum = crypto.createHash('sha256').update(fs.readFileSync(apk)).digest('hex');
 fs.writeFileSync(path.join(output, 'SHA256SUMS.txt'), `${checksum}  ${path.basename(apk)}\n`);
 const versionCode = Number(fs.readFileSync(path.join(root, 'android', 'AndroidManifest.xml'), 'utf8').match(/android:versionCode="(\d+)"/)[1]);
-const updateManifest = JSON.stringify({ version, versionCode, url: `https://github.com/NZqiye/mobile-workbench/releases/download/android-v${version}/${path.basename(apk)}`, sha256: checksum, notes: '优化使用体验，请更新到最新版本。' }, null, 2) + '\n';
+const updateManifest = JSON.stringify({ version, versionCode, url: `https://github.com/NZqiye/mobile-workbench/releases/download/android-v${version}/${path.basename(apk)}`, sha256: checksum, notes: '新增待办、追剧、纪念日及订阅话费分类提醒；新增纪念日倒数桌面卡片；支持独立测试账号；优化毛玻璃追剧日历。更新后请在消息提醒中开启通知。' }, null, 2) + '\n';
 fs.writeFileSync(path.join(output, 'app-update.json'), updateManifest);
 fs.writeFileSync(path.join(root, 'public', 'app-update.json'), updateManifest);
 console.log(`APK: ${apk}\nSHA-256: ${checksum}`);

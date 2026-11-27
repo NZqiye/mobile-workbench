@@ -68,6 +68,20 @@ test('notification denial, test errors and channel reset remain recoverable', as
   await assert.rejects(disable, { name: 'AbortError' });
 });
 
+test('new bridge preserves account owner and sends category changes independently', async () => {
+  const h = bridge(); h.connect();
+  const sync = h.native.syncReminders([{ id: 'ann', title: '纪念日', at: 123, kind: 'anniversaries' }], 'test-workbench');
+  assert.equal(h.sent[0].owner, 'test-workbench');
+  assert.equal(h.sent[0].tasks[0].kind, 'anniversaries');
+  h.receive({ id: h.sent[0].id, notifications: { pending: 1 } });
+  assert.equal((await sync).pending, 1);
+  const configure = h.native.configureNotifications({ watch: false });
+  assert.equal(h.sent[1].action, 'notification-configure');
+  assert.deepEqual(h.sent[1].settings, { watch: false });
+  h.receive({ id: h.sent[1].id, notifications: { categories: { watch: false } } });
+  assert.equal((await configure).categories.watch, false);
+});
+
 test('real Java reminder policy handles duplicate delivery, rescheduling and missed reminders', () => {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'qiye-reminder-test-'));
   const javaDir = process.env.JAVA_HOME || 'C:/Program Files/ojdkbuild/java-17-openjdk-17.0.3.0.6-1';

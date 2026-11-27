@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import styles from "./native-notification-panel.module.css";
 
-export default function NativeNotificationPanel() {
+const categories = [["tasks", "待办到时", "按任务设置的时间"], ["watch", "追剧更新", "按已知播出时间；未注明时间为 20:00"], ["anniversaries", "纪念日", "前一天及当天 09:00"], ["subscriptions", "订阅与话费", "提前三天及当天 09:00"]];
+const formatTime = value => new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value));
+
+export default function NativeNotificationPanel({ compact = false, onSettings }) {
   const [supported, setSupported] = useState(false);
   const [state, setState] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -35,21 +38,37 @@ export default function NativeNotificationPanel() {
     try {
       const value = await window.QiyeNative[method]();
       setState(value);
+      window.dispatchEvent(new CustomEvent("qiye-notification-state", { detail: value }));
       setStatus(value.permitted ? message : "系统通知未允许，请在通知设置中开启。");
     } catch (error) { setStatus(error.message || "连接失败，请稍后重试。"); }
     finally { setBusy(false); }
   }
   const enabled = state?.enabled && state?.permitted;
+  async function configure(kind, checked) {
+    setBusy(true); setStatus("");
+    try {
+      const value = await window.QiyeNative.configureNotifications({ [kind]: checked });
+      setState(value);
+      window.dispatchEvent(new CustomEvent("qiye-notification-state", { detail: value }));
+    } catch (error) { setStatus(error.message || "设置未保存，请重试。"); }
+    finally { setBusy(false); }
+  }
+  if (compact) {
+    if (!supported || !state || enabled && !state.error) return null;
+    return <section className={`panel ${styles.panel}`} aria-label="开启手机提醒"><div className="panel-head"><div><h2>开启重要提醒</h2><p>待办、追剧、纪念日与订阅到期</p></div><button type="button" className="chip-button" disabled={busy} onClick={() => act("enableNotifications")}>{busy ? "开启中…" : "开启提醒"}</button></div>{(status || state.error) && <p role="status" className={styles.status}>{status || state.error}</p>}<button type="button" className={styles.settingsLink} onClick={onSettings}>查看提醒设置</button></section>;
+  }
   return <section className={`panel ${styles.panel}`} aria-label="App 消息提醒">
-    <div className="panel-head"><div><h2>消息提醒</h2><p>{!supported ? "安装新版后开启" : !state ? "正在读取提醒状态…" : enabled ? `已开启 · ${state.pending} 条待提醒` : "未开启"}</p></div>{supported ? <button className="chip-button" type="button" disabled={busy || !state} onClick={() => act(state?.enabled ? "disableNotifications" : "enableNotifications")}>{busy ? "处理中…" : state?.enabled ? "关闭提醒" : "开启提醒"}</button> : <a href="https://github.com/NZqiye/mobile-workbench/releases/latest" target="_blank" rel="noopener noreferrer">下载新版</a>}</div>
-    <p className={styles.description}>给任务设置提醒时间后，App 会把提醒安排到手机系统。切到后台、锁屏或暂时断网时，也可收到已安排的通知。电脑上修改的任务，需要先在手机同步。</p>
+    <div className="panel-head"><div><h2>消息提醒</h2><p>{!supported ? "安装新版后开启" : !state ? "正在读取提醒状态…" : enabled ? `已开启 · ${state.pending} 条待提醒` : state.enabled ? "系统通知未允许" : "未开启"}</p></div>{supported ? <button className="chip-button" type="button" disabled={busy || !state} onClick={() => act(enabled ? "disableNotifications" : "enableNotifications")}>{busy ? "处理中…" : enabled ? "关闭提醒" : "开启提醒"}</button> : <a href="https://github.com/NZqiye/mobile-workbench/releases/latest" target="_blank" rel="noopener noreferrer">下载新版</a>}</div>
+    <p className={styles.description}>提醒会安排到手机系统，后台、锁屏或暂时断网也能发送。电脑上修改的记录，需要先打开手机 App 同步。以下时间均为北京时间。</p>
+    {supported && state?.categories ? <div className={styles.categories}>{categories.map(([kind, title, description]) => <label key={kind}><span><strong>{title}</strong><small>{state.channels?.[kind] === false ? "系统已关闭此类通知，请到通知设置开启" : `${description} · ${state.counts?.[kind] || 0} 条待提醒`}</small></span><input type="checkbox" checked={Boolean(state.categories[kind])} disabled={busy} onChange={event => configure(kind, event.target.checked)} /></label>)}</div> : supported && <p className={styles.description}>当前安装包仅支持待办提醒，更新 App 后可开启全部四类。</p>}
     {supported && state && <div className={styles.actions}>
       <button type="button" disabled={busy || !enabled} onClick={() => act("testNotification", "测试通知已发送，请查看手机通知栏。")}>发送测试通知</button>
       <button type="button" onClick={() => window.QiyeNative.openNotificationSettings()}>通知设置</button>
       {!state.exact && <button type="button" onClick={() => window.QiyeNative.openExactAlarmSettings()}>允许准时提醒</button>}
     </div>}
     {supported && state && !state.exact && <p className={styles.description}>未开启“闹钟和提醒”权限时，系统可能延迟提醒。</p>}
-    <p className={styles.description}>这是本机任务到时提醒；云端即时消息推送尚未接入。强行停止 App 后，请重新打开，以恢复提醒。</p>
+    {state?.lastSynced > 0 && <p className={styles.description}>最近同步 {formatTime(state.lastSynced)}{enabled && state.nextAt > 0 ? ` · 下次 ${formatTime(state.nextAt)}` : ""}</p>}
+    <p className={styles.description}>纪念日支持公历和农历。追剧只提醒已同步的排期，话费充值日按当前余额估算。强行停止 App 后需重新打开；若仍收不到，请允许后台运行并取消电池限制。</p>
     {(status || state?.error) && <p className={styles.status} role="status">{status || state.error}</p>}
   </section>;
 }

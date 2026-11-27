@@ -7,7 +7,7 @@ function unconfigured() {
 
 export async function GET(request) {
   if (!isAuthorized(request)) return unauthorizedResponse();
-  const config = syncConfig();
+  const config = syncConfig(request);
   if (!config) return unconfigured();
 
   const { data, error } = await config.supabase
@@ -31,13 +31,13 @@ export async function GET(request) {
       items[name] = note;
     }
   }
-  return Response.json({ items });
+  return Response.json({ items, userId: config.userId }, { headers: { "Cache-Control": "private, no-store" } });
 }
 
 export async function POST(request) {
   if (!isSameOrigin(request)) return Response.json({ error: "来源不受信任" }, { status: 403 });
   if (!isAuthorized(request)) return unauthorizedResponse();
-  const config = syncConfig();
+  const config = syncConfig(request);
   if (!config) return unconfigured();
 
   let body;

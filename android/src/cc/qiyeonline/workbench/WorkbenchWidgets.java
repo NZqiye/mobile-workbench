@@ -22,6 +22,7 @@ public class WorkbenchWidgets extends AppWidgetProvider {
     public static final class Water extends WorkbenchWidgets { }
     public static final class Watch extends WorkbenchWidgets { }
     public static final class Assets extends WorkbenchWidgets { }
+    public static final class Anniversaries extends WorkbenchWidgets { }
     static final String PREFS = "home-widgets";
 
     static String today() { return LocalDate.now(ZoneId.of("Asia/Shanghai")).toString(); }
@@ -34,6 +35,16 @@ public class WorkbenchWidgets extends AppWidgetProvider {
         JSONObject snapshot = new JSONObject();
         String date = source.getString("date"); LocalDate.parse(date);
         snapshot.put("date", date).put("tasks", safeLines(source.optJSONArray("tasks"), 3, 50));
+        String owner = source.optString("owner", "personal-workbench");
+        snapshot.put("owner", owner);
+        JSONArray anniversaries = source.optJSONArray("anniversaryDetails"), safeAnniversaries = new JSONArray();
+        if (anniversaries != null) for (int i = 0; i < Math.min(500, anniversaries.length()); i++) {
+            JSONObject item = anniversaries.optJSONObject(i); if (item == null) continue;
+            JSONArray dates = item.optJSONArray("dates"), safeDates = new JSONArray();
+            if (dates != null) for (int j = 0; j < Math.min(3, dates.length()); j++) { String target = dates.getString(j); LocalDate.parse(target); safeDates.put(target); }
+            safeAnniversaries.put(new JSONObject().put("id", text(item, "id", 120)).put("title", text(item, "title", 80)).put("annual", item.optBoolean("annual", true)).put("calendarType", "lunar".equals(item.optString("calendarType")) ? "lunar" : "solar").put("dates", safeDates));
+        }
+        snapshot.put("anniversaryDetails", safeAnniversaries);
         snapshot.put("pendingCount", count(source, "pendingCount", 999)).put("completedCount", count(source, "completedCount", 999));
         snapshot.put("waterMl", count(source, "waterMl", 100000)).put("targetMl", Math.max(250, Math.min(100000, source.optInt("targetMl", 2000))));
         JSONArray days = source.optJSONArray("watchDays"), safeDays = new JSONArray();
@@ -67,7 +78,10 @@ public class WorkbenchWidgets extends AppWidgetProvider {
             }
             snapshot.put("assetDetails", details);
         }
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("snapshot", snapshot.toString()).apply();
+        android.content.SharedPreferences preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        android.content.SharedPreferences.Editor edit = preferences.edit();
+        if (!owner.equals(read(context).optString("owner", "personal-workbench"))) edit.clear();
+        edit.putString("snapshot", snapshot.toString()).apply();
         updateAll(context); WidgetImages.refresh(context);
     }
 
@@ -91,7 +105,7 @@ public class WorkbenchWidgets extends AppWidgetProvider {
 
     public static void updateAll(Context context) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
-        for (Class<?> type : new Class<?>[] { Plans.class, Water.class, Watch.class, Assets.class })
+        for (Class<?> type : new Class<?>[] { Plans.class, Water.class, Watch.class, Assets.class, Anniversaries.class })
             for (int id : manager.getAppWidgetIds(new ComponentName(context, type))) render(context, manager, id, type);
     }
 
@@ -99,7 +113,7 @@ public class WorkbenchWidgets extends AppWidgetProvider {
     @Override public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager, int id, Bundle options) { render(context, manager, id, getClass()); }
     @Override public void onDeleted(Context context, int[] ids) {
         android.content.SharedPreferences.Editor edit = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit();
-        for (int id : ids) edit.remove("asset:" + id); edit.apply();
+        for (int id : ids) { edit.remove("asset:" + id); edit.remove("anniversary:" + id); } edit.apply();
     }
 
     private static int count(JSONObject value, String key, int max) { return Math.max(0, Math.min(max, value.optInt(key))); }
@@ -121,7 +135,7 @@ public class WorkbenchWidgets extends AppWidgetProvider {
 
     private static void render(Context context, AppWidgetManager manager, int id, Class<?> type) {
         JSONObject data = read(context); String date = today(); boolean fresh = date.equals(data.optString("date"));
-        int layout = type == Plans.class ? R.layout.widget_plans : type == Water.class ? R.layout.widget_water : type == Watch.class ? R.layout.widget_watch : R.layout.widget_assets;
+        int layout = type == Plans.class ? R.layout.widget_plans : type == Water.class ? R.layout.widget_water : type == Watch.class ? R.layout.widget_watch : type == Anniversaries.class ? R.layout.widget_anniversary : R.layout.widget_assets;
         int height = manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 280);
         int width = manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 140);
         if (type == Assets.class && height < 250) layout = R.layout.widget_assets_compact;
@@ -162,12 +176,55 @@ public class WorkbenchWidgets extends AppWidgetProvider {
             views.setPendingIntentTemplate(R.id.widget_list, open(context, "consultations", 1000 + id, true));
             views.setOnClickPendingIntent(R.id.widget_heading, open(context, "consultations", 303, false));
         } else {
-            renderAsset(context, views, data, id, date);
+            if (type == Anniversaries.class) renderAnniversary(context, views, data, id, date);
+            else renderAsset(context, views, data, id, date);
         }
-        String page = type == Plans.class ? "plans" : type == Water.class ? "diet" : type == Watch.class ? "consultations" : "assets";
-        views.setOnClickPendingIntent(R.id.widget_root, open(context, page, type == Plans.class ? 301 : type == Water.class ? 302 : type == Watch.class ? 303 : 304, false));
+        String page = type == Plans.class ? "plans" : type == Water.class ? "diet" : type == Watch.class ? "consultations" : type == Anniversaries.class ? "anniversaries" : "assets";
+        views.setOnClickPendingIntent(R.id.widget_root, open(context, page, type == Plans.class ? 301 : type == Water.class ? 302 : type == Watch.class ? 303 : type == Anniversaries.class ? 305 : 304, false));
         manager.updateAppWidget(id, views);
         if (type == Watch.class) manager.notifyAppWidgetViewDataChanged(id, R.id.widget_list);
+    }
+
+    static String anniversaryDate(JSONObject item, String today) {
+        JSONArray dates = item.optJSONArray("dates"); String target = "";
+        if (dates != null) for (int i = 0; i < dates.length(); i++) {
+            String candidate = dates.optString(i);
+            if (item.optBoolean("annual", true) && candidate.compareTo(today) < 0) continue;
+            if (target.isEmpty() || candidate.compareTo(target) < 0) target = candidate;
+        }
+        return target;
+    }
+
+    private static void renderAnniversary(Context context, RemoteViews views, JSONObject data, int id, String date) {
+        String selection = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("anniversary:" + id, "");
+        JSONArray items = data.optJSONArray("anniversaryDetails"); JSONObject selected = null; String target = "";
+        if (items != null) for (int i = 0; i < items.length(); i++) {
+            JSONObject item = items.optJSONObject(i); if (item == null) continue;
+            String next = anniversaryDate(item, date);
+            if (!selection.isEmpty()) { if (selection.equals(item.optString("id"))) { selected = item; target = next; break; } }
+            else if (!next.isEmpty()) {
+                boolean upcoming = next.compareTo(date) >= 0, currentUpcoming = !target.isEmpty() && target.compareTo(date) >= 0;
+                boolean nearer = upcoming ? !currentUpcoming || next.compareTo(target) < 0 : !currentUpcoming && next.compareTo(target) > 0;
+                if (selected == null || nearer) { selected = item; target = next; }
+            }
+        }
+        boolean available = selected != null && !target.isEmpty();
+        long days = available ? WidgetPolicy.remaining(target, date) : 0;
+        views.setTextViewText(R.id.widget_title, selected == null ? "纪念日倒数" : selected.optString("title"));
+        views.setTextViewText(R.id.widget_date, available ? target.replace('-', '/') : selected == null ? selection.isEmpty() ? "打开 App 添加纪念日" : "该纪念日已删除" : "打开 App 更新日期");
+        int height = AppWidgetManager.getInstance(context).getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140);
+        float fontScale = context.getResources().getConfiguration().fontScale;
+        if (height < 180) {
+            int padding = Math.round(12 * context.getResources().getDisplayMetrics().density);
+            views.setViewPadding(R.id.widget_root, padding, padding, padding, padding);
+        }
+        if (height < 180 && fontScale > 1.5f) views.setTextViewTextSize(R.id.widget_date, android.util.TypedValue.COMPLEX_UNIT_SP, 16.5f / fontScale);
+        views.setTextViewText(R.id.widget_amount, available ? days == 0 ? "今天" : String.valueOf(Math.abs(days)) : "—");
+        views.setTextViewTextSize(R.id.widget_amount, android.util.TypedValue.COMPLEX_UNIT_SP, available && Math.abs(days) > 9999 ? 34 : 44);
+        views.setTextViewText(R.id.widget_footer, available ? days == 0 ? "就是今天" : days > 0 ? "还有 · 天" : "已过 · 天" : "点击右上角选择");
+        views.setContentDescription(R.id.widget_root, available ? selected.optString("title") + (days == 0 ? "，就是今天" : days > 0 ? "，还有" + days + "天" : "，已过" + Math.abs(days) + "天") : "纪念日倒数，暂无可展示日期");
+        Intent configure = new Intent(context, WidgetAnniversaryConfigActivity.class).setAction(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+        views.setOnClickPendingIntent(R.id.widget_settings, PendingIntent.getActivity(context, 3000 + id, configure, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
     }
 
     private static void renderAsset(Context context, RemoteViews views, JSONObject data, int id, String date) {

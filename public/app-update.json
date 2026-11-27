@@ -1,7 +1,7 @@
 {
-  "version": "1.1.10",
-  "versionCode": 12,
-  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.10/qiyeonline-1.1.10.apk",
-  "sha256": "208f29c1681e46b2ad3bdb89306620044bf7b2fab60e4c9843b04a590d8bdb27",
-  "notes": "新增手机话费计算：按余额、每月套餐费和扣费日估算充值日期，首页显示话费提醒；取消内搭建议，保留外套、下装与出行提醒；内置SIM卡图标。请直接覆盖安装后联网打开App，不要先卸载。"
+  "version": "1.1.11",
+  "versionCode": 13,
+  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.11/qiyeonline-1.1.11.apk",
+  "sha256": "69d909535a04db7cc37ac388f02022fe7f98c82c6d311311494ac1ca710dc7de",
+  "notes": "新增待办、追剧、纪念日及订阅话费分类提醒；新增纪念日倒数桌面卡片；支持独立测试账号；优化毛玻璃追剧日历。更新后请在消息提醒中开启通知。"
 }

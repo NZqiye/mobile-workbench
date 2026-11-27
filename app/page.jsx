@@ -17,8 +17,9 @@ import WhaleCompanion from "./components/whale-companion";
 import MobileNavigation from "./components/mobile-navigation";
 import { bundledAssetUrl } from "../lib/bundled-assets";
 import NativeNotificationPanel from "./components/native-notification-panel";
-import { nativeReminderTasks } from "../lib/native-reminders";
+import { nativeReminderTasks, nativeReminderSchedule } from "../lib/native-reminders";
 import { widgetSnapshot } from "../lib/native-widgets";
+import { activeAccountId, activeAccountStorageKey, accountStorageKey, selectAccountStorage } from "../lib/account-storage";
 import { parseEpisodeList, watchEntriesForDate } from "../lib/watch-schedule";
 import watchDetailStyles from "./components/watch-detail.module.css";
 import watchCalendarStyles from "./components/watch-calendar.module.css";
@@ -38,8 +39,6 @@ import useAppMotion from "./components/use-app-motion";
 import "./components/app-motion.css";
 import "./components/workbench-polish.css";
 import "./components/readability.css";
-
-const storagePrefix = "qiyeworkbench:";
 
 function hasChineseText(value) {
   return /[㐀-鿿]/.test(String(value || ""));
@@ -721,7 +720,7 @@ function PonyThemePanel({ value, onChange }) {
 }
 
 function key(name) {
-  return storagePrefix + name;
+  return accountStorageKey(name);
 }
 
 function userKey(session, name) {
@@ -842,6 +841,7 @@ function estimateMealCalories(title) {
 
 function readStorage(name, fallback) {
   if (typeof window === "undefined") return fallback;
+  if (activeAccountId() === "test-workbench" && name === "indexTrackerItems") fallback = [];
   try {
     return JSON.parse(localStorage.getItem(key(name)) || JSON.stringify(fallback));
   } catch {
@@ -924,10 +924,6 @@ function toDateKey(date) {
 
 function weekdayText(date) {
   return ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()];
-}
-
-function monthTitle(date) {
-  return `${["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"][date.getMonth()]} ${date.getFullYear()}`;
 }
 
 function mapItemsById(items, id, updater) {
@@ -1120,7 +1116,8 @@ function mergeCloudWithLocal(cloud) {
   };
 }
 
-function normalizeSavedAssets(assets, fallback = defaultAssets) {
+function normalizeSavedAssets(assets, fallback = activeAccountId() === "test-workbench" ? "" : defaultAssets) {
+  if (activeAccountId() === "test-workbench" && fallback === defaultAssets) fallback = "";
   if (assets === null || assets === undefined || assets === legacyDefaultAssets || assets === stockDefaultAssets) return fallback;
   try {
     if (Array.isArray(JSON.parse(assets))) return fallback;
@@ -1147,6 +1144,7 @@ function normalizeStockSymbol(value, market = "auto") {
 }
 
 function migrateLegacyData() {
+  if (activeAccountId() === "test-workbench") return;
   const existingNotes = readStorage("notes", null);
   const existingPlans = readStorage("plans", null);
   const existingConsultations = readStorage("consultations", null);
@@ -1203,9 +1201,10 @@ function migrateLegacyData() {
 
 async function loadCloudItems(session) {
   if (!session) return {};
-  const response = await fetch("/api/sync", { headers: { Accept: "application/json" } });
+  const response = await fetch("/api/sync", { headers: { Accept: "application/json", "X-Workbench-Account": session.user.id } });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || "云同步读取失败");
+  if (payload.userId && payload.userId !== session.user.id) throw new Error("账号已切换，请刷新页面");
   return payload.items || {};
 }
 
@@ -1216,7 +1215,7 @@ async function saveCloudItem(session, name, value) {
   const task = cloudWriteQueue.then(async () => {
     const response = await fetch("/api/sync", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-Workbench-Account": session.user.id },
       body: JSON.stringify({ name, value }),
     });
     if (!response.ok) {
@@ -2652,7 +2651,7 @@ function buildIndexTrackerRows(items, trackerData) {
 }
 
 function normalizeIndexTrackerItems(items) {
-  const list = Array.isArray(items) && items.length ? items : indexTrackerItems;
+  const list = Array.isArray(items) && items.length ? items : activeAccountId() === "test-workbench" ? [] : indexTrackerItems;
   return list.map((item, index) => ({
     ...item,
     id: item.id || `index-${index}-${Date.now()}`,
@@ -2914,11 +2913,12 @@ function IndexTrackerBoard({ onItemsChange }) {
 }
 
 function normalizeFundCodes(value) {
-  return String(value || defaultFundCodes)
+  const fallback = activeAccountId() === "test-workbench" ? "" : defaultFundCodes;
+  return String(value || fallback)
     .split(",")
     .map((item) => item.trim())
     .filter((item) => /^\d{6}$/.test(item))
-    .join(",") || defaultFundCodes;
+    .join(",") || fallback;
 }
 
 function normalizeFundTrade(trade) {
@@ -3702,18 +3702,13 @@ function upsertWatchCheckin(records, record) {
   ]);
 }
 
-function dayUpdateLabel(updates, expanded) {
-  const groups = updates.reduce((acc, item) => {
-    const title = item.title || "";
-    if (!title) return acc;
-    acc.set(title, (acc.get(title) || 0) + 1);
-    return acc;
-  }, new Map());
-  const grouped = Array.from(groups, ([title, count]) => ({ title, count }));
-  if (expanded) return `${grouped.length || updates.length} 部更新`;
-  const first = grouped[0];
-  if (!first) return "";
-  return `${first.title}${first.count > 1 ? ` ${first.count}集` : ""}${grouped.length > 1 ? ` +${grouped.length - 1}` : ""}`;
+function dayUpdateSummary(updates) {
+  const shows = countUniqueWatchItems(updates);
+  return {
+    shows,
+    episodes: updates.length,
+    level: shows > 4 ? "high" : shows > 1 ? "medium" : shows === 1 ? "low" : "none",
+  };
 }
 
 function mediaAirText(item) {
@@ -4853,7 +4848,7 @@ function WatchSchedule({ items = [], compact = false, activeView = "today", tmdb
     if (window.confirm(`确定把《${item.title}》移出片单吗？`)) onDeleteItem(item.id);
   }
   function itemsForDate(dateKey) {
-    return watchEntriesForDate(allItems, dateKey);
+    return watchEntriesForDate(allItems.filter((item) => !["看过的剧", "暂停/弃剧", "已归档"].includes(item.status)), dateKey);
   }
 
   const week = Array.from({ length: 7 }, (_, index) => {
@@ -4863,7 +4858,6 @@ function WatchSchedule({ items = [], compact = false, activeView = "today", tmdb
     return {
       date,
       dateKey,
-      items: [...itemsForDate(dateKey), ...allItems.filter((item) => item.watchedDate === dateKey)],
       updates: itemsForDate(dateKey),
     };
   });
@@ -4879,15 +4873,14 @@ function WatchSchedule({ items = [], compact = false, activeView = "today", tmdb
       date,
       dateKey,
       inMonth: date.getMonth() === today.getMonth(),
-      items: [...itemsForDate(dateKey), ...allItems.filter((item) => item.watchedDate === dateKey)],
       updates: itemsForDate(dateKey),
     };
   });
   const calendarDays = expanded ? monthDays : week;
   const [selectedDate, setSelectedDate] = useState(week[0].dateKey);
   const selected = monthDays.find((day) => day.dateKey === selectedDate) || week[0];
-  const timeline = selected.items
-    .filter((item) => item.status !== "看过的剧" && item.status !== "暂停/弃剧")
+  const selectedSummary = dayUpdateSummary(selected.updates);
+  const timeline = selected.updates
     .flatMap((item) => {
       if (item.updateEpisode) return [item];
       const current = Number(item.currentEpisode || 0);
@@ -4930,25 +4923,32 @@ function WatchSchedule({ items = [], compact = false, activeView = "today", tmdb
             </div>
           </section>
           <section className={`watch-calendar ${watchCalendarStyles.calendar}`}>
-            <div className="panel-head">
-              <h2>{monthTitle(selected.date)}</h2>
-              <div className="calendar-actions">
-                <button className="chip-button" type="button" onClick={onRefreshTmdbTracked}>刷新更新</button>
-                <button className="calendar-toggle" type="button" aria-label={expanded ? "收起月历" : "展开月历"} aria-expanded={expanded} aria-controls="watch-calendar-days" onClick={() => setExpanded(!expanded)}><SelectChevron /></button>
+            <div className={watchCalendarStyles.header}>
+              <h2 className={watchCalendarStyles.monthTitle}>{today.toLocaleDateString("zh-CN", { month: "long" })}<span>{today.getFullYear()}</span></h2>
+              <div className={watchCalendarStyles.actions}>
+                <button className={watchCalendarStyles.refresh} type="button" onClick={onRefreshTmdbTracked}><MotionIcon name="sync" /><span>刷新更新</span></button>
+                <button className={watchCalendarStyles.toggle} type="button" aria-label={expanded ? "收起月历" : "展开月历"} aria-expanded={expanded} aria-controls="watch-calendar-days" onClick={() => setExpanded(!expanded)}><SelectChevron /></button>
               </div>
             </div>
-            <div id="watch-calendar-days" className={expanded ? "week-grid month-grid" : "week-grid"} key={expanded ? "month" : "week"}>
-              {calendarDays.map((day) => (
-                <button className={`${day.dateKey === selectedDate ? "week-day active" : "week-day"} ${day.inMonth === false ? "outside-month" : ""} ${watchCalendarStyles.day}`} type="button" key={day.dateKey} aria-label={`${day.dateKey}${day.updates.length ? ` · ${day.updates.length} 集更新` : ""}`} aria-pressed={day.dateKey === selectedDate} onClick={() => setSelectedDate(day.dateKey)}>
-                  <span>{weekdayText(day.date)}</span>
-                  <strong>{day.date.getDate()}</strong>
-                  <i className={day.updates.length ? "has-update" : ""} />
-                  <small className="day-updates">{day.updates.length > 0 ? dayUpdateLabel(day.updates, expanded) : ""}</small>
-                </button>
-              ))}
+            {expanded && <div className={watchCalendarStyles.weekdays} aria-hidden="true">{["一", "二", "三", "四", "五", "六", "日"].map((day) => <span key={day}>{day}</span>)}</div>}
+            <div id="watch-calendar-days" className={`${watchCalendarStyles.grid} ${expanded ? watchCalendarStyles.month : ""}`} key={expanded ? "month" : "week"}>
+              {calendarDays.map((day) => {
+                const summary = dayUpdateSummary(day.updates);
+                return (
+                  <button className={watchCalendarStyles.day} type="button" key={day.dateKey} data-outside-month={day.inMonth === false} aria-label={`${day.dateKey} · ${summary.shows ? `${summary.shows} 部剧，${summary.episodes} 集更新` : "暂无更新"}`} aria-current={day.dateKey === week[0].dateKey ? "date" : undefined} aria-pressed={day.dateKey === selectedDate} aria-controls="watch-calendar-updates" title={day.updates.map((item) => `${mediaTitle(item)}${item.updateEpisode ? ` · 第${item.updateEpisode}集` : ""}`).join("\n")} onClick={() => setSelectedDate(day.dateKey)}>
+                    {!expanded && <span className={watchCalendarStyles.weekday}>{weekdayText(day.date)}</span>}
+                    <strong>{day.date.getDate()}</strong>
+                    <i className={watchCalendarStyles.indicator} data-level={summary.level} aria-hidden="true" />
+                  </button>
+                );
+              })}
             </div>
           </section>
-          <div className={`watch-timeline ${watchCalendarStyles.timeline}`}>
+          <div id="watch-calendar-updates" className={`watch-timeline ${watchCalendarStyles.timeline}`}>
+            <div className={watchCalendarStyles.selectionSummary} aria-live="polite" aria-atomic="true">
+              <strong>{selected.date.getMonth() + 1} 月 {selected.date.getDate()} 日<span>{weekdayText(selected.date)}</span></strong>
+              <span>{selectedSummary.shows ? `${selectedSummary.episodes} 集更新` : "暂无更新"}</span>
+            </div>
             {timeline.length === 0 && <p className="empty">这一天还没有追剧更新。给剧集填写“下次更新日期”和“更新时间”后，会显示在这里。</p>}
             {timeline.map((item) => {
               const updateEpisode = Number(item.updateEpisode || 0);
@@ -6560,7 +6560,7 @@ export default function Workbench() {
     setSubscriptionRecords(readStorage("subscriptionRecords", []));
     setTravelRecords(readStorage("travelRecords", []));
     let nextAnniversaries = readStorage("anniversaries", []);
-    if (localStorage.getItem(key(defaultChineseHolidaysSeedKey)) !== "true") {
+    if (activeAccountId() !== "test-workbench" && localStorage.getItem(key(defaultChineseHolidaysSeedKey)) !== "true") {
       nextAnniversaries = withDefaultChineseHolidays(nextAnniversaries);
       writeStorage("anniversaries", nextAnniversaries);
       localStorage.setItem(key(defaultChineseHolidaysSeedKey), "true");
@@ -6584,6 +6584,8 @@ export default function Workbench() {
     window.addEventListener("resize", applyResponsiveMode);
     const nativeReady = () => { applyResponsiveMode(); setNativeConnection(value => value + 1); };
     window.addEventListener("qiye-native-ready", nativeReady);
+    const accountChanged = event => { if (event.key === activeAccountStorageKey) window.location.reload(); };
+    window.addEventListener("storage", accountChanged);
     setPonyTheme(ponyThemes.some((theme) => theme.id === localStorage.getItem(key("ponyTheme"))) ? localStorage.getItem(key("ponyTheme")) : "jade");
     setClock(clockText());
     let lastMinute = clockText().slice(0, 5);
@@ -6601,6 +6603,7 @@ export default function Workbench() {
       clearInterval(timer);
       window.removeEventListener("resize", applyResponsiveMode);
       window.removeEventListener("qiye-native-ready", nativeReady);
+      window.removeEventListener("storage", accountChanged);
     };
   }, []);
 
@@ -6657,27 +6660,30 @@ export default function Workbench() {
   }
 
   useEffect(() => {
-    if (!storageLoaded || !androidApp || !window.QiyeNative?.syncReminders) return;
+    if (!storageLoaded || accountState === "checking" || !androidApp || !window.QiyeNative?.syncReminders) return;
     let current = true;
-    window.QiyeNative.syncReminders(nativeReminderTasks(plans)).then(state => {
+    const reminders = window.QiyeNative.configureNotifications ? nativeReminderSchedule({ plans, consultations, anniversaries, subscriptionRecords }) : nativeReminderTasks(plans);
+    window.QiyeNative.syncReminders(reminders, session?.user.id || activeAccountId()).then(state => {
       if (current) window.dispatchEvent(new CustomEvent("qiye-notification-state", { detail: state }));
     }).catch(error => {
       if (current) window.dispatchEvent(new CustomEvent("qiye-notification-error", { detail: error.message }));
     });
     return () => { current = false; };
-  }, [androidApp, storageLoaded, nativeConnection, plans]);
+  }, [androidApp, storageLoaded, nativeConnection, plans, consultations, anniversaries, subscriptionRecords, accountState, session, widgetDate]);
 
   useEffect(() => {
-    if (!storageLoaded || !androidApp || !window.QiyeNative?.syncWidgets) return;
-    window.QiyeNative.syncWidgets(widgetSnapshot(plans, dietRecords, waterTarget, widgetDate, consultations, assetItems, assetIconImageMap));
-  }, [androidApp, storageLoaded, nativeConnection, plans, dietRecords, waterTarget, widgetDate, consultations, assetItems]);
+    if (!storageLoaded || accountState === "checking" || !androidApp || !window.QiyeNative?.syncWidgets) return;
+    window.QiyeNative.syncWidgets({ ...widgetSnapshot(plans, dietRecords, waterTarget, widgetDate, consultations, assetItems, assetIconImageMap, anniversaries), owner: session?.user.id || activeAccountId() });
+  }, [androidApp, storageLoaded, nativeConnection, plans, dietRecords, waterTarget, widgetDate, consultations, assetItems, anniversaries, accountState, session]);
 
   useEffect(() => {
     if (!androidApp || !storageLoaded) return;
     const open = (page) => {
-      if (!["plans", "diet", "consultations", "assets"].includes(page)) return;
-      switchPage(page);
-      if (page === "plans") setArrangementView("tasks");
+      if (!["plans", "diet", "consultations", "assets", "anniversaries", "subscriptions"].includes(page)) return;
+      switchPage(page === "anniversaries" ? "plans" : page === "subscriptions" ? "assets" : page);
+      if (page === "anniversaries") setArrangementView("anniversaries");
+      else if (page === "subscriptions") setAssetSection("subscriptions");
+      else if (page === "plans") setArrangementView("tasks");
       else if (page === "diet") setDietView("water");
       else if (page === "consultations") setConsultationView("today");
       else { setAssetSection("assets"); setAssetView("服役中"); }
@@ -7880,6 +7886,7 @@ export default function Workbench() {
       setAccountState("ready");
       localStorage.removeItem(key("accessUnlocked"));
       if (data.authenticated && data.user) {
+        if (await switchAccount(data.user.id)) return;
         const restored = { user: data.user };
         setSession(restored);
         await syncFromCloud(restored);
@@ -7896,6 +7903,7 @@ export default function Workbench() {
 
   async function login(credentials) {
     try {
+      await cloudWriteQueue.catch(() => {});
       const response = await fetch("/api/access", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -7903,6 +7911,7 @@ export default function Workbench() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "登录失败，请重试");
+      if (await switchAccount(data.user.id)) return true;
       const nextSession = { user: data.user };
       setAccountState("ready");
       setSession(nextSession);
@@ -7916,12 +7925,24 @@ export default function Workbench() {
 
   async function logout() {
     try {
+      await cloudWriteQueue.catch(() => {});
       const response = await fetch("/api/access/logout", { method: "POST" });
       if (!response.ok) throw new Error("退出失败，请重试");
       localStorage.removeItem(key("accessUnlocked"));
       setSession(null);
       setSyncStatus("已退出登录，本机记录保留");
     } catch (error) { setSyncStatus("退出登录失败，请检查网络后重试。"); }
+  }
+
+  async function switchAccount(id) {
+    if (!selectAccountStorage(id)) return false;
+    setStorageLoaded(false);
+    setSession(null);
+    setSyncStatus("正在切换独立工作台…");
+    if (window.QiyeNative?.syncReminders) await window.QiyeNative.syncReminders([], id).catch(() => {});
+    window.QiyeNative?.syncWidgets?.({ ...widgetSnapshot([], [], defaultWaterTarget, todayKey()), owner: id });
+    window.location.reload();
+    return true;
   }
 
   function cancelEditing() {
@@ -8066,6 +8087,7 @@ export default function Workbench() {
           {activePage === "today" && (
             <>
               <TodayTimePanel />
+              {androidApp && <NativeNotificationPanel compact onSettings={() => switchPage("settings")} />}
               {androidApp && <>{quickRecorder}{todayTasksPanel}</>}
               <WeatherCard compact clock={clock} phoneApp={androidApp} />
               {!androidApp && <>{quickRecorder}<DailyQuoteCard /></>}

@@ -79,3 +79,28 @@ test('repeated failed logins are limited and missing server secrets cannot mint 
     assert.equal(response.headers.get('set-cookie'), null);
   }
 });
+
+test('test credentials create a separately signed identity and cannot access the primary owner', async () => {
+  const context = load({ WORKBENCH_TEST_ACCESS_CODE: '1111' });
+  const response = await context.POST(login({ username: 'user', password: '1111' }));
+  assert.equal(response.status, 200);
+  assert.deepEqual((await response.json()).user, { id: 'test-workbench', name: 'user' });
+  const cookie = response.headers.get('set-cookie').split(';')[0];
+  const request = new Request('https://workbench.test/api/access', { headers: { Cookie: cookie } });
+  assert.equal(context.requestAccountId(request), 'test-workbench');
+  assert.equal(context.isPrimaryAccount(request), false);
+  assert.deepEqual((await (await context.GET(request)).json()).user, { id: 'test-workbench', name: 'user' });
+  const wrongOwner = new Request('https://workbench.test/api/sync', { headers: { Cookie: cookie, 'X-Workbench-Account': 'personal-workbench' } });
+  assert.equal(context.isAuthorized(wrongOwner), false);
+  const token = decodeURIComponent(cookie.slice(cookie.indexOf('=') + 1));
+  assert.equal(context.isValidSession(token.replace('.test-workbench', '')), false);
+  assert.equal(context.isValidSession(token.replace('test-workbench', 'personal-workbench')), false);
+  assert.equal((await context.POST(login({ username: 'qiye', password: '1111' }))).status, 401);
+  assert.equal((await context.POST(login({ username: 'user', password: 'test-password-123' }))).status, 401);
+});
+
+test('test account is unavailable until its separate server password is configured', async () => {
+  const response = await load().POST(login({ username: 'user', password: '1111' }));
+  assert.equal(response.status, 401);
+  assert.equal(response.headers.get('set-cookie'), null);
+});

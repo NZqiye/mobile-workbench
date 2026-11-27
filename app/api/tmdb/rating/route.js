@@ -1,10 +1,11 @@
 import { fetchTmdb, tmdbToken } from "../../../../lib/tmdb";
-import { isAuthorized, isSameOrigin, parseMediaInput, readJson, unauthorizedResponse } from "../../../../lib/access-auth";
+import { isAuthorized, isPrimaryAccount, isSameOrigin, parseMediaInput, readJson, unauthorizedResponse } from "../../../../lib/access-auth";
 
 export async function POST(request) {
   try {
     if (!isSameOrigin(request)) return Response.json({ error: "来源不受信任" }, { status: 403 });
     if (!isAuthorized(request)) return unauthorizedResponse();
+    if (!isPrimaryAccount(request)) return Response.json({ error: "测试账号使用独立观影记录，不连接主账号 TMDB" }, { status: 403 });
     if (!tmdbToken || !process.env.TMDB_SESSION_ID) {
       return Response.json({ error: "缺少 TMDB_ACCESS_TOKEN 或 TMDB_SESSION_ID" }, { status: 500 });
     }

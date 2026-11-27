@@ -25,7 +25,7 @@ export default function AccountPanel({ session, username, accountState, status, 
   }
 
   return <section className="panel account-panel" aria-label="账号登录与同步">
-    <div className="panel-head"><div><h2>{session ? "我的账号" : "账号登录"}</h2><p>{session ? "登录时合并记录，修改后自动同步" : "电脑和手机使用同一个个人账号"}</p></div>{session && <span className="tag">已登录</span>}</div>
+    <div className="panel-head"><div><h2>{session ? "我的账号" : "账号登录"}</h2><p>{session?.user.id === "test-workbench" ? "独立测试空间 · 与主账号数据分开" : session ? "当前账号自动同步，切换账号后使用独立空间" : "电脑和手机可登录同一账号，账号之间数据独立"}</p></div>{session && <span className="tag">{session.user.id === "test-workbench" ? "测试账号" : "已登录"}</span>}</div>
     {session ? <div className="account-identity"><strong>{session.user.name}</strong><div className="account-actions"><button className="chip-button" type="button" onClick={onSync} disabled={Boolean(busy) || status.startsWith("正在")}>立即同步</button><button className="chip-button" type="button" onClick={signOut} disabled={Boolean(busy)}>{busy === "logout" ? "退出中…" : "退出登录"}</button></div></div> : <form className="account-login-form" onSubmit={submit}>
       <label htmlFor={`${id}-name`}>账号<input id={`${id}-name`} name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} maxLength={64} value={name} onChange={event => setName(event.target.value)} disabled={busy || accountState === "checking"} required /></label>
       <label htmlFor={`${id}-password`}>密码<input id={`${id}-password`} name="password" type="password" autoComplete="current-password" maxLength={256} placeholder="输入账号密码" value={password} onChange={event => setPassword(event.target.value)} disabled={busy || accountState === "checking"} aria-describedby={`${id}-status`} required /></label>

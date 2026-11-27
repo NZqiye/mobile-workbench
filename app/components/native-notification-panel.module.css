@@ -6,3 +6,10 @@
 .panel a { color: var(--ios-blue); font-size: 14px; }
 .panel :is(button, a):focus-visible { outline: 2px solid var(--ios-blue); outline-offset: 3px; }
 .status { margin: 12px 0 0; color: var(--ios-ink); font-size: 13px; line-height: 1.7; }
+.categories { display: grid; margin-top: 16px; }
+.categories label { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; padding: 12px 0; border-bottom: 1px solid var(--ios-border, #9caaa333); }
+.categories span { display: grid; gap: 5px; min-width: 0; }
+.categories strong { font-size: 14px; font-weight: 600; color: var(--ios-ink); }
+.categories small { font-size: 12px; line-height: 1.6; color: var(--ios-muted); }
+.categories input { width: 22px; height: 22px; margin: 11px; flex-shrink: 0; accent-color: var(--ios-blue); }
+.settingsLink { border: 0; padding: 12px 0 0; color: var(--ios-blue); background: transparent; font: inherit; font-size: 13px; min-height: 44px; }

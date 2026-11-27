@@ -60,6 +60,7 @@ function harness(name = "MarketBoard", { storage = new Map(), cached = false } =
   if (cached) writeStorage("marketCache", { version: versions.marketCacheVersion, savedAt: START, quotes: quotes() });
   const context = vm.createContext({
     ...versions, localStorage, readStorage, writeStorage, key, URLSearchParams, console,
+    activeAccountId: () => "personal-workbench",
     Date: class extends Date { constructor(...args) { super(...(args.length ? args : [now])); } static now() { return now; } },
     useState(initial) {
       const index = cursor++;

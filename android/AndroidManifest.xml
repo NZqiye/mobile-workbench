@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="cc.qiyeonline.workbench" android:versionCode="12" android:versionName="1.1.10">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="cc.qiyeonline.workbench" android:versionCode="13" android:versionName="1.1.11">
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="36" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -19,6 +19,13 @@
         <receiver android:name=".WorkbenchWidgets$Plans" android:label="今日计划" android:exported="true">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_plans_info" />
+        </receiver>
+        <activity android:name=".WidgetAnniversaryConfigActivity" android:exported="true" android:theme="@android:style/Theme.Material.Light.Dialog.Alert">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
+        </activity>
+        <receiver android:name=".WorkbenchWidgets$Anniversaries" android:label="纪念日倒数" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_anniversary_info" />
         </receiver>
         <receiver android:name=".WorkbenchWidgets$Water" android:label="喝水进度" android:exported="true">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>

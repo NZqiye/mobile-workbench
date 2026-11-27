@@ -1,5 +1,5 @@
 import { pushConfig, validSubscription } from "../../../../lib/push-server";
-import { isAuthorized, isSameOrigin, readJson, unauthorizedResponse } from "../../../../lib/access-auth";
+import { isAuthorized, requestAccountId, isSameOrigin, readJson, unauthorizedResponse } from "../../../../lib/access-auth";
 
 export async function POST(request) {
   if (!isSameOrigin(request)) return Response.json({ error: "来源不受信任" }, { status: 403 });
@@ -14,7 +14,7 @@ export async function POST(request) {
   const { error } = await config.supabase.from("push_subscriptions").upsert({
     endpoint: body.subscription.endpoint,
     subscription: body.subscription,
-    user_id: "personal-workbench",
+    user_id: requestAccountId(request),
     updated_at: new Date().toISOString(),
   }, { onConflict: "endpoint" });
   if (error) return Response.json({ error: "推送订阅保存失败，请稍后重试" }, { status: 500 });

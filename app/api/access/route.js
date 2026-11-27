@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { createSession, hasSessionSecret, isAuthorized, isSameOrigin, readJson, sessionSetCookie } from "../../../lib/access-auth";
+import { createSession, hasSessionSecret, isAuthorized, requestAccountId, isSameOrigin, readJson, sessionSetCookie } from "../../../lib/access-auth";
 
 const attempts = new Map();
 const attemptWindowMs = 10 * 60 * 1000;
@@ -10,13 +10,13 @@ function pruneAttempts(now) {
   for (const [ip, record] of attempts) if (now - record.startedAt >= attemptWindowMs) attempts.delete(ip);
 }
 
-function accountUser() {
-  return { id: "personal-workbench", name: process.env.WORKBENCH_USERNAME || "qiye" };
+function accountUser(id = "personal-workbench") {
+  return id === "test-workbench" ? { id, name: "user" } : { id, name: process.env.WORKBENCH_USERNAME || "qiye" };
 }
 
 export async function GET(request) {
   const authenticated = isAuthorized(request);
-  return Response.json({ authenticated, username: accountUser().name, user: authenticated ? accountUser() : null }, { headers: { "Cache-Control": "no-store" } });
+  return Response.json({ authenticated, username: accountUser().name, user: authenticated ? accountUser(requestAccountId(request)) : null }, { headers: { "Cache-Control": "no-store" } });
 }
 
 export async function POST(request) {
@@ -35,21 +35,22 @@ export async function POST(request) {
   const legacy = typeof body?.code === "string" && body?.username === undefined && body?.password === undefined;
   const password = legacy ? body.code : body?.password;
   const username = legacy ? accountUser().name : body?.username;
-  const expectedCode = process.env.WORKBENCH_ACCESS_CODE;
+  const user = accountUser(username === "user" && username !== accountUser().name ? "test-workbench" : "personal-workbench");
+  const expectedCode = user.id === "test-workbench" ? process.env.WORKBENCH_TEST_ACCESS_CODE : process.env.WORKBENCH_ACCESS_CODE;
 
   if (!expectedCode) {
-    return Response.json({ error: "尚未配置固定访问码" }, { status: 500 });
+    return Response.json({ error: user.id === "test-workbench" ? "测试账号尚未启用" : "尚未配置固定访问码" }, { status: user.id === "test-workbench" ? 401 : 500 });
   }
 
   const supplied = Buffer.from(typeof password === "string" ? password : "");
   const expected = Buffer.from(expectedCode);
   const passwordMatches = supplied.length === expected.length && timingSafeEqual(supplied, expected);
-  if (typeof password !== "string" || password.length > 256 || username !== accountUser().name || !passwordMatches) {
+  if (typeof password !== "string" || password.length > 256 || username !== user.name || !passwordMatches) {
     return Response.json({ error: "账号或密码不正确" }, { status: 401 });
   }
 
   attempts.delete(ip);
-  const response = Response.json({ ok: true, user: accountUser() }, { headers: { "Cache-Control": "no-store" } });
-  response.headers.set("Set-Cookie", sessionSetCookie(createSession()));
+  const response = Response.json({ ok: true, user }, { headers: { "Cache-Control": "no-store" } });
+  response.headers.set("Set-Cookie", sessionSetCookie(createSession(user.id)));
   return response;
 }
