@@ -18,11 +18,11 @@ public final class WidgetAnniversaryConfigActivity extends Activity {
         JSONArray items = WorkbenchWidgets.read(this).optJSONArray("anniversaryDetails");
         int count = items == null ? 0 : items.length();
         String[] names = new String[count + 1], keys = new String[count + 1];
-        names[0] = "自动展示最近的纪念日"; keys[0] = "";
+        names[0] = "自动轮换即将到来的日子"; keys[0] = "";
         for (int i = 0; i < count; i++) { JSONObject item = items.optJSONObject(i); names[i + 1] = item.optString("title"); keys[i + 1] = item.optString("id"); }
         new AlertDialog.Builder(this).setTitle("选择桌面纪念日")
             .setItems(names, (dialog, which) -> {
-                getSharedPreferences(WorkbenchWidgets.PREFS, MODE_PRIVATE).edit().putString("anniversary:" + id, keys[which]).apply();
+                getSharedPreferences(WorkbenchWidgets.PREFS, MODE_PRIVATE).edit().putString("anniversary:" + id, keys[which]).remove("anniversary-current:" + id).remove("anniversary-switched:" + id).apply();
                 WorkbenchWidgets.updateAll(this);
                 setResult(RESULT_OK, new Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)); finish();
             }).setNegativeButton("取消", (dialog, which) -> finish()).setOnCancelListener(dialog -> finish()).show();

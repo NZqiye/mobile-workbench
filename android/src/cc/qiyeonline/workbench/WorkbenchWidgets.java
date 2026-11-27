@@ -12,6 +12,8 @@ import android.view.View;
 import android.widget.RemoteViews;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 import org.json.JSONArray;
@@ -24,6 +26,8 @@ public class WorkbenchWidgets extends AppWidgetProvider {
     public static final class Assets extends WorkbenchWidgets { }
     public static final class Anniversaries extends WorkbenchWidgets { }
     static final String PREFS = "home-widgets";
+    static final String NEXT_ANNIVERSARY = "cc.qiyeonline.workbench.NEXT_ANNIVERSARY";
+    static final long ANNIVERSARY_INTERVAL = 1800000L;
 
     static String today() { return LocalDate.now(ZoneId.of("Asia/Shanghai")).toString(); }
     static JSONObject read(Context context) {
@@ -110,10 +114,27 @@ public class WorkbenchWidgets extends AppWidgetProvider {
     }
 
     @Override public void onUpdate(Context context, AppWidgetManager manager, int[] ids) { for (int id : ids) render(context, manager, id, getClass()); }
+    @Override public void onReceive(Context context, Intent intent) {
+        if (NEXT_ANNIVERSARY.equals(intent.getAction()) && getClass() == Anniversaries.class) {
+            AppWidgetManager manager = AppWidgetManager.getInstance(context);
+            int id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
+            for (int registered : manager.getAppWidgetIds(new ComponentName(context, Anniversaries.class))) if (registered == id) {
+                android.content.SharedPreferences preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+                if (!preferences.getString("anniversary:" + id, "").isEmpty()) return;
+                JSONArray queue = anniversaryQueue(read(context), today());
+                if (queue.length() == 0) return;
+                int index = anniversaryIndex(queue, preferences.getString("anniversary-current:" + id, ""), preferences.getLong("anniversary-switched:" + id, 0), System.currentTimeMillis(), true);
+                preferences.edit().putString("anniversary-current:" + id, queue.optJSONObject(index).optString("id")).putLong("anniversary-switched:" + id, System.currentTimeMillis()).apply();
+                render(context, manager, id, Anniversaries.class); return;
+            }
+            return;
+        }
+        super.onReceive(context, intent);
+    }
     @Override public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager, int id, Bundle options) { render(context, manager, id, getClass()); }
     @Override public void onDeleted(Context context, int[] ids) {
         android.content.SharedPreferences.Editor edit = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit();
-        for (int id : ids) { edit.remove("asset:" + id); edit.remove("anniversary:" + id); } edit.apply();
+        for (int id : ids) { edit.remove("asset:" + id); edit.remove("anniversary:" + id); edit.remove("anniversary-current:" + id); edit.remove("anniversary-switched:" + id); } edit.apply();
     }
 
     private static int count(JSONObject value, String key, int max) { return Math.max(0, Math.min(max, value.optInt(key))); }
@@ -195,23 +216,47 @@ public class WorkbenchWidgets extends AppWidgetProvider {
         return target;
     }
 
-    private static void renderAnniversary(Context context, RemoteViews views, JSONObject data, int id, String date) {
-        String selection = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("anniversary:" + id, "");
-        JSONArray items = data.optJSONArray("anniversaryDetails"); JSONObject selected = null; String target = "";
-        if (items != null) for (int i = 0; i < items.length(); i++) {
-            JSONObject item = items.optJSONObject(i); if (item == null) continue;
-            String next = anniversaryDate(item, date);
-            if (!selection.isEmpty()) { if (selection.equals(item.optString("id"))) { selected = item; target = next; break; } }
-            else if (!next.isEmpty()) {
-                boolean upcoming = next.compareTo(date) >= 0, currentUpcoming = !target.isEmpty() && target.compareTo(date) >= 0;
-                boolean nearer = upcoming ? !currentUpcoming || next.compareTo(target) < 0 : !currentUpcoming && next.compareTo(target) > 0;
-                if (selected == null || nearer) { selected = item; target = next; }
-            }
+    static JSONArray anniversaryQueue(JSONObject data, String date) {
+        ArrayList<JSONObject> queue = new ArrayList<>();
+        JSONArray items = data.optJSONArray("anniversaryDetails");
+        if (items != null) for (int index = 0; index < items.length(); index++) {
+            JSONObject item = items.optJSONObject(index); if (item == null) continue;
+            String target = anniversaryDate(item, date);
+            if (!target.isEmpty() && target.compareTo(date) >= 0) queue.add(item);
         }
+        queue.sort(Comparator.comparing((JSONObject item) -> anniversaryDate(item, date)).thenComparing(item -> item.optString("id")));
+        return new JSONArray(queue);
+    }
+
+    static int anniversaryIndex(JSONArray queue, String current, long changedAt, long now, boolean advance) {
+        for (int index = 0; index < queue.length(); index++) if (current.equals(queue.optJSONObject(index).optString("id"))) {
+            return advance || changedAt > 0 && now - changedAt >= ANNIVERSARY_INTERVAL ? (index + 1) % queue.length() : index;
+        }
+        return 0;
+    }
+
+    private static void renderAnniversary(Context context, RemoteViews views, JSONObject data, int id, String date) {
+        android.content.SharedPreferences preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        String selection = preferences.getString("anniversary:" + id, "");
+        JSONArray items = data.optJSONArray("anniversaryDetails"); JSONObject selected = null; String target = "";
+        JSONArray queue = anniversaryQueue(data, date); int position = 0;
+        if (selection.isEmpty() && queue.length() > 0) {
+            String current = preferences.getString("anniversary-current:" + id, "");
+            long changedAt = preferences.getLong("anniversary-switched:" + id, 0), now = System.currentTimeMillis();
+            position = anniversaryIndex(queue, current, changedAt, now, false);
+            selected = queue.optJSONObject(position);
+            if (!current.equals(selected.optString("id")) || changedAt == 0 || changedAt > now) {
+                preferences.edit().putString("anniversary-current:" + id, selected.optString("id")).putLong("anniversary-switched:" + id, now).apply();
+            }
+        } else if (items != null && !selection.isEmpty()) for (int index = 0; index < items.length(); index++) {
+            JSONObject item = items.optJSONObject(index);
+            if (item != null && selection.equals(item.optString("id"))) { selected = item; break; }
+        }
+        if (selected != null) target = anniversaryDate(selected, date);
         boolean available = selected != null && !target.isEmpty();
         long days = available ? WidgetPolicy.remaining(target, date) : 0;
         views.setTextViewText(R.id.widget_title, selected == null ? "纪念日倒数" : selected.optString("title"));
-        views.setTextViewText(R.id.widget_date, available ? target.replace('-', '/') : selected == null ? selection.isEmpty() ? "打开 App 添加纪念日" : "该纪念日已删除" : "打开 App 更新日期");
+        views.setTextViewText(R.id.widget_date, available ? target.replace('-', '/') + (selection.isEmpty() && queue.length() > 1 ? " · " + (position + 1) + "/" + queue.length() : "") : selected == null ? selection.isEmpty() ? "暂无将到的日子" : "该纪念日已删除" : "打开 App 更新日期");
         int height = AppWidgetManager.getInstance(context).getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140);
         float fontScale = context.getResources().getConfiguration().fontScale;
         if (height < 180) {
@@ -219,12 +264,21 @@ public class WorkbenchWidgets extends AppWidgetProvider {
             views.setViewPadding(R.id.widget_root, padding, padding, padding, padding);
         }
         if (height < 180 && fontScale > 1.5f) views.setTextViewTextSize(R.id.widget_date, android.util.TypedValue.COMPLEX_UNIT_SP, 16.5f / fontScale);
+        if (height < 180) views.setTextViewTextSize(R.id.widget_title, android.util.TypedValue.COMPLEX_UNIT_SP, Math.min(16, 24 / fontScale));
         views.setTextViewText(R.id.widget_amount, available ? days == 0 ? "今天" : String.valueOf(Math.abs(days)) : "—");
-        views.setTextViewTextSize(R.id.widget_amount, android.util.TypedValue.COMPLEX_UNIT_SP, available && Math.abs(days) > 9999 ? 34 : 44);
+        int width = AppWidgetManager.getInstance(context).getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250);
+        float amountSize = available && Math.abs(days) > 9999 ? 34 : 44;
+        if (width < 300) amountSize = Math.min(amountSize, 60 / fontScale);
+        views.setTextViewTextSize(R.id.widget_amount, android.util.TypedValue.COMPLEX_UNIT_SP, amountSize);
         views.setTextViewText(R.id.widget_footer, available ? days == 0 ? "就是今天" : days > 0 ? "还有 · 天" : "已过 · 天" : "点击右上角选择");
         views.setContentDescription(R.id.widget_root, available ? selected.optString("title") + (days == 0 ? "，就是今天" : days > 0 ? "，还有" + days + "天" : "，已过" + Math.abs(days) + "天") : "纪念日倒数，暂无可展示日期");
         Intent configure = new Intent(context, WidgetAnniversaryConfigActivity.class).setAction(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
         views.setOnClickPendingIntent(R.id.widget_settings, PendingIntent.getActivity(context, 3000 + id, configure, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
+        boolean rotating = selection.isEmpty() && queue.length() > 1;
+        views.setViewVisibility(R.id.widget_next, rotating ? View.VISIBLE : View.GONE);
+        views.setContentDescription(R.id.widget_next, "下一个纪念日，当前第" + (position + 1) + "个，共" + queue.length() + "个");
+        Intent next = new Intent(context, Anniversaries.class).setAction(NEXT_ANNIVERSARY).setData(Uri.parse("qiye-widget://anniversaries/" + id)).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+        views.setOnClickPendingIntent(R.id.widget_next, PendingIntent.getBroadcast(context, id, next, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
     }
 
     private static void renderAsset(Context context, RemoteViews views, JSONObject data, int id, String date) {

@@ -60,7 +60,7 @@ fs.copyFileSync(builtApk, apk);
 const checksum = crypto.createHash('sha256').update(fs.readFileSync(apk)).digest('hex');
 fs.writeFileSync(path.join(output, 'SHA256SUMS.txt'), `${checksum}  ${path.basename(apk)}\n`);
 const versionCode = Number(fs.readFileSync(path.join(root, 'android', 'AndroidManifest.xml'), 'utf8').match(/android:versionCode="(\d+)"/)[1]);
-const updateManifest = JSON.stringify({ version, versionCode, url: `https://github.com/NZqiye/mobile-workbench/releases/download/android-v${version}/${path.basename(apk)}`, sha256: checksum, notes: '新增待办、追剧、纪念日及订阅话费分类提醒；新增纪念日倒数桌面卡片；支持独立测试账号；优化毛玻璃追剧日历。更新后请在消息提醒中开启通知。' }, null, 2) + '\n';
+const updateManifest = JSON.stringify({ version, versionCode, url: `https://github.com/NZqiye/mobile-workbench/releases/download/android-v${version}/${path.basename(apk)}`, sha256: checksum, notes: '全部栏目统一毛玻璃卡片、导航和表单；纪念日桌面卡片焕新，自动轮换即将到来的日子，支持手动切换和固定展示。保留现有记录与分类提醒，请覆盖安装后打开 App 同步。' }, null, 2) + '\n';
 fs.writeFileSync(path.join(output, 'app-update.json'), updateManifest);
 fs.writeFileSync(path.join(root, 'public', 'app-update.json'), updateManifest);
 console.log(`APK: ${apk}\nSHA-256: ${checksum}`);

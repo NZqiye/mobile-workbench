@@ -1,0 +1,107 @@
+.phone-shell.ios18-shell.visual-aligned.glass-workbench {
+  --glass-card: color-mix(in srgb, var(--ios-panel) 76%, transparent);
+  --glass-raised: color-mix(in srgb, var(--ios-panel) 88%, transparent);
+  --glass-inset: color-mix(in srgb, var(--ios-panel-muted) 32%, var(--ios-panel));
+  --glass-edge: color-mix(in srgb, var(--ios-panel) 72%, var(--ios-separator));
+  --glass-shadow: 0 8px 28px -18px color-mix(in srgb, var(--ios-ink) 26%, transparent), inset 0 1px 0 rgb(255 255 255 / .5);
+  --glass-blur: saturate(135%) blur(18px);
+  background: radial-gradient(ellipse at 0% 0%, color-mix(in srgb, var(--ios-blue) 14%, transparent), transparent 58%), radial-gradient(ellipse at 100% 85%, color-mix(in srgb, var(--theme-accent) 12%, transparent), transparent 62%), var(--ios-page) !important;
+}
+
+.phone-shell.ios18-shell.visual-aligned.glass-workbench.pony-theme-bw {
+  --glass-card: color-mix(in srgb, var(--ios-panel) 84%, transparent);
+  --glass-raised: color-mix(in srgb, var(--ios-panel) 94%, transparent);
+  --glass-edge: rgb(255 255 255 / .14);
+  --glass-shadow: 0 8px 28px -18px rgb(0 0 0 / .55), inset 0 1px 0 rgb(255 255 255 / .08);
+}
+
+.phone-shell.ios18-shell.visual-aligned.glass-workbench :is(.app-body, .work-area, .content, .news-shell, .diet-shell, .exercise-shell, .desktop-context-rail, .arrange-shell, .asset-workspace, .life-list-workspace, .watch-shell) {
+  background: transparent !important;
+}
+
+.phone-shell.ios18-shell.visual-aligned.glass-workbench:is(.mobile-shell, .desktop-shell) :is(.panel, .market-panel, .stat-card, .dashboard-tile, .daily-quote-card, .diet-card, .exercise-card, .news-card, .arrange-card, .asset-board, .subscription-board, .travel-board, .life-goal-card, .watch-panel, .watch-list-panel, .watch-checkin-panel, .watch-rating-panel, .watch-calendar, .media-updates-panel, .tmdb-recommendations, .tmdb-panel, .desktop-context-card, .today-time-panel, .hero-card, .pet-card, .desktop-context-hero, .daybook-board) {
+  border-color: var(--glass-edge) !important;
+  background: var(--glass-card) !important;
+  box-shadow: var(--glass-shadow) !important;
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+.phone-shell.ios18-shell.visual-aligned.glass-workbench:is(.mobile-shell, .desktop-shell) :is(.phone-status, .bottom-nav, .side-nav, .module-head) {
+  background: var(--glass-raised) !important;
+  border-color: var(--glass-edge) !important;
+  -webkit-backdrop-filter: saturate(155%) blur(24px);
+  backdrop-filter: saturate(155%) blur(24px);
+}
+
+.phone-shell.ios18-shell.visual-aligned.glass-workbench :is(.module-tabs, .meal-tabs, .news-tabs, .asset-section-tabs, .asset-status-tabs, .stock-chart-tabs) {
+  background: color-mix(in srgb, var(--ios-panel-muted) 55%, transparent) !important;
+}
+
+.phone-shell.ios18-shell.visual-aligned.glass-workbench :is(.module-tabs, .meal-tabs, .news-tabs, .asset-section-tabs, .asset-status-tabs, .stock-chart-tabs) button.active {
+  background: var(--glass-raised) !important;
+  box-shadow: 0 2px 7px -4px color-mix(in srgb, var(--ios-ink) 28%, transparent);
+}
+
+.phone-shell.ios18-shell.visual-aligned.glass-workbench :is(.daybook-entry, .subscription-row, .subscription-summary > div, .travel-card, .account-box, .file-row, .record, .asset-row, .exercise-stat-card, .index-track-card, .watch-rating-library, .watch-rating-detail) {
+  background: var(--glass-inset) !important;
+  border-color: var(--ios-separator) !important;
+}
+
+.phone-shell.ios18-shell.visual-aligned.glass-workbench .watch-rating-panel {
+  border-radius: var(--ui-radius) !important;
+  overflow: clip;
+}
+
+.phone-shell.ios18-shell.visual-aligned.glass-workbench .daybook-entry.daybook-featured {
+  background: linear-gradient(125deg, color-mix(in srgb, var(--ios-blue) 11%, var(--glass-raised)), var(--glass-raised)) !important;
+  border-color: color-mix(in srgb, var(--ios-blue) 22%, var(--glass-edge)) !important;
+}
+
+.phone-shell.ios18-shell.visual-aligned.glass-workbench :is(.stack-form, .quick-form, .note-field, .filter-panel, .meal-form, .exercise-form, .weight-form, .anniversary-form, .asset-form, .account-login-form, .life-goal-form-fields) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), textarea, .ui-select-trigger) {
+  color: var(--ios-ink) !important;
+  background: var(--glass-inset) !important;
+  border-color: var(--ios-separator) !important;
+}
+
+.phone-shell.ios18-shell.visual-aligned.glass-workbench :is(.mobile-navigation-sheet, .quick-record-panel, .overview-panel) {
+  color: var(--ios-ink);
+  background: var(--glass-raised) !important;
+  border-color: var(--glass-edge) !important;
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+body:has(.glass-workbench) .ui-select-content {
+  background: color-mix(in srgb, var(--select-panel, #f5f7fa) 92%, transparent);
+  -webkit-backdrop-filter: saturate(135%) blur(18px);
+  backdrop-filter: saturate(135%) blur(18px);
+}
+
+.glass-workbench .mobile-navigation-dialog::backdrop {
+  background: rgb(12 25 36 / .3);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .phone-shell.ios18-shell.visual-aligned.glass-workbench {
+    --glass-card: var(--ios-panel);
+    --glass-raised: var(--ios-panel);
+  }
+  body:has(.glass-workbench) .ui-select-content { background: var(--select-panel, #f5f7fa); }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .phone-shell.ios18-shell.visual-aligned.glass-workbench {
+    --glass-card: var(--ios-panel);
+    --glass-raised: var(--ios-panel);
+    --glass-blur: none;
+  }
+  .phone-shell.ios18-shell.visual-aligned.glass-workbench:is(.mobile-shell, .desktop-shell) :is(.phone-status, .bottom-nav, .side-nav, .module-head),
+  body:has(.glass-workbench) .ui-select-content {
+    background: var(--ios-panel, #f5f7fa) !important;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

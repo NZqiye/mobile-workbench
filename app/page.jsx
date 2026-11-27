@@ -39,6 +39,7 @@ import useAppMotion from "./components/use-app-motion";
 import "./components/app-motion.css";
 import "./components/workbench-polish.css";
 import "./components/readability.css";
+import "./components/glass-surfaces.css";
 
 function hasChineseText(value) {
   return /[㐀-鿿]/.test(String(value || ""));
@@ -7981,7 +7982,7 @@ export default function Workbench() {
   </section>;
 
   return (
-    <main ref={shellRef} className={`phone-shell ios18-shell visual-aligned app-motion ${androidApp ? "android-app-shell" : ""} ${displayMode === "desktop" ? "desktop-shell desktop-redesign" : "mobile-shell"} ${menuOpen ? "menu-open" : ""} page-${activePage} pony-theme-${ponyTheme}`}>
+    <main ref={shellRef} className={`phone-shell ios18-shell visual-aligned glass-workbench app-motion ${androidApp ? "android-app-shell" : ""} ${displayMode === "desktop" ? "desktop-shell desktop-redesign" : "mobile-shell"} ${menuOpen ? "menu-open" : ""} page-${activePage} pony-theme-${ponyTheme}`}>
       <div className="phone-status">
         <button className="menu-toggle" type="button" aria-label="打开菜单" onClick={() => setMenuOpen(true)}>☰</button>
         <strong>{androidApp ? "七夜online" : <ClockText />}</strong>

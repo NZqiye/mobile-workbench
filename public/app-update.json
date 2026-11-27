@@ -1,7 +1,7 @@
 {
-  "version": "1.1.11",
-  "versionCode": 13,
-  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.11/qiyeonline-1.1.11.apk",
-  "sha256": "69d909535a04db7cc37ac388f02022fe7f98c82c6d311311494ac1ca710dc7de",
-  "notes": "新增待办、追剧、纪念日及订阅话费分类提醒；新增纪念日倒数桌面卡片；支持独立测试账号；优化毛玻璃追剧日历。更新后请在消息提醒中开启通知。"
+  "version": "1.1.12",
+  "versionCode": 14,
+  "url": "https://github.com/NZqiye/mobile-workbench/releases/download/android-v1.1.12/qiyeonline-1.1.12.apk",
+  "sha256": "501ab04483509be229c6f74781454fb915d156c7c4ac006fc550409a44f588c2",
+  "notes": "全部栏目统一毛玻璃卡片、导航和表单；纪念日桌面卡片焕新，自动轮换即将到来的日子，支持手动切换和固定展示。保留现有记录与分类提醒，请覆盖安装后打开 App 同步。"
 }
