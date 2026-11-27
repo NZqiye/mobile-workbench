@@ -8270,9 +8270,6 @@ export default function Workbench() {
                 <p className="backup-description" id="backup-description">导出的 Markdown 包含全部私人记录，请勿公开分享；可用于恢复，也兼容旧版 JSON 备份。</p>
               </section>
               <PonyThemePanel value={ponyTheme} onChange={changePonyTheme} />
-              <section className="panel" aria-label="应用信息">
-                <div className="panel-head"><h2>应用信息</h2><a className="chip-button" href="https://www.thiings.co/things" target="_blank" rel="noopener noreferrer">图标署名 · Thiings</a></div>
-              </section>
             </>
           )}
         </section>
