@@ -16,27 +16,27 @@ function animeRoute({tmdb = true, matches = true} = {}) {
   return {get:async()=>(await context.GET({url:'http://localhost/api/anime-updates'})).json(),normalize:context.normalizeSubject};
 }
 
-test('anime uses a smaller real Bangumi poster when available and retains the original when a size is missing',()=>{
+test('anime recommendations do not use Bangumi images as posters',()=>{
   const route=animeRoute();
-  assert.equal(route.normalize({id:1,name:'作品',images:{large:'large',common:'common'}},0).posterUrl,'common');
-  assert.equal(route.normalize({id:1,name:'作品',images:{large:'large'}},0).posterUrl,'large');
+  assert.equal(route.normalize({id:1,name:'作品',images:{large:'large',common:'common'}},0).posterUrl,'');
+  assert.equal(route.normalize({id:1,name:'作品',images:{large:'large'}},0).posterUrl,'');
   assert.equal(route.normalize({id:1,name:'作品'},0).posterUrl,'');
 });
 
-test('TMDB enrichment keeps the matching work original Bangumi poster as an error fallback',async()=>{
+test('TMDB enrichment supplies the matching work poster without a Bangumi fallback',async()=>{
   const data=await animeRoute().get();
   const item=data.sections.find(section=>section.id==='animeHot').items[0];
   assert.equal(item.bangumiId,10);
   assert.equal(item.tmdbId,90);
   assert.equal(item.posterUrl,'https://image.tmdb.org/t/p/w342/tmdb.jpg');
-  assert.equal(item.posterFallbackUrl,'https://lain.bgm.tv/pic/cover/c/common.jpg');
+  assert.equal(item.posterFallbackUrl,undefined);
 });
 
-test('unmatched anime and an unconfigured TMDB keep their own poster without borrowing another work',async()=>{
+test('unmatched anime and an unconfigured TMDB show no non-TMDB poster',async()=>{
   for(const options of [{matches:false},{tmdb:false}]){
     const data=await animeRoute(options).get();
     const item=data.sections.find(section=>section.id==='animeHot').items[0];
-    assert.equal(item.posterUrl,'https://lain.bgm.tv/pic/cover/c/common.jpg');
+    assert.equal(item.posterUrl,'');
     assert.equal(item.tmdbId,undefined);
   }
 });

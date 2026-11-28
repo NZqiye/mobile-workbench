@@ -9455,6 +9455,44 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
 .ios18-shell .daybook-board .anniversary-form .daybook-icon-options button:hover { background: var(--ios-blue-soft) !important; }
 .ios18-shell .daybook-board .anniversary-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .ios18-shell .daybook-board .anniversary-fields .anniversary-type-menu { grid-column: auto; }
+.ios18-shell .daybook-board .anniversary-repeat-control {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.ios18-shell .daybook-board .anniversary-repeat-control legend {
+  padding: 0;
+  color: var(--daybook-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.anniversary-repeat-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.ios18-shell .anniversary-repeat-options button {
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 2px;
+  border: 1px solid var(--daybook-line);
+  border-radius: 10px;
+  color: var(--daybook-ink);
+  background: var(--ios-panel-muted);
+  font-size: 12px;
+  font-weight: 550;
+  white-space: nowrap;
+  transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+.ios18-shell .anniversary-repeat-options button[aria-checked="true"] {
+  border-color: var(--daybook-accent);
+  color: var(--daybook-accent);
+  background: var(--ios-blue-soft);
+  font-weight: 700;
+}
+.ios18-shell .anniversary-repeat-options button:focus-visible { outline: 2px solid var(--daybook-accent); outline-offset: 2px; }
+.ios18-shell.mobile-shell button.ui-select-trigger.ui-select-trigger { min-height: 48px; border-radius: 14px; }
+.ios18-shell.mobile-shell .ui-select-option { min-height: 46px; }
 @media (max-width: 480px) {
   .ios18-shell .arrange-card.daybook-board { padding: 18px 14px; border-radius: 26px !important; }
   .ios18-shell .daybook-filters button { flex: 1 0 auto; padding-inline: 8px; }
@@ -9466,6 +9504,8 @@ body:has(.ios18-shell.pony-theme-moon) { --select-accent: #496b82; --select-acce
   .ios18-shell .daybook-featured .daybook-number b { font-size: 56px; }
   .ios18-shell .daybook-featured .daybook-copy h3 { font-size: 20px; }
   .daybook-total { font-size: 11px; }
+  .ios18-shell .anniversary-repeat-options { gap: 4px; }
+  .ios18-shell .anniversary-repeat-options button { font-size: 11px; }
 }
 @media (prefers-reduced-motion: reduce) { .daybook-board *, .daybook-board *::before, .daybook-board *::after { transition: none !important; } }
 

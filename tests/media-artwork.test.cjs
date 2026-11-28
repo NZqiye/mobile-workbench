@@ -32,37 +32,12 @@ test("horizontal images take priority and films do not request TV episodes", asy
   assert.equal(route.calls.length, 1);
 });
 
-test("TVMaze falls back to exact show backgrounds and episode images without a TMDB token", async () => {
-  const route = artworkRoute((url) => url.endsWith("/images")
-    ? [{ type: "poster", resolutions: { original: { url: "poster" } } }, { type: "background", resolutions: { original: { url: "background" } } }]
-    : [{ image: { original: "still" } }, { image: null }], "");
-  assert.deepEqual((await route.get("tvmazeId=30")).images, ["background", "still"]);
-  assert.ok(route.calls.every((url) => url.includes("/shows/30/")));
-});
-
 test("unavailable artwork and invalid identity leave no invented replacement", async () => {
   const route = artworkRoute(() => { throw new Error("offline"); });
   assert.deepEqual((await route.get("id=40")).images, []);
   const count = route.calls.length;
   assert.deepEqual((await route.get("id=../wrong&type=tv")).images, []);
   assert.equal(route.calls.length, count);
-});
-
-test("Bangumi-only anime matches Kitsu by exact title and year without confusing seasons", async () => {
-  const route = artworkRoute(() => ({ data: [
-    { id: "1", attributes: { titles: { en: "Cyberpunk: Edgerunners" }, startDate: "2022-09-13", coverImage: { large: "wrong-season" } } },
-    { id: "2", attributes: { titles: { en: "Cyberpunk: Edgerunners II" }, startDate: "2026-10-20", coverImage: { large: "right-season" } } },
-  ] }));
-  const result = await route.get("bangumiId=10&name=Cyberpunk%3A%20Edgerunners%20II&year=2026");
-  assert.deepEqual(result.images, ["right-season"]);
-  assert.equal(route.calls.length, 1);
-  assert.ok(route.calls[0].includes("kitsu.app"));
-});
-
-test("ambiguous anime matches never borrow another show's artwork", async () => {
-  const candidate = { attributes: { titles: { en: "Same Title" }, startDate: "2026-01-01", coverImage: { large: "ambiguous" } } };
-  const route = artworkRoute(() => ({ data: [candidate, candidate] }));
-  assert.deepEqual((await route.get("bangumiId=11&name=Same%20Title&year=2026")).images, []);
 });
 
 test("missing main poster uses the same programme's newest available season poster", async () => {
@@ -84,4 +59,11 @@ test("poster-only image collections prefer Chinese and do not invent artwork", a
   assert.equal((await route.get("id=301&type=movie")).posterUrl, "https://image.tmdb.org/t/p/w342/zh.jpg");
   const empty = artworkRoute(() => ({}));
   assert.deepEqual(await empty.get("id=302&type=tv"), { images: [], posterUrl: "" });
+});
+
+test("non-TMDB source IDs cannot retrieve or display posters", async () => {
+  const route = artworkRoute(() => { throw new Error("should not fetch external artwork"); });
+  const result = await route.get("tvmazeId=30&bangumiId=40&kitsuId=55");
+  assert.deepEqual(result.images, []);
+  assert.equal(route.calls.length, 0);
 });

@@ -94,7 +94,10 @@ async function enrichWithTmdb(sections) {
     }
   }));
   for (const section of sections) {
-    section.items = section.items.map((item) => ({ ...item, posterFallbackUrl: item.posterUrl, ...metadata.get(item.bangumiId) }));
+    section.items = section.items.map((item) => {
+      const tmdb = metadata.get(item.bangumiId);
+      return { ...item, ...tmdb, posterUrl: tmdb?.posterUrl || "" };
+    });
   }
   return incomplete ? "部分 TMDB 资料暂未获取，已保留 Bangumi 资料，可稍后刷新重试" : "";
 }
@@ -147,7 +150,6 @@ function normalizeSubject(item, index) {
   const date = String(item.date || item.air_date || "");
   const title = String(item.name_cn || item.name || "").trim();
   const summary = String(item.summary || "").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
-  const images = item.images || {};
   const collection = item.collection || {};
   return {
     id: `bangumi-${item.id}`,
@@ -170,7 +172,7 @@ function normalizeSubject(item, index) {
     platform: "Bangumi",
     source: "Bangumi",
     sourceLabel: "Bangumi",
-    posterUrl: images.common || images.medium || images.large || images.small || "",
+    posterUrl: "",
     summary,
     summaryZh: /[\u3400-\u9fff]/.test(summary) ? summary : "",
     tags: Array.isArray(item.meta_tags) ? item.meta_tags : [],

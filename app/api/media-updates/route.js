@@ -36,7 +36,21 @@ function hasChinese(text) {
 function normalizeTitle(text) {
   return String(text || "")
     .toLowerCase()
-    .replace(/[^a-z0-9\u3400-\u9fff]+/gi, "");
+    .normalize("NFKC")
+    .replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+function matchTmdbTitle(show, results) {
+  const title = normalizeTitle(show?.name);
+  const matches = (Array.isArray(results) ? results : []).filter((item) =>
+    [item.name, item.original_name].some((value) => value && normalizeTitle(value) === title)
+  );
+  const year = Number(String(show?.premiered || "").slice(0, 4));
+  if (!Number.isInteger(year) || year < 1800) return matches.length === 1 ? matches[0] : null;
+  const sameYear = matches.filter((item) => Number(String(item.first_air_date || "").slice(0, 4)) === year);
+  if (sameYear.length === 1) return sameYear[0];
+  const nearbyYear = matches.filter((item) => Math.abs(Number(String(item.first_air_date || "").slice(0, 4)) - year) <= 1);
+  return nearbyYear.length === 1 ? nearbyYear[0] : null;
 }
 
 function getPlatformCalibration(platform) {
@@ -82,33 +96,55 @@ function pickChineseAlias(akas = []) {
   );
 }
 
+async function findTmdbShowByExternalId(externalId, source, signal) {
+  if (!externalId) return null;
+  const url = new URL(`https://api.themoviedb.org/3/find/${encodeURIComponent(externalId)}`);
+  url.searchParams.set("external_source", source);
+  url.searchParams.set("language", "zh-CN");
+  const response = await fetchTmdb(url, { signal });
+  if (!response.ok) return null;
+  const data = await response.json();
+  return data.tv_results?.find((item) => item?.id) || null;
+}
+
 async function fetchTmdbTitle(show) {
   if (!tmdbToken || !show?.name) return { tmdbId: "", title: "", overview: "", posterUrl: "", backdropUrl: "" };
-  const cacheKey = `${show.name}|${show.premiered || ""}`;
+  const cacheKey = `${show.name}|${show.premiered || ""}|${show.externals?.imdb || ""}|${show.externals?.thetvdb || ""}`;
   if (tmdbTitleCache.has(cacheKey)) return tmdbTitleCache.get(cacheKey);
   const promise = (async () => {
     try {
-      const url = new URL("https://api.themoviedb.org/3/search/tv");
-      url.searchParams.set("query", show.name);
-      url.searchParams.set("language", "zh-CN");
-      url.searchParams.set("include_adult", "false");
-      if (show.premiered) url.searchParams.set("first_air_date_year", String(show.premiered).slice(0, 4));
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 8000);
       try {
-        const response = await fetchTmdb(url, { signal: controller.signal });
-        const text = await response.text();
-        const data = text ? JSON.parse(text) : {};
-        if (!response.ok) return { tmdbId: "", title: "", overview: "", posterUrl: "", backdropUrl: "" };
-        const results = Array.isArray(data.results) ? data.results : [];
-        const query = normalizeTitle(show.name);
-        const best = results.find((item) => normalizeTitle(item.name) === query || normalizeTitle(item.original_name) === query);
+        let best = null;
+        for (const [externalId, source] of [[show.externals?.imdb, "imdb_id"], [show.externals?.thetvdb, "tvdb_id"]]) {
+          if (!externalId) continue;
+          try {
+            best = await findTmdbShowByExternalId(externalId, source, controller.signal);
+          } catch {
+            best = null;
+          }
+          if (best) break;
+        }
+        if (!best) {
+          const url = new URL("https://api.themoviedb.org/3/search/tv");
+          url.searchParams.set("query", show.name);
+          url.searchParams.set("language", "zh-CN");
+          url.searchParams.set("include_adult", "false");
+          if (show.premiered) url.searchParams.set("first_air_date_year", String(show.premiered).slice(0, 4));
+          const response = await fetchTmdb(url, { signal: controller.signal });
+          if (!response.ok) return { tmdbId: "", title: "", overview: "", posterUrl: "", backdropUrl: "" };
+          const data = await response.json();
+          const results = Array.isArray(data.results) ? data.results : [];
+          best = matchTmdbTitle(show, results);
+        }
         if (!best?.id) return { tmdbId: "", title: "", overview: "", posterUrl: "", backdropUrl: "" };
         const detailUrl = new URL(`https://api.themoviedb.org/3/tv/${best.id}`);
         detailUrl.searchParams.set("language", "zh-CN");
         detailUrl.searchParams.set("append_to_response", "images,translations");
         detailUrl.searchParams.set("include_image_language", "zh-CN,en,null");
         const detailResponse = await fetchTmdb(detailUrl, { signal: controller.signal });
+        if (!detailResponse.ok) return { tmdbId: "", title: "", overview: "", posterUrl: "", backdropUrl: "" };
         const detailText = await detailResponse.text();
         const details = detailText ? JSON.parse(detailText) : {};
         const imagePath = (images = []) => {
@@ -116,6 +152,7 @@ async function fetchTmdbTitle(show) {
           return list.find((image) => image.iso_639_1 === "zh")?.file_path
             || list.find((image) => image.iso_639_1 === "en")?.file_path
             || list.find((image) => !image.iso_639_1)?.file_path
+            || list[0]?.file_path
             || "";
         };
         const translation = (details.translations?.translations || []).find((entry) => ["CN", "TW", "HK"].includes(entry.iso_3166_1) && entry.data);
@@ -194,7 +231,7 @@ async function normalizeEpisode(episode, compact = false) {
     summaryZh: titleZh.summaryZh,
     tmdbId: titleZh.tmdbId,
     tvmazeId: show.id || "",
-    posterUrl: titleZh.posterUrl || show.image?.original || show.image?.medium || "",
+    posterUrl: titleZh.posterUrl || "",
     backdropUrl: titleZh.backdropUrl || episode.image?.original || episode.image?.medium || "",
     titleSource: titleZh.titleSource,
   };

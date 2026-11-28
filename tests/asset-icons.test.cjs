@@ -39,6 +39,17 @@ test("every selectable and legacy asset icon resolves to a decodable local image
   }
 });
 
+test("icon assets use concise semantic folders without extra directories", () => {
+  const iconRoot = path.join(root, "public/assets-icons/thiings");
+  const folders = fs.readdirSync(iconRoot, { withFileTypes: true }).filter(entry => entry.isDirectory());
+  assert.equal(folders.some(entry => entry.name.endsWith("-extra")), false);
+  for (const folder of folders) {
+    const count = fs.readdirSync(path.join(iconRoot, folder.name)).length;
+    assert.ok(count <= 100, `${folder.name} should stay within the folder size limit`);
+  }
+  assert.ok(folders.some(entry => entry.name === "food-asian"));
+});
+
 test("common shortcuts resolve to real asset categories and camping has its own category", () => {
   const context = vm.createContext({ thiingsIconCategories: categories, thiingsIconLabels: iconContext.thiingsIconLabels });
   const start = pageSource.indexOf("const assetIconCategories =");
@@ -52,6 +63,21 @@ test("common shortcuts resolve to real asset categories and camping has its own 
   assert.equal(context.assetCategory({ icon: "thiings:payroll-check" }), "财务办公");
   assert.match(context.assetIconLabel("thiings:payroll-check"), /发薪日/);
   assert.match(context.assetIconLabel("thiings:dental-floss"), /牙线/);
+});
+
+test("asset icon source lookup supports current, legacy and prefixed icon names", () => {
+  const source = pageSource.slice(pageSource.indexOf("function assetIconSource"), pageSource.indexOf("function AssetIcon"));
+  const context = vm.createContext({
+    subscriptionIconByKey: new Map([["thiings-subscribe:netflix", "/subscribe/netflix.webp"]]),
+    thiingsIconByKey: { "thiings:laptop": "/digital/laptop.webp" },
+    assetIconImageMap: { laptop: "/legacy/laptop.webp", smartphone: "/legacy/smartphone.webp" },
+  });
+  vm.runInContext(source + "this.resolve = assetIconSource", context);
+  assert.equal(context.resolve("thiings-subscribe:netflix"), "/subscribe/netflix.webp");
+  assert.equal(context.resolve("thiings:laptop"), "/digital/laptop.webp");
+  assert.equal(context.resolve("laptop"), "/digital/laptop.webp");
+  assert.equal(context.resolve("smartphone"), "/legacy/smartphone.webp");
+  assert.equal(context.resolve("unknown"), undefined);
 });
 
 test("additions keep existing categories and Chinese names with distinct compact images", async () => {

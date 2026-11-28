@@ -26,6 +26,7 @@ import watchCalendarStyles from "./components/watch-calendar.module.css";
 import { seriesWatchProgress } from "../lib/watch-progress";
 import { encodeMarkdownBackup, decodeMarkdownBackup } from "../lib/markdown-backup";
 import { mergeWatchImport } from "../lib/watch-import";
+import { findExactTmdbMatch } from "../lib/tmdb-match";
 import { planQuickRecordChanges, undoQuickRecordChanges } from "../lib/workbench-records";
 import { anniversaryIcon, anniversaryIcons } from "../lib/anniversary-icons";
 import { anniversaryProgress } from "../lib/anniversary-progress";
@@ -3424,12 +3425,9 @@ function DailyArrangement({ view = "habits", habits, done, tasks, anniversaries,
   const [selectedAnniversaryIcon, setSelectedAnniversaryIcon] = useState("");
   const [editingAnniversaryIcon, setEditingAnniversaryIcon] = useState(null);
   const formIcon = anniversaryIcon({ type: anniversaryType, icon: selectedAnniversaryIcon });
-  useEffect(() => {
-    setAnniversaryRepeat(anniversaryType === "countdown" ? "once" : "annual");
-  }, [anniversaryType]);
-  useEffect(() => {
-    if (anniversaryCalendarType === "lunar" && !["once", "annual"].includes(anniversaryRepeat)) setAnniversaryRepeat("annual");
-  }, [anniversaryCalendarType, anniversaryRepeat]);
+  const anniversaryRepeatOptions = anniversaryCalendarType === "solar"
+    ? [["once", "仅一次"], ["weekly", "每周"], ["monthly", "每月"], ["quarterly", "每季度"], ["annual", "每年"]]
+    : [["once", "仅一次"], ["annual", "每年"]];
   const unfinishedTasks = tasks.filter((task) => task.status !== "已完成").slice(0, 8);
   const sortedAnniversaries = [...anniversaries].sort((a, b) => (anniversaryMeta(a).nextDays ?? 99999) - (anniversaryMeta(b).nextDays ?? 99999));
   const filteredAnniversaries = sortedAnniversaries.filter((item) => anniversaryFilter === "all" || (item.type || "memory") === anniversaryFilter);
@@ -3553,24 +3551,33 @@ function DailyArrangement({ view = "habits", habits, done, tasks, anniversaries,
             <WorkbenchSelect
               name="type"
               value={anniversaryType}
-              onChange={(event) => setAnniversaryType(event.target.value)}
+              onChange={(event) => {
+                const nextType = event.target.value;
+                setAnniversaryType(nextType);
+                if (nextType === "countdown") setAnniversaryRepeat("once");
+                else if (anniversaryRepeat === "once") setAnniversaryRepeat("annual");
+              }}
               className="anniversary-type-menu"
               aria-label="选择纪念日类型"
             >{anniversaryTypes.map((type) => <option value={type.id} key={type.id}>{type.label}</option>)}</WorkbenchSelect>
             <WorkbenchSelect
               name="calendarType"
               value={anniversaryCalendarType}
-              onChange={(event) => setAnniversaryCalendarType(event.target.value)}
+              onChange={(event) => {
+                const nextCalendarType = event.target.value;
+                setAnniversaryCalendarType(nextCalendarType);
+                if (nextCalendarType === "lunar" && !["once", "annual"].includes(anniversaryRepeat)) setAnniversaryRepeat("annual");
+              }}
               className="anniversary-calendar-menu"
               aria-label="选择日历类型"
             ><option value="solar">公历</option><option value="lunar">农历</option></WorkbenchSelect>
-            <WorkbenchSelect
-              name="repeat"
-              value={anniversaryRepeat}
-              onChange={(event) => setAnniversaryRepeat(event.target.value)}
-              className="anniversary-repeat-menu"
-              aria-label="选择重复周期"
-            ><option value="once">仅一次</option>{anniversaryCalendarType === "solar" && <><option value="weekly">每周</option><option value="monthly">每月</option><option value="quarterly">每季度</option></>}<option value="annual">每年</option></WorkbenchSelect>
+            <fieldset className="anniversary-repeat-control">
+              <legend>重复周期</legend>
+              <input type="hidden" name="repeat" value={anniversaryRepeat} />
+              <div className="anniversary-repeat-options" role="radiogroup" aria-label="选择重复周期">
+                {anniversaryRepeatOptions.map(([value, label]) => <button key={value} type="button" role="radio" aria-checked={anniversaryRepeat === value} onClick={() => setAnniversaryRepeat(value)}>{label}</button>)}
+              </div>
+            </fieldset>
           </div>
           {anniversaryType === "countdown" && <label className="daybook-start-date">倒数起始日期<input name="startDate" type="date" defaultValue={todayKey()} onInput={(event) => event.currentTarget.setCustomValidity("")} required /><small>用于计算已过天数和日期进度</small></label>}
           <input type="hidden" name="icon" value={formIcon.id} />
@@ -3794,9 +3801,13 @@ const subscriptionIconCategories = [{
 }];
 const subscriptionIconByKey = new Map(subscriptionIconCategories.flatMap((category) => category.icons.map((icon) => [icon, `/assets-icons/thiings/subscribe/${icon.replace("thiings-subscribe:", "")}.webp`])));
 
+function assetIconSource(name) {
+  return subscriptionIconByKey.get(name) || thiingsIconByKey[name] || thiingsIconByKey[`thiings:${name}`] || assetIconImageMap[name];
+}
+
 function AssetIcon({ name, size = 20 }) {
   const [err, setErr] = useState(false);
-  const src = subscriptionIconByKey.get(name) || thiingsIconByKey[name] || assetIconImageMap[name];
+  const src = assetIconSource(name);
   useEffect(() => setErr(false), [name]);
   if (!src || err) {
     return (
@@ -4291,7 +4302,7 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
             }
           });
         }}>
-          {item.posterUrl ? <img src={item.posterUrl} alt="" loading="lazy" /> : <span>{mediaTitle(item).slice(0, 1)}</span>}
+          <MediaPoster item={item} />
           <strong>{mediaTitle(item)}</strong>
           <small>{[item.year, item.type].filter(Boolean).join(" · ")}</small>
         </button>)}
@@ -4569,7 +4580,7 @@ function MediaUpdates({ watchItems = [] }) {
                 const meta = [hasLiveClock(item.airtime) ? item.airtime : "", item.platformZh || item.platform, item.type === "premiere" ? "首播" : item.type === "finale" ? "季终" : "", item.season ? "S" + item.season + "E" + item.number : ""].filter(Boolean).join(" · ");
                 return (
                   <div className="media-update-row" key={selectedDay.date + "-" + (item.id || item.title) + "-" + item.season + "-" + item.number}>
-                    {item.posterUrl ? <img className="media-update-poster" src={item.posterUrl} alt="" loading="lazy" /> : <span className="media-update-poster" />}
+                    <MediaPoster item={item} className="media-update-poster" />
                     <div className="media-update-main">
                       <div className="media-update-title-row">
                         <strong>{itemTitle}</strong>
@@ -4632,7 +4643,7 @@ function AnimeUpdates() {
             const meta = [item.score ? `评分 ${item.score}` : "", item.episodeCount ? `${item.episodeCount} 集` : "", item.startDate ? `开播 ${item.startDate}` : ""].filter(Boolean).join(" · ");
             return (
               <a className="media-update-row anime-update-row" key={item.id || item.title} href={item.url || undefined} target="_blank" rel="noreferrer">
-                {item.posterUrl ? <img className="media-update-poster" src={item.posterUrl} alt="" loading="lazy" /> : <span className="media-update-poster" />}
+                <MediaPoster item={item} className="media-update-poster" />
                 <div className="media-update-main">
                   <div className="media-update-title-row">
                     <strong>{mediaTitle(item)}</strong>
@@ -4651,14 +4662,12 @@ function AnimeUpdates() {
 
 function MediaGallery({ item, posterOnly = false }) {
   const [backdropUrl, setBackdropUrl] = useState(item?.backdropUrl || "");
-  const [posterUrl, setPosterUrl] = useState(item?.posterUrl || "");
   const galleryRef = useRef(null);
   const attempted = useRef(false);
   const fallbackImages = useRef([]);
 
   useEffect(() => {
     setBackdropUrl(item?.backdropUrl || "");
-    setPosterUrl(item?.posterUrl || "");
     attempted.current = false;
     fallbackImages.current = [];
   }, [item?.backdropUrl, item?.posterUrl, item?.tmdbId, item?.tvmazeId, item?.bangumiId]);
@@ -4693,14 +4702,11 @@ function MediaGallery({ item, posterOnly = false }) {
 
   if (posterOnly) return <MediaPoster item={item} className="media-recommendation-cover" />;
 
-  if (!backdropUrl && !posterUrl) return <div ref={galleryRef} className="media-gallery media-gallery-empty" aria-hidden="true"><span>{mediaTitle(item).slice(0, 1)}</span></div>;
   return (
-    <div ref={galleryRef} className={`media-gallery${!backdropUrl ? " media-gallery-poster-only" : !posterUrl ? " media-gallery-single" : ""}`}>
-      {posterUrl && (
-        <div className="media-poster-thumb">
-          <img src={posterUrl} alt="" loading="lazy" decoding="async" onError={() => setPosterUrl("")} />
-        </div>
-      )}
+    <div ref={galleryRef} className={`media-gallery${!backdropUrl ? " media-gallery-poster-only" : ""}`}>
+      <div className="media-poster-thumb">
+        <MediaPoster item={item} className="media-gallery-poster" />
+      </div>
       {backdropUrl && (
         <div className="media-still">
           <img src={backdropUrl} alt="" loading="lazy" decoding="async" onError={() => setBackdropUrl(fallbackImages.current.shift() || "")} />
@@ -4940,7 +4946,7 @@ function WatchSchedule({ items = [], compact = false, activeView = "today", tmdb
             <div className="tmdb-results">
               {searchResults.map((item) => (
                 <button className="tmdb-result" type="button" key={`${item.type}-${item.tmdbId}`} onClick={() => onImportTmdb(item)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onImportTmdb(item); } }}>
-                  {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{mediaTitle(item).slice(0, 1)}</span>}
+                  <MediaPoster item={item} />
                   <strong>{mediaTitle(item)}</strong>
                   <small>{[item.year, item.type].filter(Boolean).join(" · ")}</small>
                 </button>
@@ -4985,7 +4991,7 @@ function WatchSchedule({ items = [], compact = false, activeView = "today", tmdb
                   <div className="watch-time">{weekdayText(selected.date)} {selected.dateKey.slice(5).replace("-", "/")}{hasLiveClock(item.airTime) && <span>{item.airTime}</span>}</div>
                   <div className="watch-card">
                     <div className="poster-box">
-                      {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{mediaTitle(item).slice(0, 1)}</span>}
+                      <MediaPoster item={item} />
                     </div>
                     <div className="watch-info">
                       <div className="watch-title-row">
@@ -5035,7 +5041,7 @@ function WatchSchedule({ items = [], compact = false, activeView = "today", tmdb
                 {visibleWatchItems.map((item) => (
                   <article className="watch-list-row" key={item.id}>
                     <div className="watch-list-poster">
-                      {item.posterUrl ? <img src={item.posterUrl} alt="" /> : <span>{mediaTitle(item).slice(0, 1)}</span>}
+                      <MediaPoster item={item} />
                     </div>
                     <div>
                       <strong>{mediaTitle(item)}</strong>
@@ -6923,7 +6929,7 @@ export default function Workbench() {
     const mergedItem = {
       ...item,
       title: item.titleZh || item.title,
-      posterUrl: item.posterUrl || omdbDetails.posterUrl || "",
+      posterUrl: item.posterUrl || "",
       imdbRating: omdbDetails.imdbRating || item.imdbRating || "",
       imdbVotes: omdbDetails.imdbVotes || item.imdbVotes || "",
       imdbID: omdbDetails.imdbId || item.imdbID || "",
@@ -6982,19 +6988,11 @@ export default function Workbench() {
     const text = await response.text();
     const data = text ? JSON.parse(text) : {};
     if (!response.ok) throw new Error(data.error || "TMDB 搜索失败");
-    const mediaType = tmdbMediaType(item);
-    const candidates = (Array.isArray(data.results) ? data.results : []).filter((result) => result.tmdbMediaType === mediaType);
-    if (!candidates.length) return item;
-    const normalizedTitle = title.toLowerCase();
-    const sameTitle = candidates.find((result) => [result.title, result.titleZh, result.originalTitle]
-      .filter(Boolean)
-      .some((value) => String(value).trim().toLowerCase() === normalizedTitle));
-    const sameYear = candidates.find((result) => item.year && String(result.year) === String(item.year));
-    return sameTitle || sameYear || candidates[0];
+    return findExactTmdbMatch(item, data.results) || item;
   }
 
-  async function syncLocalConsultationsToTmdb() {
-    const candidates = consultations.filter((item) => item?.status !== "\u5df2\u5f52\u6863");
+  async function syncLocalConsultationsToTmdb(sourceItems = consultations) {
+    const candidates = sourceItems.filter((item) => item?.status !== "\u5df2\u5f52\u6863");
     if (!candidates.length) return { synced: 0, matched: 0, failed: 0 };
     let synced = 0;
     let matched = 0;
@@ -7020,12 +7018,16 @@ export default function Workbench() {
         const text = await response.text();
         const data = text ? JSON.parse(text) : {};
         if (!response.ok) throw new Error(data.error || "TMDB 片单写入失败");
-        if (item.rating && Number.isFinite(Number(item.rating))) {
-          await fetch("/api/tmdb/rating", {
+        const itemRating = Number(item.rating);
+        if (Number.isFinite(itemRating) && itemRating >= 0.5 && itemRating <= 10) {
+          const ratingResponse = await fetch("/api/tmdb/rating", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mediaId: match.tmdbId, mediaType, rating: Math.round(Number(item.rating) * 2) / 2 }),
+            body: JSON.stringify({ mediaId: match.tmdbId, mediaType, rating: Math.round(itemRating * 2) / 2 }),
           });
+          const ratingText = await ratingResponse.text();
+          const ratingData = ratingText ? JSON.parse(ratingText) : {};
+          if (!ratingResponse.ok) throw new Error(ratingData.error || "TMDB 评分同步失败");
         }
         updates.set(item.id, { ...item, ...match, id: item.id, status: item.status, rating: item.rating || "" });
         synced += 1;
@@ -7035,7 +7037,7 @@ export default function Workbench() {
     }
     if (updates.size) {
       const next = syncConsultationStatusFromWatchCheckins(
-        dedupeConsultations(consultations.map((item) => updates.get(item.id) || item)),
+        dedupeConsultations(sourceItems.map((item) => updates.get(item.id) || item)),
         watchCheckins,
       );
       setConsultations(next);
@@ -7909,8 +7911,9 @@ export default function Workbench() {
           return stored && Object.entries(item.seasonProgress || {}).every(([season, episodes]) => episodes.every(episode => stored.seasonProgress?.[season]?.includes(episode)));
         });
         if (!titlesVerified || !savedCheckins.every(record => (record.traktHistory || []).every(entry => historyIds.has(String(entry.id))))) throw new Error("云端观影数据校验未完成，请保持联网后重新导入；已有记录会自动去重");
+        const tmdb = await syncLocalConsultationsToTmdb(savedConsultations);
         const result = merged.summary;
-        setBackupStatus(`Trakt 已同步：新增 ${result.addedTitles} 部、合并 ${result.matchedTitles} 部，新增 ${result.addedHistory} 次观看、跳过 ${result.matchedHistory} 次重复${result.skippedDeleted ? `，保留 ${result.skippedDeleted} 项删除状态` : ""}`);
+        setBackupStatus(`Trakt 已同步：新增 ${result.addedTitles} 部、合并 ${result.matchedTitles} 部，新增 ${result.addedHistory} 次观看、跳过 ${result.matchedHistory} 次重复；TMDB 片单写入 ${tmdb.synced} 部${tmdb.matched ? `、匹配 ${tmdb.matched} 部` : ""}${tmdb.failed ? `，${tmdb.failed} 部待确认` : ""}${result.skippedDeleted ? `，保留 ${result.skippedDeleted} 项删除状态` : ""}`);
         setSyncStatus(`已同步 · ${nowText()}`);
         return;
       }
