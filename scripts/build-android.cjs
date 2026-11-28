@@ -60,7 +60,7 @@ fs.copyFileSync(builtApk, apk);
 const checksum = crypto.createHash('sha256').update(fs.readFileSync(apk)).digest('hex');
 fs.writeFileSync(path.join(output, 'SHA256SUMS.txt'), `${checksum}  ${path.basename(apk)}\n`);
 const versionCode = Number(fs.readFileSync(path.join(root, 'android', 'AndroidManifest.xml'), 'utf8').match(/android:versionCode="(\d+)"/)[1]);
-const updateManifest = JSON.stringify({ version, versionCode, url: `https://github.com/NZqiye/mobile-workbench/releases/download/android-v${version}/${path.basename(apk)}`, sha256: checksum, notes: '增强App透底材质、主题背景和玻璃高光，修正内层实色遮盖。资产与待办桌面小组件升级半透明磨砂卡片，优化图标、金额和任务层级；资产支持紧凑4×2及拉伸，待办显示真实完成进度，适配小尺寸和大字体。桌面卡片为半透明材质，不读取或实时模糊壁纸。请直接覆盖安装，安装后联网打开App同步；已有桌面卡片会刷新。' }, null, 2) + '\n';
+const updateManifest = JSON.stringify({ version, versionCode, url: `https://github.com/NZqiye/mobile-workbench/releases/download/android-v${version}/${path.basename(apk)}`, sha256: checksum, notes: '统一毛玻璃质感与页面层次，手机底部“快捷记录”改为独立录入页；动漫推荐过滤歌曲类内容。可在App内检查更新或覆盖安装，请勿先卸载。' }, null, 2) + '\n';
 fs.writeFileSync(path.join(output, 'app-update.json'), updateManifest);
 fs.writeFileSync(path.join(root, 'public', 'app-update.json'), updateManifest);
 console.log(`APK: ${apk}\nSHA-256: ${checksum}`);
