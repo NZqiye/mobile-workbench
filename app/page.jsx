@@ -173,6 +173,7 @@ const pages = [
   { id: "settings", name: "设置", icon: "settings" },
 ];
 const pageNames = Object.fromEntries(pages.map((page) => [page.id, page.name]));
+pageNames.record = "快捷记录";
 const pageDescriptions = {
   notes: "保存生活、树洞、复盘和灵感笔记",
   today: "时间、天气、计划和行情集中整理",
@@ -185,6 +186,7 @@ const pageDescriptions = {
   assets: "管理个人物品、会员订阅与旅行记录",
   exercise: "记录跑步、球类训练与每日对战战绩",
   settings: "账号、通知与数据备份",
+  record: "语音或文字录入，自动整理到对应栏目",
 };
 const defaultPetSupplies = { bone: 0, water: 0, toy: 0, stick: 0, gift: 0, cat: 0, happiness: 0 };
 const petSupplyItems = [
@@ -6746,14 +6748,6 @@ export default function Workbench() {
     return () => { if (window.__qiyeHandleBack === back) delete window.__qiyeHandleBack; };
   }, [androidApp, menuOpen, overviewOpen, editing, activePage]);
 
-  function openMobileRecording() {
-    if (activePage !== "today") switchPage("today");
-    setMenuOpen(false);
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      document.querySelector('[aria-label="语音快速记录"]')?.scrollIntoView({ block: "center", behavior: "smooth" });
-    }));
-  }
-
   function toggleDisplayMode() {
     const next = displayMode === "desktop" ? "mobile" : "desktop";
     setDisplayMode(next);
@@ -8216,7 +8210,7 @@ export default function Workbench() {
                       <button key={tab.id} className={exerciseView === tab.id ? "active" : ""} type="button" aria-pressed={exerciseView === tab.id} onClick={() => setExerciseView(tab.id)}>{tab.label}</button>
                     ))}
                   </div>
-                ) : ["notes", "assets", "settings"].includes(activePage) ? null : (
+                ) : ["notes", "assets", "settings", "record"].includes(activePage) ? null : (
                   <div className="module-tabs" aria-label="内容切换">
                     <button className="active" type="button">{activePage === "life" ? "目标清单" : "今日内容"}</button>
                   </div>
@@ -8240,7 +8234,7 @@ export default function Workbench() {
             <>
               <TodayTimePanel />
               {androidApp && <NativeNotificationPanel compact onSettings={() => switchPage("settings")} />}
-              {androidApp && <>{quickRecorder}{todayTasksPanel}</>}
+              {androidApp && todayTasksPanel}
               <WeatherCard compact clock={clock} phoneApp={androidApp} />
               {!androidApp && <>{quickRecorder}<DailyQuoteCard /></>}
               <section className="panel quick-note-panel" aria-label="随手记想法">
@@ -8304,6 +8298,8 @@ export default function Workbench() {
               onUpdateItem={updateLifeItem}
             />
           )}
+
+          {activePage === "record" && androidApp && <div className="record-page">{quickRecorder}</div>}
 
           {activePage === 'notes' && (
             <>
@@ -8438,11 +8434,11 @@ export default function Workbench() {
         />
       </section>
       <nav className="bottom-nav" aria-label={androidApp ? "手机主要导航" : "主要导航，可左右滑动"} ref={bottomNavRef}>
-        {androidApp && <span className="bottom-nav-indicator" aria-hidden="true" style={{ "--nav-index": activePage === "today" ? 0 : activePage === "plans" ? 1 : activePage === "market" ? 3 : 4 }} />}
+        {androidApp && <span className="bottom-nav-indicator" aria-hidden="true" style={{ "--nav-index": activePage === "today" ? 0 : activePage === "plans" ? 1 : activePage === "record" ? 2 : activePage === "market" ? 3 : 4 }} />}
         {(androidApp ? [
           { id: "today", label: "首页", icon: "home" },
           { id: "plans", label: "安排", icon: "checklist" },
-          { id: "record", label: "录入", icon: "microphone" },
+          { id: "record", label: "快捷记录", icon: "note" },
           { id: "market", label: "股市", icon: "trend" },
           { id: "more", label: "更多", icon: "settings" },
         ] : [
@@ -8459,16 +8455,16 @@ export default function Workbench() {
           { id: "settings", label: "设置", icon: "settings" },
         ]).map((item) => (
           <button
-            className={`bottom-nav-item ${item.id === activePage || (androidApp && item.id === "more" && !["today", "plans", "market"].includes(activePage)) ? "active" : ""}`}
+            className={`bottom-nav-item ${item.id === activePage || (androidApp && item.id === "more" && !["today", "plans", "record", "market"].includes(activePage)) ? "active" : ""}`}
             type="button"
             key={item.id}
-            onClick={() => item.id === "record" ? openMobileRecording() : item.id === "more" ? setMenuOpen(true) : switchPage(item.id)}
+            onClick={() => item.id === "more" ? setMenuOpen(true) : switchPage(item.id)}
             aria-label={item.label}
-            aria-current={item.id === activePage || (androidApp && item.id === "more" && !["today", "plans", "market"].includes(activePage)) ? "page" : undefined}
+            aria-current={item.id === activePage || (androidApp && item.id === "more" && !["today", "plans", "record", "market"].includes(activePage)) ? "page" : undefined}
             aria-haspopup={item.id === "more" ? "dialog" : undefined}
             aria-expanded={item.id === "more" ? menuOpen : undefined}
           >
-            <span>{item.icon === "microphone" ? <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8" /></svg> : <CrewNavIcon name={item.icon} />}</span>
+            <span><CrewNavIcon name={item.icon} /></span>
             <small>{item.label}</small>
           </button>
         ))}

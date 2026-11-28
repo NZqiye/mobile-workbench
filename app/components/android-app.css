@@ -116,8 +116,7 @@
   padding: 6px 2px;
 }
 
-.android-app-shell .bottom-nav-item[aria-label="录入"] { color: var(--ios-blue); }
-.android-app-shell .bottom-nav-item[aria-label="录入"] svg { width: 24px; height: 24px; }
+.android-app-shell.page-record .content { align-content: start; }
 .android-app-shell .bottom-nav-item small { font-size: 12px; }
 .android-app-shell .quick-record-panel button { min-height: 48px; }
 .android-app-shell .quick-record-panel textarea { resize: none; }

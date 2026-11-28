@@ -13,8 +13,16 @@ function animeRoute({tmdb = true, matches = true, posterPath = '/tmdb.jpg', year
     mapTmdbResult:item=>({tmdbId:item.id,tmdbMediaType:item.media_type,title:'动画作品',posterUrl:item.poster_path?`https://image.tmdb.org/t/p/w342${item.poster_path}`:'',summary:'中文简介'}),
   });
   vm.runInContext(source,context);
-  return {get:async()=>(await context.GET({url:'http://localhost/api/anime-updates'})).json(),normalize:context.normalizeSubject,seasonless:context.seasonlessTitle};
+  return {get:async()=>(await context.GET({url:'http://localhost/api/anime-updates'})).json(),normalize:context.normalizeSubject,seasonless:context.seasonlessTitle,isMusic:context.isMusicSubject,normalizeSubjects:context.normalizeSubjects};
 }
+
+test('music videos and songs are excluded from anime recommendations',()=>{
+  const route=animeRoute();
+  assert.equal(route.isMusic({name:'世界计划 六周年歌曲 2DMV'}),true);
+  assert.equal(route.isMusic({name:'普通动画',meta_tags:['music video']}),true);
+  assert.equal(route.normalizeSubjects([{id:1,type:2,name:'世界计划 六周年歌曲 2DMV'}]).length,0);
+  assert.equal(route.normalizeSubjects([{id:2,type:2,name:'普通动画'}]).length,1);
+});
 
 test('anime recommendations do not use Bangumi images as posters',()=>{
   const route=animeRoute();

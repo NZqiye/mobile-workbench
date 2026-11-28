@@ -25,6 +25,13 @@ function expandAnimeTitle(title) {
   return String(title || "").replace(/S\.?A\.?C\.?/gi, "STAND ALONE COMPLEX");
 }
 
+function isMusicSubject(item) {
+  const text = [item?.name, item?.name_cn, ...(Array.isArray(item?.meta_tags) ? item.meta_tags : [])]
+    .filter(Boolean)
+    .join(" ");
+  return /歌曲|音乐(?:视频|短片)?|2D\s*MV|music\s*video|\bsongs?\b|\bMV\b/i.test(text);
+}
+
 function chineseText(text) {
   return /[\u3400-\u9fff]/.test(text || "") && !/[\u3040-\u30ff]/.test(text || "") ? text : "";
 }
@@ -241,7 +248,7 @@ function normalizeSubject(item, index) {
 function normalizeSubjects(items) {
   const seen = new Set();
   return items.filter((item) => {
-    if (!item?.id || item.nsfw || (item.type && item.type !== 2) || seen.has(item.id)) return false;
+    if (!item?.id || item.nsfw || (item.type && item.type !== 2) || isMusicSubject(item) || seen.has(item.id)) return false;
     seen.add(item.id);
     return Boolean(item.name_cn || item.name);
   }).map(normalizeSubject);
