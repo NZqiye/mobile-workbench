@@ -14,15 +14,22 @@ function titleKey(title) {
   return String(title || "").normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
 }
 
+function seasonlessTitle(title) {
+  return String(title || "").normalize("NFKC")
+    .replace(/(?:\s*第\s*(?:\d+|[一二三四五六七八九十百]+)\s*(?:季|期)(?:\s*part\s*\.?\s*\d+)?|\s+(?:season|s)\s*\d+|\s+\d+(?:st|nd|rd|th)\s+season|\s+part\s*\.?\s*\d+|\s+\d+)\s*$/i, "")
+    .trim();
+}
+
 function chineseText(text) {
   return /[\u3400-\u9fff]/.test(text || "") && !/[\u3040-\u30ff]/.test(text || "") ? text : "";
 }
 
 async function matchTmdb(item, signal) {
-  const queries = [...new Set([item.bangumiName, item.bangumiNameCn].filter(Boolean))];
+  const titles = [...new Set([item.bangumiName, item.bangumiNameCn].filter(Boolean))];
+  const queries = [...new Set(titles.flatMap((title) => [title, seasonlessTitle(title)]).filter(Boolean))];
   const names = new Set(queries.map(titleKey));
   const candidates = new Map();
-  for (const query of queries) {
+  for (const query of titles) {
     const url = new URL("https://api.themoviedb.org/3/search/multi");
     url.searchParams.set("query", query);
     url.searchParams.set("language", "zh-CN");
@@ -35,6 +42,23 @@ async function matchTmdb(item, signal) {
         || !candidate.genre_ids?.includes(16)
         || ![candidate.name, candidate.title, candidate.original_name, candidate.original_title].some((name) => name && names.has(titleKey(name)))) continue;
       candidates.set(`${candidate.media_type}:${candidate.id}`, candidate);
+    }
+  }
+  if (!candidates.size) {
+    for (const query of queries.filter((title) => !titles.includes(title))) {
+      const url = new URL("https://api.themoviedb.org/3/search/multi");
+      url.searchParams.set("query", query);
+      url.searchParams.set("language", "zh-CN");
+      url.searchParams.set("include_adult", "false");
+      const response = await fetchTmdb(url, { signal: AbortSignal.any([signal, AbortSignal.timeout(2500)]) });
+      if (!response.ok) throw new Error(`TMDB ${response.status}`);
+      const data = await response.json();
+      for (const candidate of Array.isArray(data.results) ? data.results : []) {
+        if (!candidate.id || !["tv", "movie"].includes(candidate.media_type) || candidate.adult
+          || !candidate.genre_ids?.includes(16)
+          || ![candidate.name, candidate.title, candidate.original_name, candidate.original_title].some((name) => name && names.has(titleKey(name)))) continue;
+        candidates.set(`${candidate.media_type}:${candidate.id}`, candidate);
+      }
     }
   }
   const matches = [...candidates.values()];
