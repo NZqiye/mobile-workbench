@@ -8,7 +8,7 @@ const source = fs.readFileSync(path.join(__dirname, '..', 'app/api/media-updates
   .replace(/^import .*;\r?\n/gm, '')
   .replace(/export async function/g, 'async function');
 
-function route({ externalMatch = true, matchSource = 'imdb_id' } = {}) {
+function route({ externalMatch = true, matchSource = 'imdb_id', aliasMatch = false, compact = true } = {}) {
   const tmdbCalls = [];
   const show = {
     id: 53689,
@@ -36,6 +36,7 @@ function route({ externalMatch = true, matchSource = 'imdb_id' } = {}) {
     tmdbToken: 'configured',
     imageBase: 'https://image.tmdb.org/t/p/w342',
     fetch: async (url) => {
+      if (String(url).includes('/shows/53689/akas')) return response([{ name: '东京复仇者', country: { code: 'JP' } }]);
       const date = new URL(url).searchParams.get('date');
       return response([{ id: 1, name: 'Episode', season: 1, number: 1, airdate: date, airtime: '20:00', show, image: { original: 'https://static.tvmaze.com/episode.jpg' } }]);
     },
@@ -51,14 +52,14 @@ function route({ externalMatch = true, matchSource = 'imdb_id' } = {}) {
         images: { posters: [{ file_path: '/tmdb-poster.jpg', iso_639_1: 'ja' }] },
         seasons: [{ season_number: 1, poster_path: '/season.jpg' }],
       });
-      if (parsed.pathname === '/3/search/tv') return response({ results: [] });
+      if (parsed.pathname === '/3/search/tv') return response({ results: aliasMatch && parsed.searchParams.get('query') === '东京复仇者' ? [{ id: 105009, name: '东京复仇者', original_name: 'Tokyo Revengers', first_air_date: '2021-04-11', poster_path: '/tmdb-poster.jpg' }] : [] });
       throw new Error(`Unexpected TMDB URL ${parsed.pathname}`);
     },
   });
   vm.runInContext(source, context);
   return {
     tmdbCalls,
-    get: () => context.GET(new Request('https://workbench.test/api/media-updates?days=1&compact=1')),
+    get: () => context.GET(new Request(`https://workbench.test/api/media-updates?days=1&compact=${compact ? 1 : 0}`)),
   };
 }
 
@@ -89,4 +90,13 @@ test('TVDB is tried when an IMDb mapping is unavailable', async () => {
   const payload = await response.json();
   assert.equal(payload.days[0].items[0].tmdbId, 105009);
   assert.ok(instance.tmdbCalls.some(url => url.searchParams.get('external_source') === 'tvdb_id'));
+});
+
+test('TVMaze Chinese aliases are searched on TMDB when the original title does not match', async () => {
+  const instance = route({ externalMatch: false, aliasMatch: true, compact: false });
+  const response = await instance.get();
+  const payload = await response.json();
+  const [item] = payload.days[0].items;
+  assert.equal(item.tmdbId, 105009);
+  assert.equal(item.posterUrl, 'https://image.tmdb.org/t/p/w342/tmdb-poster.jpg');
 });

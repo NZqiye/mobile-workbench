@@ -21,6 +21,7 @@ function chineseText(text) {
 async function matchTmdb(item, signal) {
   const queries = [...new Set([item.bangumiName, item.bangumiNameCn].filter(Boolean))];
   const names = new Set(queries.map(titleKey));
+  const candidates = new Map();
   for (const query of queries) {
     const url = new URL("https://api.themoviedb.org/3/search/multi");
     url.searchParams.set("query", query);
@@ -29,31 +30,52 @@ async function matchTmdb(item, signal) {
     const response = await fetchTmdb(url, { signal: AbortSignal.any([signal, AbortSignal.timeout(2500)]) });
     if (!response.ok) throw new Error(`TMDB ${response.status}`);
     const data = await response.json();
-    const matches = (Array.isArray(data.results) ? data.results : []).filter((candidate) => {
-      const year = (candidate.first_air_date || candidate.release_date || "").slice(0, 4);
-      return candidate.id && ["tv", "movie"].includes(candidate.media_type) && !candidate.adult
-        && candidate.genre_ids?.includes(16)
-        && [candidate.name, candidate.title, candidate.original_name, candidate.original_title].some((name) => name && names.has(titleKey(name)))
-        && year && item.year && Math.abs(Number(year) - Number(item.year)) <= 1;
-    });
-    // 多个同名、同年动画时保留原资料，避免绑定错误作品。
-    if (matches.length > 1) return null;
-    if (matches.length === 1) {
-      const mapped = mapTmdbResult(matches[0]);
-      const titleZh = chineseText(mapped.title);
-      const summaryZh = chineseText(mapped.summary);
-      return {
-        tmdbId: mapped.tmdbId, tmdbMediaType: mapped.tmdbMediaType,
-        tmdbRating: mapped.tmdbRating,
-        ...(titleZh ? { title: titleZh, titleZh } : {}),
-        ...(summaryZh ? { summary: summaryZh, summaryZh } : {}),
-        ...(mapped.posterUrl ? { posterUrl: mapped.posterUrl } : {}),
-        ...(mapped.backdropUrl ? { backdropUrl: mapped.backdropUrl } : {}),
-        platform: "TMDB", metadataSource: "TMDB", sourceLabel: "Bangumi 榜单 · TMDB 资料",
-      };
+    for (const candidate of Array.isArray(data.results) ? data.results : []) {
+      if (!candidate.id || !["tv", "movie"].includes(candidate.media_type) || candidate.adult
+        || !candidate.genre_ids?.includes(16)
+        || ![candidate.name, candidate.title, candidate.original_name, candidate.original_title].some((name) => name && names.has(titleKey(name)))) continue;
+      candidates.set(`${candidate.media_type}:${candidate.id}`, candidate);
     }
   }
-  return null;
+  const matches = [...candidates.values()];
+  const yearMatches = (distance) => matches.filter((candidate) => {
+    const year = (candidate.first_air_date || candidate.release_date || "").slice(0, 4);
+    return /^\d{4}$/.test(year) && /^\d{4}$/.test(String(item.year || ""))
+      && Math.abs(Number(year) - Number(item.year)) <= distance;
+  });
+  const bestMatches = yearMatches(0).length ? yearMatches(0) : yearMatches(1);
+  const best = bestMatches.length ? bestMatches.length === 1 ? bestMatches[0] : null : matches.length === 1 ? matches[0] : null;
+  if (!best) return null;
+
+  const mapped = mapTmdbResult(best);
+  let posterUrl = mapped.posterUrl;
+  if (!posterUrl) {
+    const detailUrl = new URL(`https://api.themoviedb.org/3/${mapped.tmdbMediaType}/${mapped.tmdbId}`);
+    detailUrl.searchParams.set("language", "zh-CN");
+    detailUrl.searchParams.set("append_to_response", "images");
+    detailUrl.searchParams.set("include_image_language", "zh-CN,en,null");
+    const response = await fetchTmdb(detailUrl, { signal: AbortSignal.any([signal, AbortSignal.timeout(2500)]) });
+    if (!response.ok) throw new Error(`TMDB ${response.status}`);
+    const details = await response.json();
+    const posters = Array.isArray(details.images?.posters) ? details.images.posters.filter((image) => image?.file_path) : [];
+    const posterPath = details.poster_path
+      || posters.find((image) => image.iso_639_1 === "zh")?.file_path
+      || posters.find((image) => image.iso_639_1 === "en")?.file_path
+      || posters.find((image) => !image.iso_639_1)?.file_path
+      || posters[0]?.file_path;
+    if (posterPath) posterUrl = `https://image.tmdb.org/t/p/w342${posterPath}`;
+  }
+  const titleZh = chineseText(mapped.title);
+  const summaryZh = chineseText(mapped.summary);
+  return {
+    tmdbId: mapped.tmdbId, tmdbMediaType: mapped.tmdbMediaType,
+    tmdbRating: mapped.tmdbRating,
+    ...(titleZh ? { title: titleZh, titleZh } : {}),
+    ...(summaryZh ? { summary: summaryZh, summaryZh } : {}),
+    ...(posterUrl ? { posterUrl } : {}),
+    ...(mapped.backdropUrl ? { backdropUrl: mapped.backdropUrl } : {}),
+    platform: "TMDB", metadataSource: "TMDB", sourceLabel: "Bangumi 榜单 · TMDB 资料",
+  };
 }
 
 async function enrichWithTmdb(sections) {
@@ -69,7 +91,7 @@ async function enrichWithTmdb(sections) {
   for (const [id, match] of tmdbMatches) {
     if (match.expiresAt <= Date.now()) tmdbMatches.delete(id);
   }
-  const signal = AbortSignal.timeout(12000);
+  const signal = AbortSignal.timeout(24000);
   const items = [...unique.values()];
   const metadata = new Map();
   let cursor = 0;

@@ -40,10 +40,10 @@ function normalizeTitle(text) {
     .replace(/[^\p{L}\p{N}]+/gu, "");
 }
 
-function matchTmdbTitle(show, results) {
-  const title = normalizeTitle(show?.name);
+function matchTmdbTitle(show, results, aliases = []) {
+  const titles = new Set([show?.name, ...aliases].map(normalizeTitle).filter(Boolean));
   const matches = (Array.isArray(results) ? results : []).filter((item) =>
-    [item.name, item.original_name].some((value) => value && normalizeTitle(value) === title)
+    [item.name, item.original_name].some((value) => value && titles.has(normalizeTitle(value)))
   );
   const year = Number(String(show?.premiered || "").slice(0, 4));
   if (!Number.isInteger(year) || year < 1800) return matches.length === 1 ? matches[0] : null;
@@ -107,7 +107,7 @@ async function findTmdbShowByExternalId(externalId, source, signal) {
   return data.tv_results?.find((item) => item?.id) || null;
 }
 
-async function fetchTmdbTitle(show) {
+async function fetchTmdbTitle(show, aliases = []) {
   if (!tmdbToken || !show?.name) return { tmdbId: "", title: "", overview: "", posterUrl: "", backdropUrl: "" };
   const cacheKey = `${show.name}|${show.premiered || ""}|${show.externals?.imdb || ""}|${show.externals?.thetvdb || ""}`;
   if (tmdbTitleCache.has(cacheKey)) return tmdbTitleCache.get(cacheKey);
@@ -127,16 +127,18 @@ async function fetchTmdbTitle(show) {
           if (best) break;
         }
         if (!best) {
-          const url = new URL("https://api.themoviedb.org/3/search/tv");
-          url.searchParams.set("query", show.name);
-          url.searchParams.set("language", "zh-CN");
-          url.searchParams.set("include_adult", "false");
-          if (show.premiered) url.searchParams.set("first_air_date_year", String(show.premiered).slice(0, 4));
-          const response = await fetchTmdb(url, { signal: controller.signal });
-          if (!response.ok) return { tmdbId: "", title: "", overview: "", posterUrl: "", backdropUrl: "" };
-          const data = await response.json();
-          const results = Array.isArray(data.results) ? data.results : [];
-          best = matchTmdbTitle(show, results);
+          for (const query of [...new Set([show.name, ...aliases].filter(Boolean))]) {
+            const url = new URL("https://api.themoviedb.org/3/search/tv");
+            url.searchParams.set("query", query);
+            url.searchParams.set("language", "zh-CN");
+            url.searchParams.set("include_adult", "false");
+            if (show.premiered) url.searchParams.set("first_air_date_year", String(show.premiered).slice(0, 4));
+            const response = await fetchTmdb(url, { signal: controller.signal });
+            if (!response.ok) continue;
+            const data = await response.json();
+            best = matchTmdbTitle(show, data.results, aliases);
+            if (best) break;
+          }
         }
         if (!best?.id) return { tmdbId: "", title: "", overview: "", posterUrl: "", backdropUrl: "" };
         const detailUrl = new URL(`https://api.themoviedb.org/3/tv/${best.id}`);
@@ -186,7 +188,7 @@ async function resolveTitleZh(show, compact = false) {
     const manual = SHOW_ZH[show.name];
     const akas = compact ? [] : await fetchShowAkas(show.id);
     const akaZh = pickChineseAlias(akas);
-    const tmdbZh = await fetchTmdbTitle(show);
+    const tmdbZh = await fetchTmdbTitle(show, akaZh ? [akaZh] : []);
     const titleZh = tmdbZh.title || manual || (akaZh && akaZh !== show.name ? akaZh : "");
     return {
       titleZh,
