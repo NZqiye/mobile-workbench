@@ -18,3 +18,11 @@ test('percentages remain accurate for repeated, invalid, empty and complete epis
   assert.equal(seriesWatchProgress([], {}, 1, [], 0), null);
   assert.equal(seriesWatchProgress([...seasons, { seasonNumber: 2 }], {}, 1, [1], 3), null);
 });
+
+test('absolute season numbering counts actual episodes instead of treating episode 62 as out of range', async () => {
+  const { seriesWatchProgress } = await import('../lib/watch-progress.js');
+  const seasons = [{ seasonNumber: 2, episodeCount: 3 }];
+  assert.deepEqual(seriesWatchProgress(seasons, {}, 2, [62, 63], 3, { 2: [62, 63, 64] }), { total: 3, watched: 2, percent: 67 });
+  assert.deepEqual(seriesWatchProgress(seasons, {}, 2, [1, 62, 63, 64, 65], 3, { 2: [62, 63, 64] }), { total: 3, watched: 3, percent: 100 });
+  assert.equal(seriesWatchProgress(seasons, {}, 2, [62], 3, { 2: [62, 63] }), null);
+});

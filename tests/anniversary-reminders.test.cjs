@@ -9,6 +9,13 @@ test('solar anniversaries repeat across year boundaries while countdowns and dat
   for (const date of ['bad', '2026-02-30', '2026-13-01']) assert.deepEqual(anniversaryDates({ date }, '2026-11-26'), []);
 });
 
+test('recurring anniversaries support weekly, monthly and quarterly cycles', async () => {
+  const { anniversaryDates } = await import('../lib/anniversary-dates.js');
+  assert.deepEqual(anniversaryDates({ date: '2026-11-02', repeat: 'weekly' }, '2026-11-04'), ['2026-11-09', '2026-11-16', '2026-11-23']);
+  assert.deepEqual(anniversaryDates({ date: '2026-01-31', repeat: 'monthly' }, '2026-02-01'), ['2026-02-28', '2026-03-31', '2026-04-30']);
+  assert.deepEqual(anniversaryDates({ date: '2026-01-15', repeat: 'quarterly' }, '2026-02-01'), ['2026-04-15', '2026-07-15', '2026-10-15']);
+});
+
 test('lunar birthdays use actual Chinese calendar dates, including the lunar year crossing January', async () => {
   const { anniversaryDates, beijingDateKey } = await import('../lib/anniversary-dates.js');
   assert.equal(anniversaryDates({ date: '2000-01-01', calendarType: 'lunar' }, '2026-01-01')[1], '2026-02-17');

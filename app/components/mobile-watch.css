@@ -221,16 +221,23 @@
 
 .phone-shell.ios18-shell.visual-aligned .tmdb-panel {
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  gap: 12px;
 }
+.phone-shell.ios18-shell.visual-aligned .tmdb-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
 .phone-shell.ios18-shell.visual-aligned .tmdb-panel-title { min-width: 0; }
-.phone-shell.ios18-shell.visual-aligned .tmdb-sync-button {
-  grid-column: 1;
-  width: fit-content;
+.phone-shell.ios18-shell.visual-aligned .tmdb-panel .tmdb-sync-button {
+  flex: 0 0 auto;
   min-height: 44px;
-  padding: 10px 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--ios-separator);
+  color: var(--ios-blue) !important;
+  background: var(--glass-inset, var(--ios-panel-muted)) !important;
+  font-weight: 650;
   white-space: nowrap;
 }
+.phone-shell.ios18-shell.visual-aligned .tmdb-panel .tmdb-sync-button:disabled { opacity: .6; cursor: wait; }
+.phone-shell.ios18-shell.visual-aligned .tmdb-panel .tmdb-sync-button:focus-visible { outline: 2px solid var(--ios-blue); outline-offset: 3px; }
+.phone-shell.ios18-shell.visual-aligned .tmdb-action-status { margin: 0; overflow-wrap: anywhere; }
 .phone-shell.ios18-shell.visual-aligned .tmdb-search {
   grid-column: 1;
   grid-row: 2;
@@ -242,3 +249,8 @@
 .phone-shell.ios18-shell.visual-aligned .tmdb-search .chip-button { padding-inline: 16px; white-space: nowrap; }
 .phone-shell.ios18-shell.visual-aligned .tmdb-results { grid-column: 1; }
 .phone-shell.ios18-shell.visual-aligned .tmdb-results:empty { display: none; }
+
+@media (max-width: 360px) {
+  .phone-shell.ios18-shell.visual-aligned .tmdb-panel-title { grid-template-columns: minmax(0, 1fr); }
+  .phone-shell.ios18-shell.visual-aligned .tmdb-panel-title > span { display: none; }
+}

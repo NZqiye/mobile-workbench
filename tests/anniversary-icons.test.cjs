@@ -11,7 +11,7 @@ test("date icon library covers requested occasions with unique IDs and decodable
   const sharp = require("sharp");
   const icons = context.anniversaryIcons;
   assert.equal(new Set(icons.map((icon) => icon.id)).size, icons.length);
-  for (const id of ["wedding", "birthday", "memorial", "defense", "promotion", "travel", "steak", "buffet", "western-food", "hiking", "climbing", "swimming", "coffee", "milk-tea", "cycling", "badminton"]) assert.ok(icons.some((icon) => icon.id === id));
+  for (const id of ["wedding", "birthday", "memorial", "defense", "promotion", "travel", "hiking", "climbing", "swimming", "cycling", "badminton"]) assert.ok(icons.some((icon) => icon.id === id));
   for (const icon of icons) {
     assert.ok(context.anniversaryIconGroups.includes(icon.group));
     await sharp(path.join(__dirname, "../public", icon.image)).raw().toBuffer();
@@ -26,16 +26,16 @@ test("saved icon wins over category defaults and legacy or unknown icons still r
   assert.equal(context.anniversaryIcon({ title: "每月发薪日", type: "countdown" }).id, "payday");
   assert.equal(context.anniversaryIcon({ title: "发薪日", icon: "gift" }).id, "gift");
   assert.equal(context.anniversaryIcon({ type: "festival", title: "圣诞节" }).id, "extra-christmas-tree");
-  assert.equal(context.anniversaryIconGroups.length, 7);
+  assert.equal(context.anniversaryIconGroups.length, 6);
 });
 
 test("Chinese holiday titles get relevant defaults while explicit choices take priority", () => {
   for (const [title, id] of [["2026 春节假期", "spring-festival"], ["元宵节", "lantern-festival"], ["清明节", "qingming"], ["端午节", "dragon-boat"], ["七夕", "qixi"], ["中秋节", "mid-autumn"], ["国庆节", "national-day"], ["重阳节", "double-ninth"], ["冬至", "winter-solstice"], ["元旦", "new-year"], ["五一假期", "labor-day"], ["劳动节", "labor-day"]]) {
     assert.equal(context.anniversaryIcon({ type: "festival", title }).id, id);
   }
-  assert.equal(context.anniversaryIcon({ type: "festival", title: "中秋节", icon: "dinner" }).id, "dinner");
+  assert.equal(context.anniversaryIcon({ type: "festival", title: "中秋节", icon: "gift" }).id, "gift");
   assert.equal(context.anniversaryIcon({ type: "festival", title: "其他节日" }).id, "festival");
-  for (const id of ["camping", "picnic", "dinner", "barbecue"]) assert.ok(context.anniversaryIcons.some((icon) => icon.id === id));
+  for (const id of ["camping", "picnic"]) assert.ok(context.anniversaryIcons.some((icon) => icon.id === id));
   assert.equal(context.anniversaryIcon({ type: "festival", title: "五一" }).source, "picnic-basket");
   assert.equal(context.anniversaryIcon({ icon: "labor-day" }).source, "picnic-basket");
   assert.equal(context.anniversaryIcon({ icon: "work" }).source, "briefcase");

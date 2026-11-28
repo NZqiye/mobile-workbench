@@ -25,10 +25,12 @@ import watchDetailStyles from "./components/watch-detail.module.css";
 import watchCalendarStyles from "./components/watch-calendar.module.css";
 import { seriesWatchProgress } from "../lib/watch-progress";
 import { encodeMarkdownBackup, decodeMarkdownBackup } from "../lib/markdown-backup";
+import { mergeWatchImport } from "../lib/watch-import";
 import { planQuickRecordChanges, undoQuickRecordChanges } from "../lib/workbench-records";
 import { anniversaryIcon, anniversaryIcons } from "../lib/anniversary-icons";
 import { anniversaryProgress } from "../lib/anniversary-progress";
 import { anniversaryMessage } from "../lib/anniversary-messages";
+import { anniversaryDates } from "../lib/anniversary-dates";
 import { WeeklyChart, MealBreakdown } from "./components/statistics-charts";
 import StockPriceChart from "./components/stock-price-chart";
 import "./components/stock-lists.css";
@@ -769,20 +771,18 @@ function anniversaryMeta(item) {
   const today = new Date(todayKey());
   if (Number.isNaN(original.getTime())) return { elapsed: null, nextDays: null, nextDate: "" };
   const elapsed = Math.floor((today - original) / (24 * 60 * 60 * 1000));
-  const type = item.type || "memory";
-  if (type === "countdown") {
-    const diff = Math.ceil((original - today) / (24 * 60 * 60 * 1000));
-    return { elapsed, nextDays: diff, nextDate: todayKey(original), elapsedYears: 0, birthdayAge: 0, thisYearPassed: diff < 0 };
-  }
-  const thisYearDate = new Date(today.getFullYear(), original.getMonth(), original.getDate());
-  const nextDate = thisYearDate < today
-    ? new Date(today.getFullYear() + 1, original.getMonth(), original.getDate())
-    : thisYearDate;
-  const nextDays = Math.ceil((nextDate - today) / (24 * 60 * 60 * 1000));
+  const dates = anniversaryDates(item, todayKey());
+  const nextDate = dates.find((date) => date >= todayKey()) || dates.at(-1) || item.date;
+  const nextDateValue = new Date(`${nextDate}T00:00:00`);
+  const nextDays = Math.ceil((nextDateValue - today) / (24 * 60 * 60 * 1000));
   const elapsedYears = today.getFullYear() - original.getFullYear();
-  const birthdayAge = nextDate.getFullYear() - original.getFullYear();
-  const thisYearPassed = thisYearDate < today;
-  return { elapsed, nextDays, nextDate: todayKey(nextDate), elapsedYears, birthdayAge, thisYearPassed };
+  const birthdayAge = nextDateValue.getFullYear() - original.getFullYear();
+  const thisYearPassed = nextDays < 0;
+  return { elapsed, nextDays, nextDate, elapsedYears, birthdayAge, thisYearPassed };
+}
+
+function anniversaryRepeatLabel(repeat) {
+  return ({ once: "仅一次", weekly: "每周", monthly: "每月", quarterly: "每季度", annual: "每年" }[repeat] || "每年");
 }
 
 function formatAnniversaryProgress(item) {
@@ -2006,11 +2006,13 @@ function countUniqueWatchItems(items, predicate = () => true) {
   return keys.size;
 }
 
-function hasCompleteEpisodeSet(episodes, episodeCount) {
+function hasCompleteEpisodeSet(episodes, episodeCount, episodeNumbers) {
   const count = Number(episodeCount);
   if (!Number.isSafeInteger(count) || count <= 0) return false;
   const watched = new Set((Array.isArray(episodes) ? episodes : []).map(Number));
-  for (let episode = 1; episode <= count; episode += 1) {
+  const expected = episodeNumbers?.length ? [...new Set(episodeNumbers.map(Number))] : Array.from({ length: count }, (_, index) => index + 1);
+  if (expected.length !== count) return false;
+  for (const episode of expected) {
     if (!watched.has(episode)) return false;
   }
   return true;
@@ -2047,11 +2049,13 @@ function mergeConsultationRecord(base, incoming) {
     seasonProgress: { ...(older?.seasonProgress || {}), ...(newer?.seasonProgress || {}) },
     seasonRatings: { ...(older?.seasonRatings || {}), ...(newer?.seasonRatings || {}) },
     seasonEpisodeCounts: { ...(older?.seasonEpisodeCounts || {}), ...(newer?.seasonEpisodeCounts || {}) },
+    seasonEpisodeNumbers: { ...(older?.seasonEpisodeNumbers || {}), ...(newer?.seasonEpisodeNumbers || {}) },
     updatedAt: Math.max(baseUpdatedAt, incomingUpdatedAt),
   };
 }
 
 function canMergeConsultations(base, incoming, matchedKey) {
+  if (tmdbMediaType(base) !== tmdbMediaType(incoming)) return false;
   const baseTmdb = String(base?.tmdbId || "").trim();
   const incomingTmdb = String(incoming?.tmdbId || "").trim();
   if (matchedKey?.startsWith("tmdb:")) return true;
@@ -2085,8 +2089,9 @@ function syncConsultationStatusFromWatchCheckins(consultations, watchCheckins) {
   return (Array.isArray(consultations) ? consultations : []).map((item) => {
     const itemKeys = new Set(mediaAliasKeys(item));
     const related = records.filter((record) => {
+      if (tmdbMediaType(record) !== tmdbMediaType(item)) return false;
       if (record.consultationId && item.id && String(record.consultationId) === String(item.id)) return true;
-      if (record.tmdbId && item.tmdbId && String(record.tmdbId) === String(item.tmdbId)) return true;
+      if (record.tmdbId && item.tmdbId && tmdbItemKey(record) === tmdbItemKey(item)) return true;
       return mediaAliasKeys(record).some((key) => itemKeys.has(key));
     });
     if (!related.length) return item;
@@ -2106,7 +2111,7 @@ function syncConsultationStatusFromWatchCheckins(consultations, watchCheckins) {
       );
       const savedEpisodes = Array.isArray(item.seasonProgress?.[key]) ? item.seasonProgress[key] : [];
       const recordEpisodes = Array.isArray(record?.episodes) ? record.episodes : [];
-      return hasCompleteEpisodeSet([...new Set([...savedEpisodes, ...recordEpisodes])], count);
+      return hasCompleteEpisodeSet([...new Set([...savedEpisodes, ...recordEpisodes])], count, item.seasonEpisodeNumbers?.[key] || record?.episodeNumbers);
     });
     if (allKnownSeasonsComplete) return { ...item, status: "看过的剧", updatedAt: Math.max(itemUpdatedAt(item), ...related.map(itemUpdatedAt)) || Date.now() };
     if (seasonRecords.length || Object.keys(item.seasonProgress || {}).length) {
@@ -3413,11 +3418,18 @@ function itemMatchesQuery(item, query, fields) {
 
 function DailyArrangement({ view = "habits", habits, done, tasks, anniversaries, onAddHabit, onToggleHabit, onDeleteHabit, onAddTask, onToggleTask, onDeleteTask, onAddAnniversary, onDeleteAnniversary, onUpdateAnniversaryIcon }) {
   const [anniversaryType, setAnniversaryType] = useState("countdown");
+  const [anniversaryRepeat, setAnniversaryRepeat] = useState("once");
   const [anniversaryCalendarType, setAnniversaryCalendarType] = useState("solar");
   const [anniversaryFilter, setAnniversaryFilter] = useState("all");
   const [selectedAnniversaryIcon, setSelectedAnniversaryIcon] = useState("");
   const [editingAnniversaryIcon, setEditingAnniversaryIcon] = useState(null);
   const formIcon = anniversaryIcon({ type: anniversaryType, icon: selectedAnniversaryIcon });
+  useEffect(() => {
+    setAnniversaryRepeat(anniversaryType === "countdown" ? "once" : "annual");
+  }, [anniversaryType]);
+  useEffect(() => {
+    if (anniversaryCalendarType === "lunar" && !["once", "annual"].includes(anniversaryRepeat)) setAnniversaryRepeat("annual");
+  }, [anniversaryCalendarType, anniversaryRepeat]);
   const unfinishedTasks = tasks.filter((task) => task.status !== "已完成").slice(0, 8);
   const sortedAnniversaries = [...anniversaries].sort((a, b) => (anniversaryMeta(a).nextDays ?? 99999) - (anniversaryMeta(b).nextDays ?? 99999));
   const filteredAnniversaries = sortedAnniversaries.filter((item) => anniversaryFilter === "all" || (item.type || "memory") === anniversaryFilter);
@@ -3443,7 +3455,7 @@ function DailyArrangement({ view = "habits", habits, done, tasks, anniversaries,
           <div className="daybook-copy">
             <h3>{item.title}</h3>
             <time dateTime={targetDate}>{targetDate.replaceAll("-", ".")} · {new Date(`${targetDate}T00:00:00`).toLocaleDateString("zh-CN", { weekday: "long" })}</time>
-            <p>{typeInfo.label} · {calendarLabel}{secondary ? ` · ${secondary}` : ""}</p>
+            <p>{typeInfo.label} · {calendarLabel} · {anniversaryRepeatLabel(item.repeat || (type === "countdown" ? "once" : "annual"))}{secondary ? ` · ${secondary}` : ""}</p>
           </div>
           <div className="daybook-number" aria-label={primary}>
             {archived || meta.nextDays === null ? <b className="daybook-past-label">{primary}</b> : <><b>{meta.nextDays === 0 ? "今天" : meta.nextDays}</b><span>{meta.nextDays === 0 ? ["memorial", "qingming"].includes(icon.id) ? "留一份思念" : "好日子就在此刻" : "天后"}</span></>}
@@ -3460,6 +3472,7 @@ function DailyArrangement({ view = "habits", habits, done, tasks, anniversaries,
   function submitAnniversary(event) {
     if (onAddAnniversary(event) === false) return;
     setAnniversaryType("countdown");
+    setAnniversaryRepeat("once");
     setAnniversaryCalendarType("solar");
     setSelectedAnniversaryIcon("");
   }
@@ -3551,6 +3564,13 @@ function DailyArrangement({ view = "habits", habits, done, tasks, anniversaries,
               className="anniversary-calendar-menu"
               aria-label="选择日历类型"
             ><option value="solar">公历</option><option value="lunar">农历</option></WorkbenchSelect>
+            <WorkbenchSelect
+              name="repeat"
+              value={anniversaryRepeat}
+              onChange={(event) => setAnniversaryRepeat(event.target.value)}
+              className="anniversary-repeat-menu"
+              aria-label="选择重复周期"
+            ><option value="once">仅一次</option>{anniversaryCalendarType === "solar" && <><option value="weekly">每周</option><option value="monthly">每月</option><option value="quarterly">每季度</option></>}<option value="annual">每年</option></WorkbenchSelect>
           </div>
           {anniversaryType === "countdown" && <label className="daybook-start-date">倒数起始日期<input name="startDate" type="date" defaultValue={todayKey()} onInput={(event) => event.currentTarget.setCustomValidity("")} required /><small>用于计算已过天数和日期进度</small></label>}
           <input type="hidden" name="icon" value={formIcon.id} />
@@ -4048,16 +4068,17 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
   const episodes = Array.isArray(seasonData?.episodes) ? seasonData.episodes : [];
   const episodeCount = Number(seasonData?.episodeCount || activeSeason?.episodeCount || episodes.length || 0);
   const checkedCount = checkedEpisodes.size;
-  const overallWatchProgress = !isMovie ? seriesWatchProgress(seasonOptions, selected?.seasonProgress, seasonNumber, checkedEpisodes, episodeCount) : null;
+  const seasonEpisodeNumbers = { ...selected?.seasonEpisodeNumbers, ...(episodes.length ? { [String(seasonNumber)]: episodes.map(episode => Number(episode.episodeNumber)) } : {}) };
+  const overallWatchProgress = !isMovie ? seriesWatchProgress(seasonOptions, selected?.seasonProgress, seasonNumber, checkedEpisodes, episodeCount, seasonEpisodeNumbers) : null;
   const allEpisodesChecked = episodes.length > 0 && episodes.every((episode) => checkedEpisodes.has(Number(episode.episodeNumber)));
   const completedSeasonKey = `${selected?.id || ""}:${seasonNumber}`;
   const savedSeasonRating = String(selected?.seasonRatings?.[String(seasonNumber)] || "");
   const hasSeasonRating = Boolean(savedSeasonRating.trim());
-  const seasonComplete = !isMovie && Number(seasonNumber) > 0 && hasCompleteEpisodeSet(Array.from(checkedEpisodes), episodeCount);
+  const seasonComplete = !isMovie && Number(seasonNumber) > 0 && hasCompleteEpisodeSet(Array.from(checkedEpisodes), episodeCount, seasonEpisodeNumbers[String(seasonNumber)]);
   const shouldCollapseSeason = mobileRatingView === "episodes" && seasonComplete && hasSeasonRating && !expandedCompletedSeasons[completedSeasonKey];
   const detailTitle = details?.title || mediaTitle(selected);
   const detailPoster = details?.posterUrl || selected?.posterUrl || "";
-  const detailSummary = details?.review || selected?.review || "暂无简介";
+  const detailSummary = details?.review || mediaDescription(selected);
   const sortedHistory = Array.isArray(watchCheckins) ? [...watchCheckins].sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")) || String(b.time || "").localeCompare(String(a.time || ""))) : [];
   const historyKeyword = historyQuery.trim().toLowerCase();
   const filteredHistory = historyKeyword
@@ -4186,7 +4207,7 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
     if (!selected || isMovie || !seasonNumber) return;
     checkedEpisodesRef.current = next;
     setCheckedEpisodes(next);
-    onCheckin?.({ id: selected.id, mode: "season-progress", season: Number(seasonNumber), episodes: Array.from(next).sort((a, b) => a - b), episodeCount, date: todayKey() });
+    onCheckin?.({ id: selected.id, mode: "season-progress", season: Number(seasonNumber), episodes: Array.from(next).sort((a, b) => a - b), episodeCount, episodeNumbers: episodes.map(episode => Number(episode.episodeNumber)), date: todayKey() });
     setRatingStatus("观看进度已自动保存");
   }
 
@@ -4198,7 +4219,7 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
       return;
     }
     setSeasonRating(String(rating));
-    onCheckin?.({ id: selected.id, mode: "season-rating", season: Number(seasonNumber), episodes: Array.from(checkedEpisodes).sort((a, b) => a - b), episodeCount, rating, date: todayKey() });
+    onCheckin?.({ id: selected.id, mode: "season-rating", season: Number(seasonNumber), episodes: Array.from(checkedEpisodes).sort((a, b) => a - b), episodeCount, episodeNumbers: episodes.map(episode => Number(episode.episodeNumber)), rating, date: todayKey() });
     if (episodeCount > 0 && checkedEpisodes.size >= episodeCount) {
       setExpandedCompletedSeasons((previous) => ({ ...previous, [completedSeasonKey]: false }));
     }
@@ -4419,10 +4440,12 @@ function WatchCheckin({ items = [], compact = false, tmdbResults = [], tmdbStatu
         {(!compact || historyPanelOpen) && <div id="watch-history-content">
         <div className="watch-checkin-history-head"><strong>最近记录</strong><input value={historyQuery} onChange={(event) => setHistoryQuery(event.target.value)} placeholder="搜索作品或季集" />{!historyKeyword && filteredHistory.length > 5 && <button type="button" onClick={() => setHistoryOpen(!historyOpen)}>{historyOpen ? "收起" : "全部"}</button>}</div>
         {filteredHistory.length === 0 ? <p className="watch-checkin-history-empty">还没有观看记录。</p> : <div className="watch-checkin-history-list">{visibleHistory.map((record) => {
-          const recordMeta = record.mode === "season"
+          const parent = items.find(item => item.id === record.consultationId);
+          const posterItem = { ...parent, ...record, posterUrl: record.posterUrl || parent?.posterUrl || "" };
+          const recordMeta = record.mode === "trakt-unmapped" ? "Trakt 原始记录 · 集号待核对" : record.mode === "season"
             ? `第 ${record.season || ""} 季 · 已看 ${(record.episodes || []).length}/${record.episodeCount || (record.episodes || []).length} 集${record.seasonRating ? ` · 季度评分 ${record.seasonRating}` : ""}`
             : record.type === "电影" ? "电影" : `第 ${record.season ? `${record.season} 季 · ` : ""}第 ${record.episode || "?"} 集`;
-          return <div className="watch-checkin-history-item" key={record.id}>{record.posterUrl ? <img src={record.posterUrl} alt="" /> : <div className="watch-checkin-history-poster">{mediaTitle(record).slice(0, 1)}</div>}<div className="watch-checkin-history-meta"><strong>{mediaTitle(record)}</strong><span>{recordMeta} · {record.date || ""} {record.time || ""}{record.tmdbRating ? ` · TMDB ${record.tmdbRating}` : ""}</span></div><button type="button" className="watch-checkin-remove" onClick={() => { if (window.confirm(`移除《${mediaTitle(record)}》这条记录吗？`)) onRemoveCheckin?.(record.id); }}>移除</button></div>;
+          return <div className="watch-checkin-history-item" key={record.id}><MediaPoster item={posterItem} className="watch-checkin-history-poster" /><div className="watch-checkin-history-meta"><strong>{mediaTitle(record)}</strong><span>{recordMeta} · {record.date || ""} {record.time || ""}{record.traktHistory?.length > 1 ? ` · ${record.traktHistory.length} 次观看` : ""}{record.tmdbRating ? ` · TMDB ${record.tmdbRating}` : ""}</span></div><button type="button" className="watch-checkin-remove" onClick={() => { if (window.confirm(`移除《${mediaTitle(record)}》这条记录吗？`)) onRemoveCheckin?.(record.id); }}>移除</button></div>;
         })}</div>}
         </div>}
       </div>
@@ -4896,24 +4919,24 @@ function WatchSchedule({ items = [], compact = false, activeView = "today", tmdb
       {activeView === "today" && (
         <>
           <section className="tmdb-panel">
-            <div className="tmdb-panel-title">
-              <span><MotionIcon name="search" /></span>
-              <div>
+            <div className="tmdb-panel-head">
+              <div className="tmdb-panel-title">
+                <span><MotionIcon name="search" /></span>
                 <strong>搜索影视</strong>
-                <p>{tmdbStatus}</p>
               </div>
+              <button className="tmdb-sync-button" type="button" onClick={onSyncTmdbWatchlist} disabled={tmdbStatus?.startsWith("正在同步") } aria-busy={tmdbStatus?.startsWith("正在同步")}>
+                <MotionIcon name="sync" />
+                <span>{tmdbStatus?.startsWith("正在同步") ? "同步中…" : "同步到 TMDB"}</span>
+              </button>
             </div>
-            <button className="tmdb-sync-button" type="button" onClick={onSyncTmdbWatchlist}>
-              <MotionIcon name="sync" tone="light" />
-              <span>同步 TMDB 片单</span>
-            </button>
             <form className="tmdb-search" onSubmit={(event) => {
               event.preventDefault();
               onSearchTmdb(tmdbQuery);
             }}>
-              <input value={tmdbQuery} onChange={(event) => setTmdbQuery(event.target.value)} placeholder="搜索剧名" />
+              <input value={tmdbQuery} onChange={(event) => setTmdbQuery(event.target.value)} placeholder="搜索剧名" aria-label="搜索影视名称" />
               <button className="chip-button" type="submit">搜索</button>
             </form>
+            {tmdbStatus && tmdbStatus !== "输入剧名搜索，点击结果即可加入观影列表" && <p className="tmdb-action-status" role="status">{tmdbStatus}</p>}
             <div className="tmdb-results">
               {searchResults.map((item) => (
                 <button className="tmdb-result" type="button" key={`${item.type}-${item.tmdbId}`} onClick={() => onImportTmdb(item)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onImportTmdb(item); } }}>
@@ -6582,7 +6605,7 @@ export default function Workbench() {
       localStorage.setItem(key("displayMode"), nextMode);
       return nextMode;
     };
-    if (applyResponsiveMode() === "mobile" && nextPage === "consultations") setConsultationView("rating");
+    if (nextPage === "consultations") setConsultationView("today");
     window.addEventListener("resize", applyResponsiveMode);
     const nativeReady = () => { applyResponsiveMode(); setNativeConnection(value => value + 1); };
     window.addEventListener("qiye-native-ready", nativeReady);
@@ -6655,7 +6678,7 @@ export default function Workbench() {
 
   function switchPage(page) {
     setActivePage(page);
-    if (page === "consultations" && displayMode === "mobile") setConsultationView("rating");
+    if (page === "consultations") setConsultationView("today");
     localStorage.setItem(key("activePage"), page);
     setMenuOpen(false);
     if (androidApp) document.querySelector(".work-area")?.scrollTo({ top: 0 });
@@ -6728,7 +6751,6 @@ export default function Workbench() {
   function toggleDisplayMode() {
     const next = displayMode === "desktop" ? "mobile" : "desktop";
     setDisplayMode(next);
-    if (next === "mobile" && activePage === "consultations") setConsultationView("rating");
     localStorage.setItem(key("displayMode"), next);
   }
 
@@ -6948,9 +6970,84 @@ export default function Workbench() {
     }
   }
 
+  function isCompletedConsultation(item) {
+    return item?.status === "\u770b\u8fc7\u7684\u5267" || item?.status === "\u5df2\u5f52\u6863";
+  }
+
+  async function resolveTmdbConsultation(item) {
+    if (item?.tmdbId) return item;
+    const title = String(item?.titleZh || item?.title || item?.originalTitle || "").trim();
+    if (!title) return item;
+    const response = await fetch(`/api/tmdb/search?query=${encodeURIComponent(title)}`);
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
+    if (!response.ok) throw new Error(data.error || "TMDB 搜索失败");
+    const mediaType = tmdbMediaType(item);
+    const candidates = (Array.isArray(data.results) ? data.results : []).filter((result) => result.tmdbMediaType === mediaType);
+    if (!candidates.length) return item;
+    const normalizedTitle = title.toLowerCase();
+    const sameTitle = candidates.find((result) => [result.title, result.titleZh, result.originalTitle]
+      .filter(Boolean)
+      .some((value) => String(value).trim().toLowerCase() === normalizedTitle));
+    const sameYear = candidates.find((result) => item.year && String(result.year) === String(item.year));
+    return sameTitle || sameYear || candidates[0];
+  }
+
+  async function syncLocalConsultationsToTmdb() {
+    const candidates = consultations.filter((item) => item?.status !== "\u5df2\u5f52\u6863");
+    if (!candidates.length) return { synced: 0, matched: 0, failed: 0 };
+    let synced = 0;
+    let matched = 0;
+    let failed = 0;
+    const updates = new Map();
+    for (let index = 0; index < candidates.length; index += 1) {
+      const item = candidates[index];
+      setTmdbStatus(`正在同步本地观影记录到 TMDB… ${index + 1}/${candidates.length}`);
+      try {
+        const match = await resolveTmdbConsultation(item);
+        if (!match?.tmdbId) {
+          failed += 1;
+          continue;
+        }
+        if (!item.tmdbId) matched += 1;
+        const mediaType = tmdbMediaType(match);
+        const method = isCompletedConsultation(item) ? "PUT" : "POST";
+        const response = await fetch("/api/tmdb/watchlist", {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mediaId: match.tmdbId, mediaType }),
+        });
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : {};
+        if (!response.ok) throw new Error(data.error || "TMDB 片单写入失败");
+        if (item.rating && Number.isFinite(Number(item.rating))) {
+          await fetch("/api/tmdb/rating", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mediaId: match.tmdbId, mediaType, rating: Math.round(Number(item.rating) * 2) / 2 }),
+          });
+        }
+        updates.set(item.id, { ...item, ...match, id: item.id, status: item.status, rating: item.rating || "" });
+        synced += 1;
+      } catch {
+        failed += 1;
+      }
+    }
+    if (updates.size) {
+      const next = syncConsultationStatusFromWatchCheckins(
+        dedupeConsultations(consultations.map((item) => updates.get(item.id) || item)),
+        watchCheckins,
+      );
+      setConsultations(next);
+      persist("consultations", next);
+    }
+    return { synced, matched, failed };
+  }
+
   async function syncTmdbWatchlist() {
-    setTmdbStatus("正在同步 TMDB 待看片单...");
+    setTmdbStatus("正在同步本地观影记录到 TMDB…");
     try {
+      const pushed = await syncLocalConsultationsToTmdb();
       const response = await fetch("/api/tmdb/watchlist");
       const text = await response.text();
       const data = text ? JSON.parse(text) : {};
@@ -6991,7 +7088,7 @@ export default function Workbench() {
       const next = syncConsultationStatusFromWatchCheckins(dedupeConsultations([...nextItems, ...refreshedItems]), watchCheckins);
       setConsultations(next);
       persist("consultations", next);
-      setTmdbStatus(`TMDB 片单同步完成：新增 ${nextItems.length} 部，刷新 ${refreshedCount} 部`);
+      setTmdbStatus(`TMDB 同步完成：写入 ${pushed.synced} 部${pushed.matched ? `，匹配 ${pushed.matched} 部` : ""}${pushed.failed ? `，${pushed.failed} 部待人工确认` : ""}；刷新 ${refreshedCount} 部`);
     } catch (error) {
       setTmdbStatus(`TMDB 片单同步失败：${error.message || "请稍后重试"}`);
     }
@@ -7153,7 +7250,7 @@ export default function Workbench() {
       if (record.kind === 'asset') setAssetView(record.value.status || '服役中');
     }
     if (record.kind === 'fund' || record.kind === 'index') setMarketView(record.kind === 'fund' ? 'funds' : 'indexes');
-    if (record.kind === 'watch') setConsultationView('rating');
+    if (record.kind === 'watch') setConsultationView('today');
     switchPage(record.page);
   }
 
@@ -7311,6 +7408,7 @@ export default function Workbench() {
     const date = String(data.get("date") || "");
     const type = String(data.get("type") || "countdown");
     const calendarType = String(data.get("calendarType") || "solar");
+    const repeat = String(data.get("repeat") || (type === "countdown" ? "once" : "annual"));
     const icon = anniversaryIcon({ type, icon: String(data.get("icon") || "") }).id;
     const startDate = type === "countdown" ? String(data.get("startDate") || "") : "";
     if (!title || !date) return;
@@ -7319,7 +7417,7 @@ export default function Workbench() {
       event.currentTarget.reportValidity();
       return false;
     }
-    const next = [stampItem({ id: crypto.randomUUID(), title, date, type, calendarType, icon, startDate }), ...anniversaries];
+    const next = [stampItem({ id: crypto.randomUUID(), title, date, type, repeat, calendarType, icon, startDate }), ...anniversaries];
     setAnniversaries(next);
     persist("anniversaries", next);
     event.currentTarget.reset();
@@ -7419,7 +7517,7 @@ export default function Workbench() {
     }
   }
 
-  function checkinWatchItem({ id, mode = "legacy", episode, rating, date, season, episodes = [], episodeCount = 0 }) {
+  function checkinWatchItem({ id, mode = "legacy", episode, rating, date, season, episodes = [], episodeCount = 0, episodeNumbers = [] }) {
     const item = consultations.find((record) => record.id === id);
     if (!item) return;
     const watchedAt = date || todayKey();
@@ -7439,10 +7537,11 @@ export default function Workbench() {
         [seasonKey]: currentEpisodeCount || previousEpisodeCount,
       };
       const knownSeasons = Array.isArray(item.seasons) ? item.seasons : [];
+      const seasonEpisodeNumbers = { ...item.seasonEpisodeNumbers, ...(episodeNumbers.length ? { [seasonKey]: episodeNumbers } : {}) };
       const allSeasonsComplete = currentEpisodeCount > 0 && knownSeasons.length > 0 && knownSeasons.every((seasonItem) => {
         const key = String(seasonItem.seasonNumber);
         const count = Number(seasonItem.episodeCount || seasonEpisodeCounts[key] || 0);
-        return hasCompleteEpisodeSet(seasonProgress[key], count);
+        return hasCompleteEpisodeSet(seasonProgress[key], count, seasonEpisodeNumbers[key]);
       });
       const nextStatus = allSeasonsComplete ? "看过的剧" : normalizedEpisodes.length ? "正在看" : item.status || "想看的剧";
       const next = consultations.map((record) => record.id === id ? {
@@ -7454,6 +7553,7 @@ export default function Workbench() {
         seasonProgress,
         seasonRatings,
         seasonEpisodeCounts,
+        seasonEpisodeNumbers,
         time,
         updatedAt: Date.now(),
       } : record);
@@ -7461,6 +7561,7 @@ export default function Workbench() {
       persist("consultations", next);
       const existing = watchCheckins.find((record) => record.mode === "season" && String(record.consultationId) === String(id) && String(record.season) === seasonKey);
       const seasonRecord = {
+        ...existing,
         id: existing?.id || crypto.randomUUID(),
         consultationId: item.id,
         tmdbId: item.tmdbId || "",
@@ -7474,6 +7575,7 @@ export default function Workbench() {
         season: seasonKey,
         episodes: normalizedEpisodes,
         episodeCount: currentEpisodeCount || previousEpisodeCount,
+        episodeNumbers: seasonEpisodeNumbers[seasonKey] || [],
         seasonRating: seasonRatings[seasonKey] || "",
         rating: seasonRatings[seasonKey] || "",
         tmdbRating: item.tmdbRating || "",
@@ -7503,6 +7605,7 @@ export default function Workbench() {
       persist("consultations", next);
       const existing = watchCheckins.find((record) => record.mode === "movie" && String(record.consultationId) === String(id));
       const movieRecord = {
+        ...existing,
         id: existing?.id || crypto.randomUUID(),
         consultationId: item.id,
         tmdbId: item.tmdbId || "",
@@ -7767,6 +7870,50 @@ export default function Workbench() {
     try {
       const text = await file.text();
       const payload = decodeMarkdownBackup(text);
+      if (payload.source === "trakt") {
+        if (!session || session.user.id !== "personal-workbench") throw new Error("请先登录主账号，再导入这份 Trakt 观影记录");
+        setBackupStatus("正在备份原有观影数据并核对重复记录…");
+        const cloud = await loadCloudItems(session);
+        const before = {
+          version: 1, exportedAt: new Date().toISOString(),
+          consultations: mergeSyncedItems("consultations", consultations, cloud.consultations, cloud),
+          watchCheckins: mergeSyncedItems("watchCheckins", watchCheckins, cloud.watchCheckins, cloud),
+          deletedTmdbWatchlist: normalizeDeletedTmdbWatchlist([...readStorage("deletedTmdbWatchlist", []), ...(cloud.deletedTmdbWatchlist || [])]),
+          "deletedIds:consultations": mergeDeletedIds("consultations", cloud), "deletedIds:watchCheckins": mergeDeletedIds("watchCheckins", cloud),
+        };
+        const merged = mergeWatchImport(before, payload);
+        for (const name of ["consultations", "watchCheckins"]) {
+          if (new Blob([JSON.stringify({ name, value: merged[name] })]).size > 4 * 1024 * 1024) throw new Error("合并后的观影数据超过同步上限，尚未写入，请先分批整理");
+        }
+        const backupUrl = URL.createObjectURL(new Blob([JSON.stringify(before)], { type: "application/json" }));
+        const anchor = document.createElement("a");
+        anchor.href = backupUrl;
+        anchor.download = `qiyeworkbench-before-trakt-${todayKey()}.json`;
+        anchor.click();
+        URL.revokeObjectURL(backupUrl);
+        writeStorage("consultations", merged.consultations);
+        writeStorage("watchCheckins", merged.watchCheckins);
+        setConsultations(merged.consultations);
+        setWatchCheckins(merged.watchCheckins);
+        const savedConsultations = await saveMergedCloudCollection(session, "consultations", merged.consultations);
+        const savedCheckins = await saveMergedCloudCollection(session, "watchCheckins", merged.watchCheckins);
+        writeStorage("consultations", savedConsultations);
+        writeStorage("watchCheckins", savedCheckins);
+        setConsultations(savedConsultations);
+        setWatchCheckins(savedCheckins);
+        const verified = await loadCloudItems(session);
+        const historyIds = new Set((verified.watchCheckins || []).flatMap(record => (record.traktHistory || []).map(entry => String(entry.id))));
+        const verifiedTitles = new Map((verified.consultations || []).map(item => [item.id, item]));
+        const titlesVerified = savedConsultations.every(item => {
+          const stored = verifiedTitles.get(item.id);
+          return stored && Object.entries(item.seasonProgress || {}).every(([season, episodes]) => episodes.every(episode => stored.seasonProgress?.[season]?.includes(episode)));
+        });
+        if (!titlesVerified || !savedCheckins.every(record => (record.traktHistory || []).every(entry => historyIds.has(String(entry.id))))) throw new Error("云端观影数据校验未完成，请保持联网后重新导入；已有记录会自动去重");
+        const result = merged.summary;
+        setBackupStatus(`Trakt 已同步：新增 ${result.addedTitles} 部、合并 ${result.matchedTitles} 部，新增 ${result.addedHistory} 次观看、跳过 ${result.matchedHistory} 次重复${result.skippedDeleted ? `，保留 ${result.skippedDeleted} 项删除状态` : ""}`);
+        setSyncStatus(`已同步 · ${nowText()}`);
+        return;
+      }
       if (Array.isArray(payload.plans)) {
         setPlans(payload.plans);
         persist("plans", payload.plans);
@@ -8263,11 +8410,11 @@ export default function Workbench() {
                 <div className="backup-actions">
                   <button className="backup-export" type="button" onClick={exportMarkdown}>导出 Markdown</button>
                   <label className="backup-import">
-                    <span>导入 Markdown</span>
-                    <input type="file" aria-label="导入 Markdown" aria-describedby="backup-description" accept=".md,.markdown,.json,text/markdown,text/plain,application/json" onChange={importBackup} />
+                    <span>导入备份 / Trakt</span>
+                    <input type="file" aria-label="导入备份 / Trakt" aria-describedby="backup-description" accept=".md,.markdown,.json,text/markdown,text/plain,application/json" onChange={importBackup} />
                   </label>
                 </div>
-                <p className="backup-description" id="backup-description">导出的 Markdown 包含全部私人记录，请勿公开分享；可用于恢复，也兼容旧版 JSON 备份。</p>
+                <p className="backup-description" id="backup-description">支持 Markdown、JSON 备份及已转换的 Trakt JSON。Trakt 导入会先备份，再合并观影记录；其他备份用于恢复。文件包含私人记录，请勿公开分享。</p>
               </section>
               <PonyThemePanel value={ponyTheme} onChange={changePonyTheme} />
             </>

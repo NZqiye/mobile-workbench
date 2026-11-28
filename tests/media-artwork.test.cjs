@@ -20,7 +20,7 @@ test("missing TV backdrop falls back to same show's episode still and is cached"
     : { seasons: [{ season_number: 0 }, { season_number: 1 }] });
   const result = await route.get("id=10&type=tv");
   assert.deepEqual(result.images, ["https://image.tmdb.org/t/p/w780/episode.jpg"]);
-  await route.get("id=10&type=tv");
+  assert.deepEqual(await route.get("id=10&type=tv"), result);
   assert.equal(route.calls.length, 2);
   assert.ok(route.calls[1].includes("/tv/10/season/1"));
 });
@@ -63,4 +63,25 @@ test("ambiguous anime matches never borrow another show's artwork", async () => 
   const candidate = { attributes: { titles: { en: "Same Title" }, startDate: "2026-01-01", coverImage: { large: "ambiguous" } } };
   const route = artworkRoute(() => ({ data: [candidate, candidate] }));
   assert.deepEqual((await route.get("bangumiId=11&name=Same%20Title&year=2026")).images, []);
+});
+
+test("missing main poster uses the same programme's newest available season poster", async () => {
+  const route = artworkRoute(() => ({ seasons: [
+    { season_number: 0, poster_path: "/special.jpg" },
+    { season_number: 1, poster_path: "/first.jpg" },
+    { season_number: 2, poster_path: "/second.jpg" },
+    { season_number: 3, poster_path: null },
+  ], backdrop_path: "/backdrop.jpg" }));
+  const result = await route.get("id=300&type=tv");
+  assert.equal(result.posterUrl, "https://image.tmdb.org/t/p/w342/second.jpg");
+  assert.deepEqual(result.images, ["https://image.tmdb.org/t/p/w780/backdrop.jpg"]);
+  assert.deepEqual(await route.get("id=300&type=tv"), result);
+  assert.equal(route.calls.length, 1);
+});
+
+test("poster-only image collections prefer Chinese and do not invent artwork", async () => {
+  const route = artworkRoute(() => ({ images: { posters: [{ file_path: "/en.jpg", iso_639_1: "en" }, { file_path: "/zh.jpg", iso_639_1: "zh" }] } }));
+  assert.equal((await route.get("id=301&type=movie")).posterUrl, "https://image.tmdb.org/t/p/w342/zh.jpg");
+  const empty = artworkRoute(() => ({}));
+  assert.deepEqual(await empty.get("id=302&type=tv"), { images: [], posterUrl: "" });
 });

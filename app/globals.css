@@ -532,9 +532,12 @@ textarea { resize: vertical; }
   grid-column: 1 / -1;
 }
 .anniversary-fields .anniversary-type-menu {
-  grid-column: span 2;
+  grid-column: span 1;
 }
 .anniversary-fields .anniversary-calendar-menu {
+  grid-column: span 1;
+}
+.anniversary-fields .anniversary-repeat-menu {
   grid-column: span 1;
 }
 .anniversary-fields .anniversary-menu {

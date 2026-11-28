@@ -11,9 +11,14 @@ async function readJson(url, tmdb = false) {
 
 async function loadArtwork(id, type, tvmazeId, bangumiId, anime) {
   const urls = [];
+  let posterUrl = "";
   if (id && tmdbToken) {
     try {
       const details = await readJson(`https://api.themoviedb.org/3/${type}/${id}?append_to_response=images&include_image_language=null,en,zh`, true);
+      const posters = (details.images?.posters || []).filter((image) => image.file_path);
+      const seasonPoster = type === "tv" ? [...(details.seasons || [])].filter((season) => season.season_number > 0 && season.poster_path).sort((left, right) => right.season_number - left.season_number)[0]?.poster_path : "";
+      const posterPath = details.poster_path || posters.find((image) => image.iso_639_1 === "zh")?.file_path || posters.find((image) => image.iso_639_1 === "en")?.file_path || posters[0]?.file_path || seasonPoster;
+      if (posterPath) posterUrl = `https://image.tmdb.org/t/p/w342${posterPath}`;
       const paths = [details.backdrop_path, ...(details.images?.backdrops || []).map((image) => image.file_path)];
       if (type === "tv") {
         paths.push(details.last_episode_to_air?.still_path, details.next_episode_to_air?.still_path);
@@ -35,6 +40,7 @@ async function loadArtwork(id, type, tvmazeId, bangumiId, anime) {
     ]);
     const images = results[0].status === "fulfilled" ? results[0].value : [];
     const episodes = results[1].status === "fulfilled" ? results[1].value : [];
+    if (!posterUrl) posterUrl = images.find((image) => image.type === "poster")?.resolutions?.original?.url || "";
     urls.push(...images.filter((image) => image.type === "background").map((image) => image.resolutions?.original?.url));
     urls.push(...episodes.map((episode) => episode.image?.original || episode.image?.medium));
   }
@@ -62,7 +68,7 @@ async function loadArtwork(id, type, tvmazeId, bangumiId, anime) {
       }
     } catch { /* Unmatched seasons retain their own poster. */ }
   }
-  return [...new Set(urls.filter(Boolean))].slice(0, 8);
+  return { images: [...new Set(urls.filter(Boolean))].slice(0, 8), posterUrl };
 }
 
 export async function GET(request) {
@@ -77,12 +83,12 @@ export async function GET(request) {
   }
   const key = JSON.stringify([type, id, tvmazeId, bangumiId, anime]);
   const cached = cache.get(key);
-  if (cached && cached.expires > Date.now()) return Response.json({ images: await cached.images });
+  if (cached && cached.expires > Date.now()) return Response.json(await cached.images);
   const images = loadArtwork(id, type, tvmazeId, bangumiId, anime);
   const entry = { images, expires: Date.now() + 15000 };
   cache.set(key, entry);
   if (cache.size > 500) cache.delete(cache.keys().next().value);
   const result = await images;
-  entry.expires = Date.now() + (result.length ? 15 * 60 * 1000 : 15000);
-  return Response.json({ images: result });
+  entry.expires = Date.now() + (result.images.length || result.posterUrl ? 15 * 60 * 1000 : 15000);
+  return Response.json(result);
 }

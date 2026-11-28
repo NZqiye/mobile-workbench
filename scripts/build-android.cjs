@@ -60,7 +60,7 @@ fs.copyFileSync(builtApk, apk);
 const checksum = crypto.createHash('sha256').update(fs.readFileSync(apk)).digest('hex');
 fs.writeFileSync(path.join(output, 'SHA256SUMS.txt'), `${checksum}  ${path.basename(apk)}\n`);
 const versionCode = Number(fs.readFileSync(path.join(root, 'android', 'AndroidManifest.xml'), 'utf8').match(/android:versionCode="(\d+)"/)[1]);
-const updateManifest = JSON.stringify({ version, versionCode, url: `https://github.com/NZqiye/mobile-workbench/releases/download/android-v${version}/${path.basename(apk)}`, sha256: checksum, notes: '沿用现有分类新增120个透明图标，支持中文搜索和离线显示。纪念日卡片默认4×2，可拉高至4×4显示更多日子，采用中文天数和针对性短句；全部消息统一提醒。统一栏目对齐与紧凑间距，调整影视搜索布局，保留全局毛玻璃。请覆盖安装后打开 App 同步。' }, null, 2) + '\n';
+const updateManifest = JSON.stringify({ version, versionCode, url: `https://github.com/NZqiye/mobile-workbench/releases/download/android-v${version}/${path.basename(apk)}`, sha256: checksum, notes: '增强App透底材质、主题背景和玻璃高光，修正内层实色遮盖。资产与待办桌面小组件升级半透明磨砂卡片，优化图标、金额和任务层级；资产支持紧凑4×2及拉伸，待办显示真实完成进度，适配小尺寸和大字体。桌面卡片为半透明材质，不读取或实时模糊壁纸。请直接覆盖安装，安装后联网打开App同步；已有桌面卡片会刷新。' }, null, 2) + '\n';
 fs.writeFileSync(path.join(output, 'app-update.json'), updateManifest);
 fs.writeFileSync(path.join(root, 'public', 'app-update.json'), updateManifest);
 console.log(`APK: ${apk}\nSHA-256: ${checksum}`);

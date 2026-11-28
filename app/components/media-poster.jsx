@@ -1,17 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./media-poster.module.css";
 
 export default function MediaPoster({ item, className = "" }) {
   const [failed, setFailed] = useState([]);
+  const [recovered, setRecovered] = useState("");
+  const rootRef = useRef(null);
+  const attempted = useRef(false);
   const poster = item?.posterUrl || "";
   const fallback = item?.posterFallbackUrl || "";
   const backdrop = item?.backdropUrl || "";
-  const source = [poster, fallback, backdrop].find(url => url && !failed.includes(url));
-  useEffect(() => setFailed([]), [poster, fallback, backdrop]);
+  const source = [poster, fallback, recovered, backdrop].find(url => url && !failed.includes(url));
+  const needsRecovery = ![poster, fallback].some(url => url && !failed.includes(url));
+  useEffect(() => { setFailed([]); setRecovered(""); attempted.current = false; }, [poster, fallback, backdrop, item?.tmdbId, item?.tmdbMediaType]);
+  useEffect(() => {
+    if (!needsRecovery || !item?.tmdbId || attempted.current || !rootRef.current) return;
+    const controller = new AbortController();
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      observer.disconnect();
+      attempted.current = true;
+      const params = new URLSearchParams({ id: String(item.tmdbId), type: item.tmdbMediaType === "movie" || item.type === "电影" ? "movie" : "tv" });
+      fetch(`/api/media-artwork?${params}`, { signal: controller.signal })
+        .then(response => response.ok ? response.json() : {})
+        .then(data => { if (!controller.signal.aborted) setRecovered(data.posterUrl || data.images?.[0] || ""); })
+        .catch(() => {});
+    }, { rootMargin: "160px" });
+    observer.observe(rootRef.current);
+    return () => { observer.disconnect(); controller.abort(); };
+  }, [needsRecovery, item?.tmdbId, item?.tmdbMediaType, item?.type]);
   return (
-    <div className={`${styles.root} ${className}`}>
+    <div ref={rootRef} className={`${styles.root} ${className}`}>
       {source ? <img className={styles.image} src={source} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(previous => [...previous, source])} />
         : <span className={styles.placeholder} aria-label="暂无海报">{String(item?.titleZh || item?.title || "影视").slice(0, 1)}</span>}
     </div>
