@@ -16,8 +16,13 @@ function titleKey(title) {
 
 function seasonlessTitle(title) {
   return String(title || "").normalize("NFKC")
-    .replace(/(?:\s*第\s*(?:\d+|[一二三四五六七八九十百]+)\s*(?:季|期)(?:\s*part\s*\.?\s*\d+)?|\s+(?:season|s)\s*\d+|\s+\d+(?:st|nd|rd|th)\s+season|\s+part\s*\.?\s*\d+|\s+\d+)\s*$/i, "")
+    .replace(/(?:\s*第\s*(?:\d+|[一二三四五六七八九十百]+)\s*(?:季|期|シリーズ)(?:\s*part\s*\.?\s*\d+)?|\s+(?:season|s)\s*\d+|\s+\d+(?:st|nd|rd|th)\s+season|\s+part\s*\.?\s*\d+|\s+\d+|\s*(?:[-~]?\s*(?:after\s+story|2nd\s+gig))\s*[-~]?)\s*$/i, "")
+    .replace(/(?:VIII|VII|III|VI|IV|IX|II|V|X)$/i, "")
     .trim();
+}
+
+function expandAnimeTitle(title) {
+  return String(title || "").replace(/S\.?A\.?C\.?/gi, "STAND ALONE COMPLEX");
 }
 
 function chineseText(text) {
@@ -26,7 +31,10 @@ function chineseText(text) {
 
 async function matchTmdb(item, signal) {
   const titles = [...new Set([item.bangumiName, item.bangumiNameCn].filter(Boolean))];
-  const queries = [...new Set(titles.flatMap((title) => [title, seasonlessTitle(title)]).filter(Boolean))];
+  const queries = [...new Set(titles.flatMap((title) => {
+    const base = seasonlessTitle(title);
+    return [title, base, expandAnimeTitle(base)];
+  }).filter(Boolean))];
   const names = new Set(queries.map(titleKey));
   const candidates = new Map();
   for (const query of titles) {
@@ -68,7 +76,11 @@ async function matchTmdb(item, signal) {
       && Math.abs(Number(year) - Number(item.year)) <= distance;
   });
   const bestMatches = yearMatches(0).length ? yearMatches(0) : yearMatches(1);
-  const best = bestMatches.length ? bestMatches.length === 1 ? bestMatches[0] : null : matches.length === 1 ? matches[0] : null;
+  const best = bestMatches.length === 1
+    ? bestMatches[0]
+    : bestMatches.filter((candidate) => candidate.media_type === "tv").length === 1
+      ? bestMatches.find((candidate) => candidate.media_type === "tv")
+      : bestMatches.length ? null : matches.length === 1 ? matches[0] : null;
   if (!best) return null;
 
   const mapped = mapTmdbResult(best);

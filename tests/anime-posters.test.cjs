@@ -4,13 +4,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-function animeRoute({tmdb = true, matches = true, posterPath = '/tmdb.jpg', year = '2026', sequel = false} = {}) {
+function animeRoute({tmdb = true, matches = true, posterPath = '/tmdb.jpg', year = '2026', sequel = false, duplicateMovie = false} = {}) {
   const subject = {id:10,name:sequel?'氷の城壁 第2期':'Anime',name_cn:sequel?'冰之城墙 第二季':'动画作品',date:'2026-10-01',type:2,images:{large:'https://lain.bgm.tv/pic/cover/l/large.jpg',common:'https://lain.bgm.tv/pic/cover/c/common.jpg'},rating:{score:8},collection:{}};
   const source=fs.readFileSync(path.join(__dirname,'../app/api/anime-updates/route.js'),'utf8').replace(/^import .*;\r?\n/,'').replace('export const maxDuration','const maxDuration').replace('export async function GET','async function GET');
   const context=vm.createContext({URL,Response,AbortSignal,Intl,Date,tmdbToken:tmdb?'test':'',
     fetch:async url=>({ok:true,json:async()=>String(url).endsWith('/calendar')?[]:{data:[subject]}}),
-    fetchTmdb:async url=>({ok:true,json:async()=>{const parsed=new URL(url);const title=sequel?'氷の城壁':'Anime';return parsed.pathname.includes('/search/multi')?({results:matches&&(parsed.searchParams.get('query')===title||!sequel)?[{id:90,name:title,original_name:sequel?'Ice Wall':'Anime',first_air_date:`${year}-10-01`,media_type:'tv',genre_ids:[16],poster_path:posterPath}]:[]}):({poster_path:null,images:{posters:[{file_path:'/localized-poster.jpg',iso_639_1:'ja'}]}})}}),
-    mapTmdbResult:item=>({tmdbId:item.id,tmdbMediaType:'tv',title:'动画作品',posterUrl:item.poster_path?`https://image.tmdb.org/t/p/w342${item.poster_path}`:'',summary:'中文简介'}),
+    fetchTmdb:async url=>({ok:true,json:async()=>{const parsed=new URL(url);const title=sequel?'氷の城壁':'Anime';const candidate={id:90,name:title,original_name:sequel?'Ice Wall':'Anime',first_air_date:`${year}-10-01`,media_type:'tv',genre_ids:[16],poster_path:posterPath};return parsed.pathname.includes('/search/multi')?({results:matches&&(parsed.searchParams.get('query')===title||!sequel)?[candidate,...(duplicateMovie?[{...candidate,id:91,media_type:'movie'}]:[])]:[]}):({poster_path:null,images:{posters:[{file_path:'/localized-poster.jpg',iso_639_1:'ja'}]}})}}),
+    mapTmdbResult:item=>({tmdbId:item.id,tmdbMediaType:item.media_type,title:'动画作品',posterUrl:item.poster_path?`https://image.tmdb.org/t/p/w342${item.poster_path}`:'',summary:'中文简介'}),
   });
   vm.runInContext(source,context);
   return {get:async()=>(await context.GET({url:'http://localhost/api/anime-updates'})).json(),normalize:context.normalizeSubject};
@@ -50,6 +50,13 @@ test('seasoned anime titles fall back to an exact TMDB franchise title',async()=
   const item=data.sections.find(section=>section.id==='animeHot').items[0];
   assert.equal(item.tmdbId,90);
   assert.equal(item.posterUrl,'https://image.tmdb.org/t/p/w342/tmdb.jpg');
+});
+
+test('the TV series wins when TMDB lists duplicate TV and movie entries for one anime',async()=>{
+  const data=await animeRoute({duplicateMovie:true}).get();
+  const item=data.sections.find(section=>section.id==='animeHot').items[0];
+  assert.equal(item.tmdbId,90);
+  assert.equal(item.tmdbMediaType,'tv');
 });
 
 test('unmatched anime and an unconfigured TMDB show no non-TMDB poster',async()=>{
