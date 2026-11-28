@@ -16,7 +16,7 @@ function titleKey(title) {
 
 function seasonlessTitle(title) {
   return String(title || "").normalize("NFKC")
-    .replace(/(?:\s*第\s*(?:\d+|[一二三四五六七八九十百]+)\s*(?:季|期|シリーズ)(?:\s*part\s*\.?\s*\d+)?|\s+(?:season|s)\s*\d+|\s+\d+(?:st|nd|rd|th)\s+season|\s+part\s*\.?\s*\d+|\s+\d+|\s*(?:[-~]?\s*(?:after\s+story|2nd\s+gig))\s*[-~]?)\s*$/i, "")
+    .replace(/(?:\s*第\s*(?:\d+|[一二三四五六七八九十百]+)\s*(?:季|期|シリーズ)(?:\s*part\s*\.?\s*\d+)?|\s+(?:season|s)\s*\d+|\s+\d+(?:st|nd|rd|th)\s+season|\s+part\s*\.?\s*\d+|\s+\d+|\s*[-~〜～]?\s*(?:after\s+story|2nd\s+gig)\s*[-~〜～]?)\s*$/i, "")
     .replace(/(?:VIII|VII|III|VI|IV|IX|II|V|X)$/i, "")
     .trim();
 }

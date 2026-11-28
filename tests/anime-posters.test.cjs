@@ -13,7 +13,7 @@ function animeRoute({tmdb = true, matches = true, posterPath = '/tmdb.jpg', year
     mapTmdbResult:item=>({tmdbId:item.id,tmdbMediaType:item.media_type,title:'动画作品',posterUrl:item.poster_path?`https://image.tmdb.org/t/p/w342${item.poster_path}`:'',summary:'中文简介'}),
   });
   vm.runInContext(source,context);
-  return {get:async()=>(await context.GET({url:'http://localhost/api/anime-updates'})).json(),normalize:context.normalizeSubject};
+  return {get:async()=>(await context.GET({url:'http://localhost/api/anime-updates'})).json(),normalize:context.normalizeSubject,seasonless:context.seasonlessTitle};
 }
 
 test('anime recommendations do not use Bangumi images as posters',()=>{
@@ -57,6 +57,13 @@ test('the TV series wins when TMDB lists duplicate TV and movie entries for one 
   const item=data.sections.find(section=>section.id==='animeHot').items[0];
   assert.equal(item.tmdbId,90);
   assert.equal(item.tmdbMediaType,'tv');
+});
+
+test('season suffixes in Japanese, Chinese and CLANNAD subtitle forms reduce to the franchise title',()=>{
+  const route=animeRoute();
+  assert.equal(route.seasonless('転生したら剣でしたII'),'転生したら剣でした');
+  assert.equal(route.seasonless('3月のライオン 第2シリーズ'),'3月のライオン');
+  assert.equal(route.seasonless('CLANNAD 〜AFTER STORY〜'),'CLANNAD');
 });
 
 test('unmatched anime and an unconfigured TMDB show no non-TMDB poster',async()=>{
